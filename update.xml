@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-    <version>1.0.1.0</version>
-    <url>https://raw.githubusercontent.com/Oleksandr-Rosenko/Screenshot_One/refs/heads/main/update.xml/main/update.zip</url>
+    <version>1.0.2.0</version>
+    <url>https://github.com/Oleksandr-Rosenko/Screenshot_One/releases/download/v1.0.2.0/update.zip</url>
     <mandatory>false</mandatory>
 </item>
