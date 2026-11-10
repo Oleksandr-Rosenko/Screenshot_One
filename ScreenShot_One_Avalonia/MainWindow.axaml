@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ScreenShot_One_Avalonia.MainWindow"
+        Title="Screen Capture Overlay"
+        SystemDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        WindowState="Maximized"
+        Topmost="True"
+        Cursor="None"
+        ShowInTaskbar="False">
+
+	<Canvas Name="OverlayCanvas" Background="Transparent"
+            PointerPressed="Canvas_PointerPressed"
+            PointerMoved="Canvas_PointerMoved"
+            PointerReleased="Canvas_PointerReleased">
+
+		<Path Name="OverlayPath" Fill="#50000000" />
+
+		<Line Name="CrosshairH" Stroke="DeepSkyBlue" StrokeThickness="1" Opacity="0.6" IsHitTestVisible="False"/>
+		<Line Name="CrosshairV" Stroke="DeepSkyBlue" StrokeThickness="1" Opacity="0.6" IsHitTestVisible="False"/>
+
+		<Rectangle Name="SelectionRectangle"
+                   Stroke="DeepSkyBlue"
+                   StrokeThickness="2"
+                   Fill="Transparent"
+                   IsVisible="False"/>
+
+		<Border Name="MagnifierBorder" Width="150" Height="150" CornerRadius="75"
+                BorderBrush="#88FFFFFF" BorderThickness="2"
+                IsVisible="False" ClipToBounds="True" Background="#111111" ZIndex="100">
+			<Panel>
+				<Canvas Width="150" Height="150">
+					<Image Name="MagnifierImage" Stretch="None" RenderOptions.BitmapInterpolationMode="None" RenderTransformOrigin="0,0">
+						<Image.RenderTransform>
+							<ScaleTransform ScaleX="3" ScaleY="3" />
+						</Image.RenderTransform>
+					</Image>
+				</Canvas>
+				<Path Stroke="DeepSkyBlue" StrokeThickness="1" Data="M 75 0 L 75 150 M 0 75 L 150 75" Opacity="0.8"/>
+				<Border VerticalAlignment="Bottom" Background="#AA000000" Padding="0,4">
+					<TextBlock Name="MagnifierText" Text="0 x 0" Foreground="White" FontSize="13" HorizontalAlignment="Center" FontWeight="Bold"/>
+				</Border>
+			</Panel>
+		</Border>
+	</Canvas>
+</Window>

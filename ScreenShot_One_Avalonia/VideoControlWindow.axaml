@@ -1,0 +1,40 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ScreenShot_One_Avalonia"
+        x:Class="ScreenShot_One_Avalonia.VideoControlWindow"
+        Title="Запис відео" Height="70" Width="780"
+        WindowDecorations="None" Background="Transparent" TransparencyLevelHint="Transparent"
+        Topmost="True" ShowInTaskbar="False">
+
+	<Border Background="#CC111111" CornerRadius="35" Padding="15,10" PointerPressed="Border_PointerPressed" BorderBrush="#55FFFFFF" BorderThickness="1" Margin="5">
+		<StackPanel Orientation="Horizontal" Spacing="15" VerticalAlignment="Center" HorizontalAlignment="Center">
+
+			<Button Name="BtnRecordToggle" Click="BtnRecordToggle_Click" Background="Transparent" Width="40" Height="40" CornerRadius="20" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="Старт/Стоп">
+				<Border Name="RecordIcon" Width="16" Height="16" Background="Red" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+			</Button>
+
+			<TextBlock Name="TxtTimer" Text="00:00" Foreground="White" FontSize="18" VerticalAlignment="Center" FontWeight="Bold" Width="60"/>
+
+			<ComboBox Name="ComboRecordArea" SelectedIndex="0" Width="140" VerticalAlignment="Center">
+				<ComboBoxItem Content="Весь екран"/>
+				<ComboBoxItem Content="Вибрана зона"/>
+			</ComboBox>
+
+			<ComboBox Name="ComboMonitor" Width="150" VerticalAlignment="Center">
+				<ComboBox.ItemTemplate>
+					<DataTemplate x:DataType="local:MonitorInfo">
+						<TextBlock Text="{Binding DisplayName}"/>
+					</DataTemplate>
+				</ComboBox.ItemTemplate>
+			</ComboBox>
+
+			<CheckBox Name="ChkShowMouse" Content="Кліки" IsChecked="True" Foreground="White" VerticalAlignment="Center"/>
+
+			<CheckBox Name="ChkRecordAudio" Content="🔊 Звук" IsChecked="True" Foreground="White" VerticalAlignment="Center" ToolTip.Tip="Записувати звуки системи (музика, сповіщення)"/>
+
+			<Separator Classes="Vertical" Height="30" Margin="5,0"/>
+
+			<Button Name="BtnClose" Click="BtnClose_Click" Content="✕" Background="Transparent" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Width="30" Height="30" CornerRadius="15" Foreground="LightGray" FontSize="16" VerticalAlignment="Center" ToolTip.Tip="Закрити"/>
+		</StackPanel>
+	</Border>
+</Window>

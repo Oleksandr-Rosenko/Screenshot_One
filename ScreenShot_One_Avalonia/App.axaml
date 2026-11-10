@@ -1,0 +1,25 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:suki="clr-namespace:SukiUI;assembly=SukiUI"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="ScreenShot_One_Avalonia.App"
+             RequestedThemeVariant="Dark">
+	<Application.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.ThemeDictionaries>
+				<ResourceDictionary x:Key="Dark">
+					<SolidColorBrush x:Key="CanvasBackdropBrush" Color="#18181B" />
+					<SolidColorBrush x:Key="ToolbarIconBrush" Color="#F4F4F5" />
+				</ResourceDictionary>
+				<ResourceDictionary x:Key="Light">
+					<SolidColorBrush x:Key="CanvasBackdropBrush" Color="#E2E8F0" />
+					<SolidColorBrush x:Key="ToolbarIconBrush" Color="#1E293B" />
+				</ResourceDictionary>
+			</ResourceDictionary.ThemeDictionaries>
+		</ResourceDictionary>
+	</Application.Resources>
+	<Application.Styles>
+		<suki:SukiTheme ThemeColor="Blue" />
+		<materialIcons:MaterialIconStyles />
+	</Application.Styles>
+</Application>

@@ -1,0 +1,133 @@
+<suki:SukiWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+        xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:local="using:ScreenShot_One_Avalonia"
+        x:Class="ScreenShot_One_Avalonia.HistoryWindow"
+        Title="Історія" Height="600" Width="750"
+        WindowStartupLocation="CenterScreen">
+
+	<Grid RowDefinitions="Auto,Auto,*">
+		<suki:GlassCard Grid.Row="0" Margin="10" Padding="15">
+			<Grid ColumnDefinitions="*,Auto">
+				<StackPanel Orientation="Horizontal" Spacing="10">
+					<material:MaterialIcon Kind="History" Width="25" Height="25" Foreground="{DynamicResource SukiPrimaryColor}"/>
+					<TextBlock Text="Історія записів" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+				</StackPanel>
+				<Button Grid.Column="1" Classes="Accent" Click="BtnClearAll_Click">
+					<StackPanel Orientation="Horizontal" Spacing="5">
+						<material:MaterialIcon Kind="DeleteSweep" />
+						<TextBlock Name="TxtClearAll" Text="Очистити скріншоти"/>
+					</StackPanel>
+				</Button>
+			</Grid>
+		</suki:GlassCard>
+
+		<StackPanel Grid.Row="1" Orientation="Horizontal" Margin="20,0" Spacing="10">
+			<RadioButton Name="TabScreenshots" Classes="Chips" IsChecked="True" IsCheckedChanged="Tab_Checked">
+				<StackPanel Orientation="Horizontal" Spacing="5">
+					<material:MaterialIcon Kind="Image" />
+					<TextBlock Text="Скріншоти"/>
+				</StackPanel>
+			</RadioButton>
+			<RadioButton Name="TabVideos" Classes="Chips" IsCheckedChanged="Tab_Checked">
+				<StackPanel Orientation="Horizontal" Spacing="5">
+					<material:MaterialIcon Kind="Video" />
+					<TextBlock Text="Відео"/>
+				</StackPanel>
+			</RadioButton>
+		</StackPanel>
+
+		<Grid Grid.Row="2" Margin="10">
+			<TextBlock Name="EmptyScreenshotsText" Text="Тут поки пусто 🤷‍♂️"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5" IsVisible="False"/>
+			<TextBlock Name="EmptyVideosText" Text="Відео не знайдено 🤷‍♂️"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5" IsVisible="False"/>
+
+			<ListBox Name="ScreenshotsListBox" Background="Transparent" DoubleTapped="ListBox_DoubleTapped">
+				<ListBox.ItemTemplate>
+					<DataTemplate x:DataType="local:HistoryItem">
+						<suki:GlassCard Margin="5" Padding="10">
+							<Grid ColumnDefinitions="Auto,*,Auto">
+								<Border CornerRadius="8" ClipToBounds="True" Width="140" Height="80" Background="{DynamicResource SukiLightBackground}" BorderBrush="{DynamicResource SukiBorderBrush}" BorderThickness="1">
+									<Image Source="{Binding ImageSource}" Stretch="UniformToFill"/>
+								</Border>
+
+								<StackPanel Grid.Column="1" Margin="15,0" VerticalAlignment="Center">
+									<TextBlock Text="{Binding FileName}" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+									<TextBlock Text="{Binding DateString}" FontSize="12" Opacity="0.6"/>
+								</StackPanel>
+
+								<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+									<Button Classes="Basic" ToolTip.Tip="Копіювати скріншот" Click="BtnCopyFromHistory_Click" Tag="{Binding Path}">
+										<material:MaterialIcon Kind="ContentCopy" Width="22" Height="22"/>
+									</Button>
+
+									<Button Classes="Basic" ToolTip.Tip="Вивантажити на Google Диск" Click="BtnUploadFromHistory_Click" Tag="{Binding Path}">
+										<material:MaterialIcon Kind="GoogleDrive" Width="22" Height="22" Foreground="#4285F4"/>
+									</Button>
+
+									<Button Classes="Basic" Foreground="Red" ToolTip.Tip="Видалити" Click="BtnDeleteFromHistory_Click" Tag="{Binding Path}">
+										<material:MaterialIcon Kind="Delete" Width="22" Height="22"/>
+									</Button>
+								</StackPanel>
+							</Grid>
+						</suki:GlassCard>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+			</ListBox>
+
+			<ListBox Name="VideosListBox" IsVisible="False" Background="Transparent" DoubleTapped="ListBox_DoubleTapped">
+				<ListBox.ItemTemplate>
+					<DataTemplate x:DataType="local:HistoryItem">
+						<suki:GlassCard Margin="5" Padding="10">
+							<Grid ColumnDefinitions="Auto,*,Auto">
+								<Border CornerRadius="8" ClipToBounds="True" Width="140" Height="80" Background="{DynamicResource SukiLightBackground}" BorderBrush="{DynamicResource SukiBorderBrush}" BorderThickness="1">
+									<Image Source="{Binding ImageSource}" Stretch="UniformToFill"/>
+								</Border>
+
+								<StackPanel Grid.Column="1" Margin="15,0" VerticalAlignment="Center">
+									<TextBlock Text="{Binding FileName}" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+									<TextBlock Text="{Binding DateString}" FontSize="12" Opacity="0.6"/>
+								</StackPanel>
+
+								<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+									<Button Classes="Basic" ToolTip.Tip="Показати в папці" Click="BtnOpenFolder_Click" Tag="{Binding Path}">
+										<material:MaterialIcon Kind="FolderOpen" Width="22" Height="22"/>
+									</Button>
+
+									<Button Classes="Basic" ToolTip.Tip="Вивантажити на Google Диск" Click="BtnUploadFromHistory_Click" Tag="{Binding Path}">
+										<material:MaterialIcon Kind="GoogleDrive" Width="22" Height="22" Foreground="#4285F4"/>
+									</Button>
+
+									<Button Classes="Basic" Foreground="Red" ToolTip.Tip="Видалити" Click="BtnDeleteFromHistory_Click" Tag="{Binding Path}">
+										<material:MaterialIcon Kind="Delete" Width="22" Height="22"/>
+									</Button>
+								</StackPanel>
+							</Grid>
+						</suki:GlassCard>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+			</ListBox>
+		</Grid>
+
+		<Border Name="ToastNotification" Grid.RowSpan="3" Background="#CC000000" CornerRadius="10" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,30" Padding="25,15" IsVisible="False" IsHitTestVisible="False" ZIndex="50">
+			<TextBlock Name="ToastText" Text="Скопійовано в буфер!" Foreground="White" FontSize="16" FontWeight="SemiBold"/>
+		</Border>
+
+		<Border Name="DialogOverlay" Grid.RowSpan="3" Background="#E6000000" IsVisible="False" ZIndex="100">
+			<Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="35" CornerRadius="20" Background="#F21E222B" BorderBrush="#33FFFFFF" BorderThickness="1">
+				<StackPanel Spacing="20">
+					<TextBlock Name="DialogTitle" Text="Підтвердження" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
+					<TextBlock Name="DialogMessage" Text="Видалити цей елемент?" FontSize="16" HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="350"/>
+					<StackPanel Orientation="Horizontal" Spacing="15" HorizontalAlignment="Center" Margin="0,15,0,0">
+						<Button Name="BtnDialogYes" Classes="Primary" Content="Так" Width="110" Click="BtnDialogYes_Click"/>
+						<Button Name="BtnDialogNo" Classes="Basic" Content="Ні" Width="110" Click="BtnDialogNo_Click"/>
+						<Button Name="BtnDialogOk" Classes="Primary" Content="ОК" Width="110" Click="BtnDialogOk_Click" IsVisible="False"/>
+					</StackPanel>
+				</StackPanel>
+			</Border>
+		</Border>
+
+	</Grid>
+</suki:SukiWindow>

@@ -1,0 +1,31 @@
+## Visual Studio & IDEs
+.vs/
+.idea/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.sln.docstates
+
+## Build outputs
+**/[bB]in/
+**/[oO]bj/
+dist/
+Releases/
+publish/
+
+## Temp & Scratch files
+crop_lines*.txt
+*.tmp
+*.bak
+*.log
+
+## Secrets (never commit)
+.github_token
+**/.github_token
+
+## Heavy binaries (kept locally, not in git)
+ScreenShot_One_Avalonia/ffmpeg.exe
+
+## Local keys (kept locally, not in git)
+ScreenShot_One_Avalonia/credentials.json
