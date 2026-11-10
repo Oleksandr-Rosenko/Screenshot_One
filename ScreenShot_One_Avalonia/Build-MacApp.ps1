@@ -1,7 +1,7 @@
 param(
     [ValidateSet("arm64", "x64", "all")]
     [string]$Arch = "arm64",
-    [string]$Version = "2.4.10",
+    [string]$Version = "2.5.0",
     [string]$Configuration = "Release"
 )
 

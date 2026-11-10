@@ -6,7 +6,7 @@ Set-Location $PSScriptRoot
 
 
 
-$Version = "2.4.10"
+$Version = "2.5.0"
 
 
 
