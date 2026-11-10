@@ -955,12 +955,46 @@ namespace ScreenShot_One_Avalonia
                             }
                         }
 
+                        // Detect audio stream to build safe encoding arguments
+                        bool hasAudio = false;
+                        try
+                        {
+                            var probeInfo = new ProcessStartInfo
+                            {
+                                FileName = ffmpegExecutable,
+                                Arguments = $"-i \"{_sourceFile}\"",
+                                RedirectStandardError = true,
+                                UseShellExecute = false,
+                                CreateNoWindow = true
+                            };
+                            using (var probeProc = Process.Start(probeInfo))
+                            {
+                                if (probeProc != null)
+                                {
+                                    string probeOut = await probeProc.StandardError.ReadToEndAsync();
+                                    await probeProc.WaitForExitAsync();
+                                    hasAudio = probeOut.Contains("Audio:", StringComparison.OrdinalIgnoreCase);
+                                }
+                            }
+                        }
+                        catch (Exception exProbe)
+                        {
+                            Debug.WriteLine($"Audio probe failed: {exProbe.Message}");
+                        }
+
                         string args;
                         if (!_isCutoutMode)
                         {
                             string startStr = TimeSpan.FromMilliseconds(startMs).ToString(@"hh\:mm\:ss\.fff");
                             string durationStr = TimeSpan.FromMilliseconds(durationMs).ToString(@"hh\:mm\:ss\.fff");
-                            args = $"-y -i \"{_sourceFile}\" -ss {startStr} -t {durationStr} -c copy \"{outputPath}\"";
+                            if (hasAudio)
+                            {
+                                args = $"-y -ss {startStr} -i \"{_sourceFile}\" -t {durationStr} -c:v libx264 -preset veryfast -crf 18 -c:a aac -avoid_negative_ts make_zero \"{outputPath}\"";
+                            }
+                            else
+                            {
+                                args = $"-y -ss {startStr} -i \"{_sourceFile}\" -t {durationStr} -c:v libx264 -preset veryfast -crf 18 -avoid_negative_ts make_zero \"{outputPath}\"";
+                            }
                         }
                         else
                         {
@@ -970,42 +1004,21 @@ namespace ScreenShot_One_Avalonia
                                 long remDuration = totalDurationMs - endMs;
                                 string startStr = TimeSpan.FromMilliseconds(endMs).ToString(@"hh\:mm\:ss\.fff");
                                 string durStr = TimeSpan.FromMilliseconds(remDuration).ToString(@"hh\:mm\:ss\.fff");
-                                args = $"-y -i \"{_sourceFile}\" -ss {startStr} -t {durStr} -c copy \"{outputPath}\"";
+                                if (hasAudio)
+                                    args = $"-y -ss {startStr} -i \"{_sourceFile}\" -t {durStr} -c:v libx264 -preset veryfast -crf 18 -c:a aac -avoid_negative_ts make_zero \"{outputPath}\"";
+                                else
+                                    args = $"-y -ss {startStr} -i \"{_sourceFile}\" -t {durStr} -c:v libx264 -preset veryfast -crf 18 -avoid_negative_ts make_zero \"{outputPath}\"";
                             }
                             else if (endMs >= totalDurationMs - 200)
                             {
                                 string durStr = TimeSpan.FromMilliseconds(startMs).ToString(@"hh\:mm\:ss\.fff");
-                                args = $"-y -i \"{_sourceFile}\" -ss 00:00:00.000 -t {durStr} -c copy \"{outputPath}\"";
+                                if (hasAudio)
+                                    args = $"-y -ss 00:00:00.000 -i \"{_sourceFile}\" -t {durStr} -c:v libx264 -preset veryfast -crf 18 -c:a aac -avoid_negative_ts make_zero \"{outputPath}\"";
+                                else
+                                    args = $"-y -ss 00:00:00.000 -i \"{_sourceFile}\" -t {durStr} -c:v libx264 -preset veryfast -crf 18 -avoid_negative_ts make_zero \"{outputPath}\"";
                             }
                             else
                             {
-                                // Detect audio stream to build safe concat filter
-                                bool hasAudio = false;
-                                try
-                                {
-                                    var probeInfo = new ProcessStartInfo
-                                    {
-                                        FileName = ffmpegExecutable,
-                                        Arguments = $"-i \"{_sourceFile}\"",
-                                        RedirectStandardError = true,
-                                        UseShellExecute = false,
-                                        CreateNoWindow = true
-                                    };
-                                    using (var probeProc = Process.Start(probeInfo))
-                                    {
-                                        if (probeProc != null)
-                                        {
-                                            string probeOut = await probeProc.StandardError.ReadToEndAsync();
-                                            await probeProc.WaitForExitAsync();
-                                            hasAudio = probeOut.Contains("Audio:", StringComparison.OrdinalIgnoreCase);
-                                        }
-                                    }
-                                }
-                                catch (Exception exProbe)
-                                {
-                                    Debug.WriteLine($"Audio probe failed: {exProbe.Message}");
-                                }
-
                                 string s1 = (startMs / 1000.0).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
                                 string s2 = (endMs / 1000.0).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
@@ -1065,10 +1078,21 @@ namespace ScreenShot_One_Avalonia
                     // Seamlessly reload the new trimmed video back into the player!
                     if (_libVLC != null && _mediaPlayer != null)
                     {
+                        if (VideoPlayer.MediaPlayer == null)
+                        {
+                            VideoPlayer.MediaPlayer = _mediaPlayer;
+                        }
+
                         var newMedia = new LibVLCSharp.Shared.Media(_libVLC, _sourceFile, FromType.FromPath);
                         _mediaPlayer.Media = newMedia;
                         _mediaPlayer.Play();
-                        await Task.Delay(300);
+
+                        for (int i = 0; i < 25 && (_mediaPlayer.Length <= 0 || !_mediaPlayer.IsPlaying); i++)
+                        {
+                            await Task.Delay(50);
+                        }
+                        await Task.Delay(150);
+
                         _mediaPlayer.Pause();
                         _mediaPlayer.Time = 0;
                         MainPlayIcon.Kind = Material.Icons.MaterialIconKind.Play;
