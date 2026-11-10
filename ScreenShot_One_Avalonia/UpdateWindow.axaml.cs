@@ -33,8 +33,8 @@ namespace ScreenShot_One_Avalonia
         private UpdateWindowState _state = UpdateWindowState.Checking;
         private UpdateManager? _updateManager;
         private UpdateInfo? _updateInfo;
-        private string _currentVersion = "2.5.0";
-        private string _newVersion = "2.5.0";
+        private string _currentVersion = "2.5.1";
+        private string _newVersion = "2.5.1";
         private bool _isDownloading = false;
         private bool _isReadyToRestart = false;
 
@@ -125,14 +125,37 @@ namespace ScreenShot_One_Avalonia
             BtnAction.IsVisible = false;
         }
 
+        /// <summary>
+        /// Повертає пензель для ресурсу теми, незалежно від того, чи це Color, чи Brush.
+        /// </summary>
+        private IBrush GetThemeBrush(string resourceKey, IBrush fallback)
+        {
+            try
+            {
+                var resource = this.FindResource(resourceKey);
+                return resource switch
+                {
+                    IBrush brush => brush,
+                    Color color => new SolidColorBrush(color),
+                    _ => fallback
+                };
+            }
+            catch
+            {
+                return fallback;
+            }
+        }
+
         private void SetUpdateAvailableState()
         {
             _state = UpdateWindowState.UpdateAvailable;
 
             TxtTitle.Text = "Доступне оновлення!";
             IconHeader.Kind = MaterialIconKind.RocketLaunch;
-            IconHeader.Foreground = (IBrush)this.FindResource("SukiPrimaryColor")!;
-            BorderIconHeader.Background = (IBrush)this.FindResource("SukiPrimaryColor10")!;
+            // SukiPrimaryColor у SukiUI — це Color, а не пензель. Пряме приведення (IBrush) кидало InvalidCastException,
+            // і замість «Доступне оновлення» показувалась помилка — оновитися через програму було неможливо.
+            IconHeader.Foreground = GetThemeBrush("SukiPrimaryColor", Brushes.DeepSkyBlue);
+            BorderIconHeader.Background = GetThemeBrush("SukiPrimaryColor10", new SolidColorBrush(Color.FromArgb(30, 0, 191, 255)));
 
             TxtCurrentVersion.Text = _currentVersion.Trim().TrimStart('v', 'V');
             TxtArrow.IsVisible = true;
@@ -141,7 +164,7 @@ namespace ScreenShot_One_Avalonia
             TxtNewVersion.Foreground = new SolidColorBrush(Color.Parse("#10B981"));
 
             IconCardHeader.Kind = MaterialIconKind.FormatListBulleted;
-            IconCardHeader.Foreground = (IBrush)this.FindResource("SukiPrimaryColor")!;
+            IconCardHeader.Foreground = GetThemeBrush("SukiPrimaryColor", Brushes.DeepSkyBlue);
             TxtCardHeader.Text = "Що нового в цій версії:";
 
             PanelProgress.IsVisible = false;
@@ -432,7 +455,7 @@ namespace ScreenShot_One_Avalonia
                 return $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
             }
 
-            return "2.5.0";
+            return "2.5.1";
         }
 
         public static async Task CheckAndShowAsync(bool isManual = true)
