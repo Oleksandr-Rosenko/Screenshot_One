@@ -13,16 +13,22 @@
   - `MainWindow` — оверлей виділення зони для скріншота.
   - `EditorWindow` — редактор скріншотів (~1900 рядків code-behind): фігури (`ShapeType`), undo/redo, обрізка, вставка, копіювання, завантаження.
   - `HistoryWindow` + `HistoryManager` — історія. Файли `{id}_original.png`, `{id}_flattened.png`, `{id}_meta.json`; ліміт 500; ID `yyyyMMdd_HHmmss_fff`.
+    Редактор зберігає через `HistoryManager.ReserveId` + `SaveScreenshotInBackground` (фонова черга; `_flattened.png` пишеться останнім і атомарно). Перед виходом/оновленням — `HistoryManager.WaitForPendingSaves`.
   - `VideoControlWindow`, `VideoRegionWindow`, `VideoRecorderManager` — запис відео. На Windows ScreenRecorderLib, на macOS ffmpeg. Інтерфейс `IVideoRecorderService`.
   - `VideoEditorWindow` — відеоплеєр (LibVLCSharp) і обрізка (ffmpeg).
   - `ScreenCaptureService` (`IScreenCaptureService`: Windows/Mac/Linux), `ScreenService`, `PlatformHelper` — платформна логіка.
+    Windows: GDI `CopyFromScreen` + пряме копіювання пікселів (`LockBits`). Mac: `MacCoreGraphics` (CoreGraphics `CGDisplayCreateImage`), запасний шлях — `/usr/sbin/screencapture`.
+  - `BitmapPixels` — обрізка / копіювання / зміна DPI бітмапів у пам'яті (без PNG). DPI знімка = 96 × `Screen.Scaling`; редактор нормалізує вхід до 96 DPI (PNG з історії завжди читається з 96).
+  - `MacPermissions` — перевірка дозволу «Запис екрана» (macOS). `MacUpdateChecker` — оновлення на Mac через GitHub API (Velopack на Mac не використовується).
+  - `VlcShared` — один `LibVLC` на всю програму (прогрів у фоні); `VlcShared.ReplaceMedia` звільняє попередній `Media`.
+  - `CrashReport` — `logs\last_crash.txt` при падінні + пропозиція відкрити журнал при наступному запуску.
   - `HotkeyService` — глобальні клавіші. Windows: low-level hook в окремому потоці; macOS: Carbon `RegisterEventHotKey`.
   - `SettingsManager` / `AppSettings` — `settings.json`, міграції (`SettingsVersion`), тема, автозапуск.
   - `UpdateWindow` — оновлення через Velopack (`GithubSource`, без токена).
   - `GoogleDriveManager` (scope `DriveFile`, файли публічні за посиланням), `PublicCloudManager` (catbox.moe).
   - `UploadConsent` — одноразове попередження про публічні посилання.
   - `AppLog` — файловий лог.
-- `ScreenShot_One_Avalonia.Tests/UnitTest1.cs` — xUnit, ціль `net10.0-windows`.
+- `ScreenShot_One_Avalonia.Tests/` — xUnit, ціль `net10.0-windows`. `UnitTest1.cs` — переважно перевірки рядків у коді; `BehaviorTests.cs` — тести поведінки (headless Avalonia + Skia через `HeadlessAvalonia.EnsureInitialized()`; паралельний запуск вимкнено).
 
 Дані користувача: `%LocalAppData%\Screenshot_One` (macOS: `~/Library/Application Support/Screenshot_One`). Там лежать `settings.json`, `Screenshots\`, `logs\app.log`, `token.json` (Google OAuth).
 
@@ -65,7 +71,7 @@ dotnet test ScreenShot_One_Avalonia.Tests -p:Platform=x64
 4. Теги релізів — версія без `v` (`2.5.4`). Velopack-id пакета `ScreenShotOne`.
 
 Запасний спосіб — `Deploy.ps1` на Windows-машині автора (потрібні `credentials.json`, `ffmpeg.exe`, токен).
-macOS-архіви збираються вручну `Build-MacApp.ps1` + `package_mac_zip.py`; автоматичний деплой поки робить тільки Windows.
+macOS-архіви (`Screenshot_One-vX.Y.Z-macOS-arm64.zip` / `-x64.zip`) збирає job `macos` у `release.yml` (`Build-MacApp.ps1 -Arch all`) і докладає до того самого релізу. Якщо архівів у релізі немає — повторний ручний запуск Release їх додасть.
 
 CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і збірка під macOS при кожному push у `main`/`claude/**` і в PR.
 
@@ -75,6 +81,9 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 - **Без порожніх `catch { }`.** Використовуйте `AppLog.Warn(ex)` для проігнорованих помилок, `AppLog.Error(ex, "контекст")` для серйозних, `AppLog.Write("...")` замість `Debug.WriteLine` (у Release він вирізається).
 - Помилки, які впливають на користувача (не зберіглось, не завантажилось), показувати через `MessageBoxManager.GetMessageBoxStandard(...)` або toast.
 - Нові вікна з трею або гарячих клавіш відкривати через `ShowSingle(() => new XWindow())`.
+- Жодних PNG-кодувань «туди й назад» для обрізки/копіювання — використовуйте `BitmapPixels`.
+- Тимчасові `RenderTargetBitmap` звільняти (`Dispose`) одразу після використання; RTB не передавати у фонові потоки (може бути на GPU) — спершу `BitmapPixels.Crop` у звичайну пам'ять.
+- Фонові задачі запускати як `SomethingAsync().FireAndForget("контекст")`, а не `async void` (окрім обробників подій).
 - Перед будь-яким новим завантаженням у хмару викликати `await UploadConsent.ConfirmAsync(this)`.
 - Нові поля в `AppSettings` мають безпечне значення за замовчуванням (старий `settings.json` без поля повинен читатися). Разові міграції робити через `SettingsManager.Migrate` + `CurrentSettingsVersion`.
 - Платформний код ховати за `IScreenCaptureService` / `IVideoRecorderService` / `#if WINDOWS` / `OperatingSystem.IsMacOS()`.
@@ -88,13 +97,13 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 ## Заплановані покращення (беклог)
 
 1. Розбити `EditorWindow.axaml.cs` на окремі класи: інструменти малювання (`IShapeTool`), undo/redo, обрізка, буфер обміну, завантаження. Або перейти на MVVM.
-2. Замінити тести «код містить рядок» на тести поведінки (серіалізація, обрізка, undo/redo, міграції).
+2. Замінити решту тестів «код містить рядок» у `UnitTest1.cs` на тести поведінки (`BehaviorTests.cs`).
 3. Історія займає багато місця: два PNG на скріншот + Base64 вставок у JSON. Варіанти: зберігати оригінал і фігури, а підсумкову картинку рендерити за потреби; вставки тримати окремими файлами.
-4. Зберігати в історію у фоновому потоці, щоб не блокувати UI на великих екранах.
-5. `WindowsScreenCaptureService.CaptureRect` кодує PNG і декодує назад: копіювати пікселі напряму у `WriteableBitmap` через `LockBits`.
-6. Додати в `release.yml` збірку й публікацію macOS-архівів (`osx-arm64`, `osx-x64`).
-7. `async void` поза обробниками подій (наприклад `PasteSecondImageFromClipboard`) переробити на `async Task`.
+4. Відеоредактор: ~20 «магічних» `Task.Delay` маскують гонки VLC — замінити на події `MediaPlayer` (Playing, LengthChanged, EndReached). Робити обережно, з ручною перевіркою.
+5. Mac: нативний знімок через `CGDisplayCreateImage` позначений Apple як застарілий (macOS 14+); на перспективу — ScreenCaptureKit. Зараз при збої автоматично працює `screencapture`.
+6. Mac: підпис і нотаризація `.app` (зараз користувач знімає карантин `xattr -cr`); вбудувати `ffmpeg` у бандл.
 
 ## Історія ключових змін
 
+- 2.5.5 — захоплення й обрізка в пам'яті (Win/Mac), нативний знімок CoreGraphics на Mac, DPI/Retina-виправлення, фонове збереження історії, звільнення пам'яті в редакторі, спільний LibVLC, Mac: дозвіл «Запис екрана», LaunchAgent-автозапуск, оновлення через GitHub, архіви в автодеплої; звіт про падіння; тести поведінки.
 - 2.5.4 — відновлено форматування (зайві порожні рядки); `AppLog`; унікальні ID історії; `ShowSingle`; `UploadConsent`; CI та автоматичний деплой через GitHub Actions; README.
