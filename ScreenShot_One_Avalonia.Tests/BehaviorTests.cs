@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Xml.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Media.Imaging;
@@ -15,22 +16,34 @@ using Xunit;
 namespace ScreenShot_One_Avalonia.Tests
 {
     /// <summary>Один раз ініціалізує Avalonia з headless-платформою і Skia (потрібно для створення бітмапів).</summary>
+    /// <summary>
+    /// Avalonia в тестах — на ОДНОМУ виділеному UI-потоці (HeadlessUnitTestSession).
+    /// Раніше платформа ініціалізувалась у потоці першого тесту, а наступні тести працювали з бітмапами
+    /// в інших потоках; залежно від порядку запуску тест-сесія зависала (так зупинився перший деплой 2.6.0).
+    /// </summary>
     internal static class HeadlessAvalonia
     {
-        private static readonly object _lock = new object();
-        private static bool _initialized;
-
-        public static void EnsureInitialized()
+        public sealed class TestAppBuilder
         {
-            lock (_lock)
-            {
-                if (_initialized) return;
-                AppBuilder.Configure<Application>()
-                    .UseSkia()
-                    .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
-                    .SetupWithoutStarting();
-                _initialized = true;
-            }
+            public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<Application>()
+                .UseSkia()
+                .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
+        }
+
+        private static readonly Lazy<HeadlessUnitTestSession> _session =
+            new Lazy<HeadlessUnitTestSession>(() => HeadlessUnitTestSession.StartNew(typeof(TestAppBuilder)));
+
+        /// <summary>Виконує тіло тесту в UI-потоці Avalonia й чекає завершення (з тайм-аутом, щоб не висіти вічно).</summary>
+        public static void Run(Action body)
+        {
+            using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMinutes(2));
+            _session.Value.Dispatch(body, cts.Token).GetAwaiter().GetResult();
+        }
+
+        public static Task RunAsync(Func<Task> body)
+        {
+            Func<Task<bool>> wrapped = async () => { await body(); return true; };
+            return _session.Value.Dispatch<bool>(wrapped, System.Threading.CancellationToken.None).WaitAsync(TimeSpan.FromMinutes(2));
         }
     }
 
@@ -66,72 +79,80 @@ namespace ScreenShot_One_Avalonia.Tests
         [Fact]
         public void BitmapPixels_Crop_CopiesCorrectRegion_AndKeepsDpi()
         {
-            HeadlessAvalonia.EnsureInitialized();
-            using var src = MakeGradient(40, 30, scaling: 1.5);
-            Assert.Equal(144, src.Dpi.X, 3);
+            HeadlessAvalonia.Run(() =>
+            {
+                using var src = MakeGradient(40, 30, scaling: 1.5);
+                Assert.Equal(144, src.Dpi.X, 3);
 
-            using var crop = BitmapPixels.Crop(src, new PixelRect(10, 5, 12, 8));
-            Assert.NotNull(crop);
-            Assert.Equal(new PixelSize(12, 8), crop!.PixelSize);
-            Assert.Equal(src.Dpi, crop.Dpi);
+                using var crop = BitmapPixels.Crop(src, new PixelRect(10, 5, 12, 8));
+                Assert.NotNull(crop);
+                Assert.Equal(new PixelSize(12, 8), crop!.PixelSize);
+                Assert.Equal(src.Dpi, crop.Dpi);
 
-            var px = ReadPixels(crop);
-            Assert.Equal(10, px[0]);               // перший піксель = (10, 5)
-            Assert.Equal(5, px[1]);
-            Assert.Equal(21, px[px.Length - 4]);   // останній піксель = (21, 12)
-            Assert.Equal(12, px[px.Length - 3]);
+                var px = ReadPixels(crop);
+                Assert.Equal(10, px[0]);               // перший піксель = (10, 5)
+                Assert.Equal(5, px[1]);
+                Assert.Equal(21, px[px.Length - 4]);   // останній піксель = (21, 12)
+                Assert.Equal(12, px[px.Length - 3]);
+            });
         }
 
         [Fact]
         public void BitmapPixels_Crop_ClampsToBounds_AndRejectsEmpty()
         {
-            HeadlessAvalonia.EnsureInitialized();
-            using var src = MakeGradient(40, 30);
+            HeadlessAvalonia.Run(() =>
+            {
+                using var src = MakeGradient(40, 30);
 
-            using var clamped = BitmapPixels.Crop(src, new PixelRect(35, 25, 20, 20));
-            Assert.NotNull(clamped);
-            Assert.Equal(new PixelSize(5, 5), clamped!.PixelSize);
+                using var clamped = BitmapPixels.Crop(src, new PixelRect(35, 25, 20, 20));
+                Assert.NotNull(clamped);
+                Assert.Equal(new PixelSize(5, 5), clamped!.PixelSize);
 
-            Assert.Null(BitmapPixels.Crop(src, new PixelRect(5, 5, 0, 3)));
+                Assert.Null(BitmapPixels.Crop(src, new PixelRect(5, 5, 0, 3)));
+            });
         }
 
         [Fact]
         public void BitmapPixels_WithDpi_ChangesDpiButNotPixels()
         {
-            HeadlessAvalonia.EnsureInitialized();
-            using var src = MakeGradient(16, 9, scaling: 2.0);
-            using var normalized = BitmapPixels.WithDpi(src, BitmapPixels.Dpi96);
+            HeadlessAvalonia.Run(() =>
+            {
+                using var src = MakeGradient(16, 9, scaling: 2.0);
+                using var normalized = BitmapPixels.WithDpi(src, BitmapPixels.Dpi96);
 
-            Assert.Equal(BitmapPixels.Dpi96, normalized.Dpi);
-            Assert.Equal(src.PixelSize, normalized.PixelSize);
-            Assert.Equal(ReadPixels(src), ReadPixels(normalized));
-            // Той самий DPI — без зайвої копії
-            Assert.Same(normalized, BitmapPixels.WithDpi(normalized, BitmapPixels.Dpi96));
+                Assert.Equal(BitmapPixels.Dpi96, normalized.Dpi);
+                Assert.Equal(src.PixelSize, normalized.PixelSize);
+                Assert.Equal(ReadPixels(src), ReadPixels(normalized));
+                // Той самий DPI — без зайвої копії
+                Assert.Same(normalized, BitmapPixels.WithDpi(normalized, BitmapPixels.Dpi96));
+            });
         }
 
         [Fact]
         public void BitmapPixels_Scale_WorksForRenderTargetAndWriteableBitmaps()
         {
             // Регрес 2.6.0: вбудований CreateScaledBitmap кидав «Invalid source bitmap type» для цих типів
-            HeadlessAvalonia.EnsureInitialized();
-            using var rtb = new RenderTargetBitmap(new PixelSize(40, 20), BitmapPixels.Dpi96);
-            using (var dc = rtb.CreateDrawingContext())
+            HeadlessAvalonia.Run(() =>
             {
-                dc.FillRectangle(Avalonia.Media.Brushes.Red, new Rect(0, 0, 20, 20));
-                dc.FillRectangle(Avalonia.Media.Brushes.Blue, new Rect(20, 0, 20, 20));
-            }
-            using var writeable = BitmapPixels.Crop(rtb, new PixelRect(0, 0, 40, 20))!;
+                using var rtb = new RenderTargetBitmap(new PixelSize(40, 20), BitmapPixels.Dpi96);
+                using (var dc = rtb.CreateDrawingContext())
+                {
+                    dc.FillRectangle(Avalonia.Media.Brushes.Red, new Rect(0, 0, 20, 20));
+                    dc.FillRectangle(Avalonia.Media.Brushes.Blue, new Rect(20, 0, 20, 20));
+                }
+                using var writeable = BitmapPixels.Crop(rtb, new PixelRect(0, 0, 40, 20))!;
 
-            foreach (Bitmap source in new Bitmap[] { rtb, writeable })
-            {
-                using var up = BitmapPixels.Scale(source, new PixelSize(80, 40));
-                Assert.Equal(new PixelSize(80, 40), up.PixelSize);
+                foreach (Bitmap source in new Bitmap[] { rtb, writeable })
+                {
+                    using var up = BitmapPixels.Scale(source, new PixelSize(80, 40));
+                    Assert.Equal(new PixelSize(80, 40), up.PixelSize);
 
-                using var down = BitmapPixels.Scale(source, new PixelSize(4, 2), Avalonia.Media.Imaging.BitmapInterpolationMode.None);
-                var px = ReadPixels(down);
-                Assert.Equal(255, px[2]);              // лівий піксель червоний
-                Assert.Equal(255, px[3 * 4]);          // правий піксель синій (B)
-            }
+                    using var down = BitmapPixels.Scale(source, new PixelSize(4, 2), Avalonia.Media.Imaging.BitmapInterpolationMode.None);
+                    var px = ReadPixels(down);
+                    Assert.Equal(255, px[2]);              // лівий піксель червоний
+                    Assert.Equal(255, px[3 * 4]);          // правий піксель синій (B)
+                }
+            });
         }
 
         [Fact]

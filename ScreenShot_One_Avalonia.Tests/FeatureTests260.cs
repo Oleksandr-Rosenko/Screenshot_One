@@ -21,32 +21,34 @@ namespace ScreenShot_One_Avalonia.Tests
         public async Task OcrService_RecognizesRenderedText_OnWindows()
         {
             if (!OperatingSystem.IsWindows()) return;
-            HeadlessAvalonia.EnsureInitialized();
-
-            using var rtb = new RenderTargetBitmap(new PixelSize(900, 200), BitmapPixels.Dpi96);
-            using (var dc = rtb.CreateDrawingContext())
+            await HeadlessAvalonia.RunAsync(async () =>
             {
-                dc.FillRectangle(Brushes.White, new Rect(0, 0, 900, 200));
-                var text = new FormattedText("Screenshot One 2026", CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
-                    new Typeface("Arial", FontStyle.Normal, FontWeight.Bold), 56, Brushes.Black);
-                dc.DrawText(text, new Point(40, 60));
-            }
 
-            string recognized;
-            try
-            {
-                recognized = await OcrService.RecognizeAsync(rtb);
-            }
-            catch (OcrUnavailableException ex)
-            {
-                // На машині без мовних пакетів OCR перевірити неможливо — це не помилка коду
-                _output.WriteLine("OCR недоступний: " + ex.Message);
-                return;
-            }
+                using var rtb = new RenderTargetBitmap(new PixelSize(900, 200), BitmapPixels.Dpi96);
+                using (var dc = rtb.CreateDrawingContext())
+                {
+                    dc.FillRectangle(Brushes.White, new Rect(0, 0, 900, 200));
+                    var text = new FormattedText("Screenshot One 2026", CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+                        new Typeface("Arial", FontStyle.Normal, FontWeight.Bold), 56, Brushes.Black);
+                    dc.DrawText(text, new Point(40, 60));
+                }
 
-            _output.WriteLine("Розпізнано: " + recognized);
-            Assert.Contains("Screenshot", recognized, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("2026", recognized);
+                string recognized;
+                try
+                {
+                    recognized = await OcrService.RecognizeAsync(rtb);
+                }
+                catch (OcrUnavailableException ex)
+                {
+                    // На машині без мовних пакетів OCR перевірити неможливо — це не помилка коду
+                    _output.WriteLine("OCR недоступний: " + ex.Message);
+                    return;
+                }
+
+                _output.WriteLine("Розпізнано: " + recognized);
+                Assert.Contains("Screenshot", recognized, StringComparison.OrdinalIgnoreCase);
+                Assert.Contains("2026", recognized);
+            });
         }
 
         [Fact]
@@ -87,28 +89,30 @@ namespace ScreenShot_One_Avalonia.Tests
         [Fact]
         public void ImageExport_SavesPngAndJpeg()
         {
-            HeadlessAvalonia.EnsureInitialized();
-            using var rtb = new RenderTargetBitmap(new PixelSize(64, 48), BitmapPixels.Dpi96);
-            using (var dc = rtb.CreateDrawingContext())
-                dc.FillRectangle(Brushes.OrangeRed, new Rect(0, 0, 64, 48));
-
-            string dir = Path.Combine(Path.GetTempPath(), "sso_test_" + Guid.NewGuid().ToString("N"));
-            try
+            HeadlessAvalonia.Run(() =>
             {
-                string png = Path.Combine(dir, "t.png");
-                string jpg = Path.Combine(dir, "t.jpg");
-                ImageExport.Save(rtb, png);
-                ImageExport.Save(rtb, jpg);
+                using var rtb = new RenderTargetBitmap(new PixelSize(64, 48), BitmapPixels.Dpi96);
+                using (var dc = rtb.CreateDrawingContext())
+                    dc.FillRectangle(Brushes.OrangeRed, new Rect(0, 0, 64, 48));
 
-                byte[] pngBytes = File.ReadAllBytes(png);
-                byte[] jpgBytes = File.ReadAllBytes(jpg);
-                Assert.Equal(0x89, pngBytes[0]); Assert.Equal((byte)'P', pngBytes[1]); // сигнатура PNG
-                Assert.Equal(0xFF, jpgBytes[0]); Assert.Equal(0xD8, jpgBytes[1]);      // сигнатура JPEG
+                string dir = Path.Combine(Path.GetTempPath(), "sso_test_" + Guid.NewGuid().ToString("N"));
+                try
+                {
+                    string png = Path.Combine(dir, "t.png");
+                    string jpg = Path.Combine(dir, "t.jpg");
+                    ImageExport.Save(rtb, png);
+                    ImageExport.Save(rtb, jpg);
 
-                using var reloaded = new Bitmap(jpg);
-                Assert.Equal(new PixelSize(64, 48), reloaded.PixelSize);
-            }
-            finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+                    byte[] pngBytes = File.ReadAllBytes(png);
+                    byte[] jpgBytes = File.ReadAllBytes(jpg);
+                    Assert.Equal(0x89, pngBytes[0]); Assert.Equal((byte)'P', pngBytes[1]); // сигнатура PNG
+                    Assert.Equal(0xFF, jpgBytes[0]); Assert.Equal(0xD8, jpgBytes[1]);      // сигнатура JPEG
+
+                    using var reloaded = new Bitmap(jpg);
+                    Assert.Equal(new PixelSize(64, 48), reloaded.PixelSize);
+                }
+                finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+            });
         }
 
         [Fact]
