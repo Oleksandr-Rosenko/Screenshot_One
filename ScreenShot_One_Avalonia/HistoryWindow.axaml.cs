@@ -158,7 +158,9 @@ namespace ScreenShot_One_Avalonia
 
         private int _loadHistoryVersion = 0;
 
-        private async void LoadHistory()
+        private void LoadHistory() => LoadHistoryAsync().FireAndForget("Завантаження історії");
+
+        private async Task LoadHistoryAsync()
         {
             int currentVersion = ++_loadHistoryVersion;
 

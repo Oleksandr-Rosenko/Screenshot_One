@@ -409,7 +409,9 @@ namespace ScreenShot_One_Avalonia.Tests
             Assert.Contains("return id;", historyCode);
 
             string editorCode = File.ReadAllText(GetSourceFilePath("EditorWindow.axaml.cs"));
-            Assert.Contains("_editingId = HistoryManager.SaveScreenshot", editorCode);
+            // Редактор резервує ID синхронно, а сам запис іде у фоні (HistoryManager.SaveScreenshotInBackground)
+            Assert.Contains("_editingId = HistoryManager.ReserveId(_editingId);", editorCode);
+            Assert.Contains("HistoryManager.SaveScreenshotInBackground(_editingId", editorCode);
             Assert.Contains("if (!_isSavedToHistory)", editorCode);
             Assert.Contains("SaveToHistoryDatabase(rtb);", editorCode);
         }

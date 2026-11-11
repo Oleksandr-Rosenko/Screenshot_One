@@ -9,7 +9,8 @@ namespace ScreenShot_One_Avalonia
 {
     public interface IScreenCaptureService
     {
-        Bitmap? CaptureRect(PixelRect rect);
+        /// <param name="scaling">Масштаб екрана (Screen.Scaling) — визначає DPI знімка, щоб редактор і лупа показували його 1:1.</param>
+        Bitmap? CaptureRect(PixelRect rect, double scaling = 1.0);
         Bitmap? CaptureScreen(Screen screen);
         Bitmap? CaptureAllScreens();
         Bitmap? CropBitmap(Bitmap source, PixelRect cropRect);
@@ -47,20 +48,28 @@ namespace ScreenShot_One_Avalonia
 #if WINDOWS
     public class WindowsScreenCaptureService : IScreenCaptureService
     {
-        public Bitmap? CaptureRect(PixelRect rect)
+        public Bitmap? CaptureRect(PixelRect rect, double scaling = 1.0)
         {
             if (rect.Width <= 0 || rect.Height <= 0) return null;
             try
             {
-                using var bmp = new System.Drawing.Bitmap(rect.Width, rect.Height);
+                using var bmp = new System.Drawing.Bitmap(rect.Width, rect.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
                 using (var g = System.Drawing.Graphics.FromImage(bmp))
                 {
                     g.CopyFromScreen(rect.X, rect.Y, 0, 0, bmp.Size);
                 }
-                using var ms = new MemoryStream();
-                bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                ms.Position = 0;
-                return new Bitmap(ms);
+
+                // Пряме копіювання пікселів (Format32bppArgb у пам'яті — це BGRA) замість кодування PNG і декодування назад
+                var data = bmp.LockBits(new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height),
+                    System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                try
+                {
+                    return BitmapPixels.FromBgra(data.Scan0, bmp.Width, bmp.Height, data.Stride, scaling);
+                }
+                finally
+                {
+                    bmp.UnlockBits(data);
+                }
             }
             catch (Exception ex)
             {
@@ -71,7 +80,7 @@ namespace ScreenShot_One_Avalonia
 
         public Bitmap? CaptureScreen(Screen screen)
         {
-            return CaptureRect(screen.Bounds);
+            return CaptureRect(screen.Bounds, screen.Scaling);
         }
 
         public Bitmap? CaptureAllScreens()
@@ -85,23 +94,7 @@ namespace ScreenShot_One_Avalonia
             if (cropRect.Width <= 0 || cropRect.Height <= 0) return null;
             try
             {
-                using var ms = new MemoryStream();
-                source.Save(ms);
-                ms.Position = 0;
-                using var sysBmp = new System.Drawing.Bitmap(ms);
-
-                int x = Math.Clamp(cropRect.X, 0, sysBmp.Width - 1);
-                int y = Math.Clamp(cropRect.Y, 0, sysBmp.Height - 1);
-                int w = Math.Min(cropRect.Width, sysBmp.Width - x);
-                int h = Math.Min(cropRect.Height, sysBmp.Height - y);
-
-                if (w <= 0 || h <= 0) return null;
-
-                using var cropped = sysBmp.Clone(new System.Drawing.Rectangle(x, y, w, h), sysBmp.PixelFormat);
-                using var outMs = new MemoryStream();
-                cropped.Save(outMs, System.Drawing.Imaging.ImageFormat.Png);
-                outMs.Position = 0;
-                return new Bitmap(outMs);
+                return BitmapPixels.Crop(source, cropRect);
             }
             catch (Exception ex)
             {
@@ -113,130 +106,129 @@ namespace ScreenShot_One_Avalonia
 #else
     public class WindowsScreenCaptureService : IScreenCaptureService
     {
-        public Bitmap? CaptureRect(PixelRect rect) => null;
+        public Bitmap? CaptureRect(PixelRect rect, double scaling = 1.0) => null;
         public Bitmap? CaptureScreen(Screen screen) => null;
         public Bitmap? CaptureAllScreens() => null;
         public Bitmap? CropBitmap(Bitmap source, PixelRect cropRect) => null;
     }
 #endif
 
+    /// <summary>
+    /// macOS: спершу нативний CoreGraphics (швидко, у пам'яті, коректно для Retina і кількох моніторів),
+    /// а якщо він не спрацював — старий перевірений шлях через /usr/sbin/screencapture.
+    /// </summary>
     public class MacScreenCaptureService : IScreenCaptureService
     {
-        public Bitmap? CaptureRect(PixelRect rect)
+        private bool _nativeBroken;
+
+        private Bitmap? TryNative(Func<Bitmap?> capture)
         {
-            if (rect.Width <= 0 || rect.Height <= 0) return null;
-            string tempFile = Path.Combine(Path.GetTempPath(), $"shot_{Guid.NewGuid():N}.png");
+            if (_nativeBroken) return null;
             try
             {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "/usr/sbin/screencapture",
-                    Arguments = $"-x -R {rect.X},{rect.Y},{rect.Width},{rect.Height} \"{tempFile}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                using var proc = Process.Start(psi);
-                proc?.WaitForExit(5000);
-
-                if (File.Exists(tempFile))
-                {
-                    using var fs = File.OpenRead(tempFile);
-                    return new Bitmap(fs);
-                }
+                return capture();
             }
             catch (Exception ex)
             {
-                AppLog.Write($"[MacScreenCapture] Error: {ex.Message}");
+                // DllNotFound / EntryPointNotFound тощо — більше не пробуємо в цій сесії
+                _nativeBroken = true;
+                AppLog.Error(ex, "Нативне захоплення CoreGraphics недоступне, використовуємо screencapture");
+                return null;
             }
-            finally
-            {
-                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch (Exception logEx) { AppLog.Warn(logEx); }
-            }
-            return null;
+        }
+
+        public Bitmap? CaptureRect(PixelRect rect, double scaling = 1.0)
+        {
+            if (rect.Width <= 0 || rect.Height <= 0) return null;
+            return TryNative(() => MacCoreGraphics.CaptureRect(rect)) ?? CaptureRectViaTool(rect, scaling);
         }
 
         public Bitmap? CaptureScreen(Screen screen)
         {
-            return CaptureRect(screen.Bounds);
+            return CaptureRect(screen.Bounds, screen.Scaling);
         }
 
         public Bitmap? CaptureAllScreens()
         {
-            string tempFile = Path.Combine(Path.GetTempPath(), $"shot_all_{Guid.NewGuid():N}.png");
-            try
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "/usr/sbin/screencapture",
-                    Arguments = $"-x \"{tempFile}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                using var proc = Process.Start(psi);
-                proc?.WaitForExit(5000);
-
-                if (File.Exists(tempFile))
-                {
-                    using var fs = File.OpenRead(tempFile);
-                    return new Bitmap(fs);
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLog.Write($"[MacScreenCapture] Error: {ex.Message}");
-            }
-            finally
-            {
-                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch (Exception logEx) { AppLog.Warn(logEx); }
-            }
-            return null;
+            return TryNative(MacCoreGraphics.CaptureAllDisplays) ?? CaptureAllScreensViaTool();
         }
 
         public Bitmap? CropBitmap(Bitmap source, PixelRect cropRect)
         {
             if (cropRect.Width <= 0 || cropRect.Height <= 0) return null;
-            string tempIn = Path.Combine(Path.GetTempPath(), $"crop_in_{Guid.NewGuid():N}.png");
-            string tempOut = Path.Combine(Path.GetTempPath(), $"crop_out_{Guid.NewGuid():N}.png");
             try
             {
-                using (var fs = File.Create(tempIn))
-                {
-                    source.Save(fs);
-                }
-
-                // Apple sips: -c <height> <width> --cropOffset <offsetY> <offsetX>
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "/usr/bin/sips",
-                    Arguments = $"-c {cropRect.Height} {cropRect.Width} --cropOffset {cropRect.Y} {cropRect.X} \"{tempIn}\" --out \"{tempOut}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                using var proc = Process.Start(psi);
-                proc?.WaitForExit(3000);
-
-                if (File.Exists(tempOut))
-                {
-                    using var outFs = File.OpenRead(tempOut);
-                    return new Bitmap(outFs);
-                }
+                // Раніше: зберегти PNG → запустити sips → прочитати PNG. Тепер — копіювання в пам'яті.
+                return BitmapPixels.Crop(source, cropRect);
             }
             catch (Exception ex)
             {
                 AppLog.Write($"[MacScreenCapture] Crop error: {ex.Message}");
+                return null;
+            }
+        }
+
+        // ---- Запасний шлях через системну утиліту screencapture ----
+
+        private static Bitmap? LoadWithScaling(string file, double scaling)
+        {
+            // PNG від screencapture на Retina має 144 dpi (а не 192), тож Size не збігався з екраном.
+            // Перекладаємо пікселі в бітмап із DPI = 96 × масштаб екрана.
+            using var fs = File.OpenRead(file);
+            var decoded = new Bitmap(fs);
+            var result = BitmapPixels.WithDpi(decoded, BitmapPixels.DpiForScaling(scaling));
+            if (!ReferenceEquals(result, decoded)) decoded.Dispose();
+            return result;
+        }
+
+        private static Bitmap? RunScreencapture(string arguments, string tempFile, double scaling)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "/usr/sbin/screencapture",
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                using var proc = Process.Start(psi);
+                proc?.WaitForExit(5000);
+
+                if (File.Exists(tempFile)) return LoadWithScaling(tempFile, scaling);
+            }
+            catch (Exception ex)
+            {
+                AppLog.Write($"[MacScreenCapture] Error: {ex.Message}");
             }
             finally
             {
-                try { if (File.Exists(tempIn)) File.Delete(tempIn); } catch (Exception logEx) { AppLog.Warn(logEx); }
-                try { if (File.Exists(tempOut)) File.Delete(tempOut); } catch (Exception logEx) { AppLog.Warn(logEx); }
+                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch (Exception logEx) { AppLog.Warn(logEx); }
             }
             return null;
+        }
+
+        private static Bitmap? CaptureRectViaTool(PixelRect rect, double scaling)
+        {
+            // screencapture -R приймає ТОЧКИ, а rect — у пікселях Avalonia: ділимо на масштаб
+            // (раніше пікселі передавались як є, і на Retina/другому моніторі область зсувалась)
+            double s = scaling > 0 ? scaling : 1.0;
+            int x = (int)Math.Round(rect.X / s), y = (int)Math.Round(rect.Y / s);
+            int w = Math.Max(1, (int)Math.Round(rect.Width / s)), h = Math.Max(1, (int)Math.Round(rect.Height / s));
+            string tempFile = Path.Combine(Path.GetTempPath(), $"shot_{Guid.NewGuid():N}.png");
+            return RunScreencapture($"-x -R {x},{y},{w},{h} \"{tempFile}\"", tempFile, s);
+        }
+
+        private static Bitmap? CaptureAllScreensViaTool()
+        {
+            string tempFile = Path.Combine(Path.GetTempPath(), $"shot_all_{Guid.NewGuid():N}.png");
+            return RunScreencapture($"-x \"{tempFile}\"", tempFile, 1.0);
         }
     }
 
     public class LinuxScreenCaptureService : IScreenCaptureService
     {
-        public Bitmap? CaptureRect(PixelRect rect) => null;
+        public Bitmap? CaptureRect(PixelRect rect, double scaling = 1.0) => null;
         public Bitmap? CaptureScreen(Screen screen) => null;
         public Bitmap? CaptureAllScreens() => null;
         public Bitmap? CropBitmap(Bitmap source, PixelRect cropRect) => null;

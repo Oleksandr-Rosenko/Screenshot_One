@@ -92,6 +92,11 @@ namespace ScreenShot_One_Avalonia
                 SepBackToHistory.IsVisible = true;
             }
 
+            // Редактор завжди працює з 96 DPI (як і раніше): PNG з історії читається з 96 DPI,
+            // а знімок екрана тепер має DPI масштабу екрана — без нормалізації вони показувались би різним розміром.
+            var normalized = BitmapPixels.WithDpi(capturedImage, BitmapPixels.Dpi96);
+            if (!ReferenceEquals(normalized, capturedImage)) capturedImage.Dispose(); // редактор володіє переданим знімком
+            capturedImage = normalized;
             _originalImage = capturedImage;
             UpdateCanvasImage(capturedImage);
 
@@ -249,7 +254,7 @@ namespace ScreenShot_One_Avalonia
             }
         }
 
-        private async void PasteSecondImageFromClipboard()
+        private async System.Threading.Tasks.Task PasteSecondImageFromClipboardAsync()
         {
             try
             {
@@ -829,8 +834,14 @@ namespace ScreenShot_One_Avalonia
             int iw = (int)Math.Min(DrawingCanvas.Width - ix, width); int ih = (int)Math.Min(DrawingCanvas.Height - iy, height);
             if (iw <= 0 || ih <= 0) return;
 
-            var rtb = CreateRenderedBitmap();
-            var cropped = new CroppedBitmap(rtb, new PixelRect(ix, iy, iw, ih));
+            // Раніше CroppedBitmap тримав живим повнорозмірний рендер усього полотна — на КОЖНУ область розмиття.
+            // Тепер копіюємо лише потрібний фрагмент, а повний рендер одразу звільняємо.
+            Bitmap? cropped;
+            using (var rtb = CreateRenderedBitmap())
+            {
+                cropped = BitmapPixels.Crop(rtb, new PixelRect(ix, iy, iw, ih));
+            }
+            if (cropped == null) return;
 
             var blurImg = new Image { Source = cropped, Width = iw, Height = ih, Stretch = Stretch.Fill, Effect = new BlurEffect { Radius = 18 } };
             var container = new Border { Width = iw, Height = ih, Child = blurImg, ClipToBounds = true, Tag = ShapeType.Blur };
@@ -1329,19 +1340,12 @@ namespace ScreenShot_One_Avalonia
                 int intW = Math.Clamp((int)Math.Round(cropW), 1, Math.Max(1, maxW - intX));
                 int intH = Math.Clamp((int)Math.Round(cropH), 1, Math.Max(1, maxH - intY));
 
-                var croppedRtb = new RenderTargetBitmap(new PixelSize(intW, intH), new Vector(96, 96));
-                using (var ctx = croppedRtb.CreateDrawingContext())
-                {
-                    var sourceRect = new Rect(intX, intY, intW, intH);
-                    var destRect = new Rect(0, 0, intW, intH);
-                    ctx.DrawImage(rtb, sourceRect, destRect);
-                }
+                // Обрізка в пам'яті замість «другий RenderTargetBitmap → PNG → декодування»
+                var finalBmp = BitmapPixels.Crop(rtb, new PixelRect(intX, intY, intW, intH));
+                rtb.Dispose();
+                if (finalBmp == null) return;
 
-                using (var ms = new MemoryStream())
                 {
-                    croppedRtb.Save(ms);
-                    ms.Position = 0;
-                    var finalBmp = new Bitmap(ms);
 
                     _originalImage = finalBmp;
                     UpdateCanvasImage(finalBmp);
@@ -1566,7 +1570,7 @@ namespace ScreenShot_One_Avalonia
             {
                 if (_isSplitMode)
                 {
-                    PasteSecondImageFromClipboard();
+                    PasteSecondImageFromClipboardAsync().FireAndForget("Вставка другого зображення");
                 }
                 else
                 {
@@ -1631,15 +1635,12 @@ namespace ScreenShot_One_Avalonia
         }
 
         private RenderTargetBitmap CreateRenderedBitmap()
-
         {
-
-            double tempScale = _currentScale; _currentScale = 1.0; UpdateZoom(); DrawingCanvas.UpdateLayout();
-
+            // Зум реалізовано через батьківський LayoutTransformControl, а RenderTargetBitmap.Render(DrawingCanvas)
+            // трансформацій предків не враховує — тож перемикати зум на 1.0 і двічі перебудовувати розмітку
+            // (від цього полотно блимало й підвисало на кожному «Копіювати»/«Зберегти») не потрібно.
             int w = (int)DrawingCanvas.Width; int h = (int)DrawingCanvas.Height;
-
             if (w <= 0) w = 1;
-
             if (h <= 0) h = 1;
 
             var rtb = new RenderTargetBitmap(new PixelSize(w, h), new Vector(96, 96));
@@ -1655,21 +1656,33 @@ namespace ScreenShot_One_Avalonia
 
             foreach (var d in overlayDecorations) d.IsVisible = true;
 
-            _currentScale = tempScale; UpdateZoom(); DrawingCanvas.UpdateLayout();
-
             return rtb;
-
         }
 
         // ФІКС 1: Використовуємо вже створену картинку для збереження історії, щоб не рендерити двічі!
+
+        // Останнє фонове збереження в історію: при закритті редактора чекаємо його, перш ніж повертатися в історію
+        private Task _pendingHistorySave = Task.CompletedTask;
 
         private void SaveToHistoryDatabase(RenderTargetBitmap? rtb = null)
         {
             try
             {
+                bool ownsRender = rtb == null;
                 var finalRtb = rtb ?? CreateRenderedBitmap();
-                _editingId = HistoryManager.SaveScreenshot(_originalImage, finalRtb, ExtractShapes(), _editingId);
+
+                // Копія пікселів у звичайну пам'ять (швидко, у UI-потоці): RenderTargetBitmap може бути на GPU
+                // і ним ще користується викликач (буфер обміну, завантаження) — у фоновий потік його не віддаємо.
+                var snapshot = BitmapPixels.Crop(finalRtb, new PixelRect(0, 0, finalRtb.PixelSize.Width, finalRtb.PixelSize.Height));
+                if (ownsRender) finalRtb.Dispose();
+                if (snapshot == null) throw new InvalidOperationException("Порожнє зображення");
+
+                bool isNew = string.IsNullOrEmpty(_editingId);
+                _editingId = HistoryManager.ReserveId(_editingId);
+                var task = HistoryManager.SaveScreenshotInBackground(_editingId, isNew, _originalImage, snapshot, ExtractShapes(), snapshot);
                 _isSavedToHistory = true;
+                _pendingHistorySave = task;
+                _ = ReportHistorySaveErrorAsync(task);
             }
             catch (Exception ex)
             {
@@ -1680,19 +1693,35 @@ namespace ScreenShot_One_Avalonia
             }
         }
 
-        // ФІКС 2: ПОВЕРНУЛИ ПЕРЕВІРЕНИЙ КОД WINFORMS ДЛЯ WINDOWS
-        private async Task CopyImageToClipboardDirectly(Bitmap? sourceBitmap = null)
+        private async Task ReportHistorySaveErrorAsync(Task saveTask)
         {
             try
             {
+                await saveTask;
+            }
+            catch (Exception ex)
+            {
+                _isSavedToHistory = false;
+                await MessageBoxManager.GetMessageBoxStandard("Помилка", $"Не вдалося зберегти скріншот в історію: {ex.Message}").ShowWindowAsync();
+            }
+        }
+
+        // ФІКС 2: ПОВЕРНУЛИ ПЕРЕВІРЕНИЙ КОД WINFORMS ДЛЯ WINDOWS
+        private async Task CopyImageToClipboardDirectly(Bitmap? sourceBitmap = null)
+        {
+            string? tempPath = null;
+            try
+            {
                 var rtb = sourceBitmap ?? CreateRenderedBitmap();
-                string tempPath = Path.Combine(Path.GetTempPath(), $"clip_{Guid.NewGuid()}.png");
+                tempPath = Path.Combine(Path.GetTempPath(), $"clip_{Guid.NewGuid()}.png");
 
                 // Зберігаємо фізичний файл (це надійно фіксує всі пікселі)
                 using (var fs = new FileStream(tempPath, FileMode.Create))
                 {
                     rtb.Save(fs);
                 }
+                // Рендер, створений тут, далі не потрібен (буфер працює з файлом) — звільняємо одразу
+                if (sourceBitmap == null) rtb.Dispose();
 
                 if (OperatingSystem.IsWindows())
                 {
@@ -1745,8 +1774,17 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
+                AppLog.Error(ex, "Копіювання в буфер обміну");
                 var box = MessageBoxManager.GetMessageBoxStandard("Помилка Буфера", $"Помилка: {ex.Message}\n\nСтек: {ex.StackTrace}");
                 await box.ShowWindowDialogAsync(this);
+            }
+            finally
+            {
+                // Раніше clip_*.png лишався в %TEMP% після КОЖНОГО копіювання. Буфер обміну вже має власну копію даних.
+                if (tempPath != null)
+                {
+                    try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (Exception logEx) { AppLog.Warn(logEx); }
+                }
             }
         }
 
@@ -1764,6 +1802,7 @@ namespace ScreenShot_One_Avalonia
 
                 tempPath = Path.Combine(Path.GetTempPath(), $"upload_{Guid.NewGuid()}.png");
                 using (var fs = new FileStream(tempPath, FileMode.Create)) { rtb.Save(fs); }
+                rtb.Dispose();
 
                 string webLink = await GoogleDriveManager.UploadImageAsync(tempPath);
 
@@ -1812,6 +1851,7 @@ namespace ScreenShot_One_Avalonia
 
                 tempPath = Path.Combine(Path.GetTempPath(), $"upload_{Guid.NewGuid()}.png");
                 using (var fs = new FileStream(tempPath, FileMode.Create)) { rtb.Save(fs); }
+                rtb.Dispose();
 
                 string webLink = await PublicCloudManager.UploadImageAsync(tempPath);
 
@@ -1859,6 +1899,7 @@ namespace ScreenShot_One_Avalonia
 
                 // Викликаємо відремонтований буфер
                 await CopyImageToClipboardDirectly(rtb);
+                rtb.Dispose();
 
                 ToastText.Text = "Картинку скопійовано в буфер!";
                 ToastNotification.IsVisible = true;
@@ -1885,10 +1926,34 @@ namespace ScreenShot_One_Avalonia
             this.Close();
         }
 
-        protected override void OnClosed(EventArgs e)
+        protected override async void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
-            ReturnToHistoryIfNeeded();
+            try
+            {
+                // Історія перечитує файли з диска — чекаємо, поки фонове збереження допише їх
+                try { await _pendingHistorySave; } catch (Exception ex) { AppLog.Warn(ex); }
+                ReturnToHistoryIfNeeded();
+            }
+            finally
+            {
+                ReleaseImages();
+            }
+        }
+
+        /// <summary>
+        /// Звільняє повнорозмірні бітмапи (нативна пам'ять Skia, десятки МБ на 4K-скріншот).
+        /// Раніше вони жили до прибирання сміття, і програма в треї поступово «товстішала».
+        /// </summary>
+        private void ReleaseImages()
+        {
+            try
+            {
+                ScreenshotImage.Source = null;
+                SecondScreenshotImage.Source = null;
+                _originalImage?.Dispose();
+            }
+            catch (Exception ex) { AppLog.Warn(ex); }
         }
 }
 }

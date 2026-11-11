@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media.Imaging;
 
@@ -53,34 +54,105 @@ namespace ScreenShot_One_Avalonia
         /// тож два скріншоти за одну секунду перезаписували один одного в історії.
         /// Формат лишається сумісним зі старими записами (той самий префікс дати й часу).
         /// </summary>
+        private static readonly object _idLock = new object();
+        private static readonly HashSet<string> _reservedIds = new HashSet<string>();
+
         private static string GenerateUniqueId()
         {
-            string baseId = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-            string id = baseId;
-            int suffix = 1;
-            while (File.Exists(Path.Combine(HistoryFolderPath, $"{id}_flattened.png")))
-                id = $"{baseId}-{suffix++}";
-            return id;
+            lock (_idLock)
+            {
+                string baseId = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+                string id = baseId;
+                int suffix = 1;
+                // Перевіряємо і файли на диску, і ID, зарезервовані фоновими збереженнями, які ще не записались
+                while (_reservedIds.Contains(id) || File.Exists(Path.Combine(HistoryFolderPath, $"{id}_flattened.png")))
+                    id = $"{baseId}-{suffix++}";
+                _reservedIds.Add(id);
+                return id;
+            }
         }
+
+        /// <summary>Повертає ID для запису: існуючий (повторне збереження) або новий унікальний.</summary>
+        public static string ReserveId(string? existingId) => string.IsNullOrEmpty(existingId) ? GenerateUniqueId() : existingId;
 
         public static string SaveScreenshot(Bitmap original, Bitmap flattened, List<ShapeData> shapes, string? existingId = null)
         {
-            string id = string.IsNullOrEmpty(existingId) ? GenerateUniqueId() : existingId;
+            string id = ReserveId(existingId);
+            WriteFiles(id, original, flattened, shapes);
+            if (string.IsNullOrEmpty(existingId)) EnforceMaxLimit(500);
+            return id;
+        }
 
+        private static void WriteFiles(string id, Bitmap original, Bitmap flattened, List<ShapeData>? shapes)
+        {
             string originalPath = Path.Combine(HistoryFolderPath, $"{id}_original.png");
             string flattenedPath = Path.Combine(HistoryFolderPath, $"{id}_flattened.png");
             string jsonPath = Path.Combine(HistoryFolderPath, $"{id}_meta.json");
 
             using (var fs = new FileStream(originalPath, FileMode.Create)) { original.Save(fs); }
-            using (var fs = new FileStream(flattenedPath, FileMode.Create)) { flattened.Save(fs); }
 
             if (shapes != null)
             {
                 File.WriteAllText(jsonPath, JsonSerializer.Serialize(shapes, JsonOptions));
             }
 
-            if (string.IsNullOrEmpty(existingId)) EnforceMaxLimit(500);
-            return id;
+            // _flattened.png — «ознака» запису для вікна історії, тому пишемо його ОСТАННІМ і атомарно
+            // (через тимчасовий файл), щоб історія ніколи не побачила напівзаписаний PNG без метаданих.
+            string tempPath = flattenedPath + ".tmp";
+            using (var fs = new FileStream(tempPath, FileMode.Create)) { flattened.Save(fs); }
+            File.Move(tempPath, flattenedPath, overwrite: true);
+
+            lock (_idLock) { _reservedIds.Remove(id); }
+        }
+
+        // ---- Фонове збереження ----
+        // Кодування двох PNG для великого екрана займає сотні мілісекунд; раніше це блокувало редактор
+        // на кожному «Копіювати»/«Зберегти». Тепер записи йдуть у фоні строго по черзі (по одному).
+
+        private static readonly object _queueLock = new object();
+        private static Task _queueTail = Task.CompletedTask;
+
+        /// <summary>
+        /// Ставить збереження в чергу. Бітмапи мають бути «незмінними» (знімки), бо пишуться з фонового потоку;
+        /// disposeAfter — бітмапи, які черга звільнить після запису (тимчасові копії).
+        /// </summary>
+        public static Task SaveScreenshotInBackground(string id, bool isNew, Bitmap original, Bitmap flattened,
+            List<ShapeData> shapes, params IDisposable[] disposeAfter)
+        {
+            lock (_queueLock)
+            {
+                _queueTail = _queueTail.ContinueWith(_ =>
+                {
+                    try
+                    {
+                        WriteFiles(id, original, flattened, shapes);
+                        if (isNew) EnforceMaxLimit(500);
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLog.Error(ex, $"Фонове збереження {id}");
+                        lock (_idLock) { _reservedIds.Remove(id); }
+                        throw;
+                    }
+                    finally
+                    {
+                        foreach (var d in disposeAfter)
+                        {
+                            try { d.Dispose(); } catch (Exception ex) { AppLog.Warn(ex); }
+                        }
+                    }
+                }, TaskScheduler.Default);
+                return _queueTail;
+            }
+        }
+
+        /// <summary>Чекає, поки допишуться всі фонові збереження (напр. перед виходом із програми).</summary>
+        public static bool WaitForPendingSaves(TimeSpan timeout)
+        {
+            Task tail;
+            lock (_queueLock) { tail = _queueTail; }
+            try { return tail.Wait(timeout); }
+            catch (Exception ex) { AppLog.Warn(ex); return true; }
         }
 
         private static void EnforceMaxLimit(int maxCount)

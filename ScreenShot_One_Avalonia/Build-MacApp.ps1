@@ -8,7 +8,7 @@ param(
 $ErrorActionPreference = "Stop"
 $ScriptDir = $PSScriptRoot
 $ProjectFile = Join-Path $ScriptDir "ScreenShot_One_Avalonia.csproj"
-$DistDir = Join-Path $ScriptDir "dist\macOS"
+$DistDir = Join-Path $ScriptDir "dist/macOS"
 
 if (-not (Test-Path $DistDir)) {
     New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
@@ -20,13 +20,13 @@ foreach ($targetArch in $Architectures) {
     $rid = "osx-$targetArch"
     Write-Host "`n=== [macOS $targetArch] 1. Publishing .NET binary ($rid) ===" -ForegroundColor Cyan
 
-    $publishOut = Join-Path $ScriptDir "bin\$Configuration\net10.0\$rid\publish"
+    $publishOut = Join-Path $ScriptDir "bin/$Configuration/net10.0/$rid/publish"
 
     dotnet publish $ProjectFile -f net10.0 -r $rid -c $Configuration --self-contained true
     if ($LASTEXITCODE -ne 0) { throw "Publish failed for $rid" }
 
     $appBundleName = "Screenshot_One.app"
-    $bundleDir = Join-Path $DistDir "$targetArch\$appBundleName"
+    $bundleDir = Join-Path $DistDir "$targetArch/$appBundleName"
     $contentsDir = Join-Path $bundleDir "Contents"
     $macOSDir = Join-Path $contentsDir "MacOS"
     $resourcesDir = Join-Path $contentsDir "Resources"
@@ -39,7 +39,7 @@ foreach ($targetArch in $Architectures) {
     New-Item -ItemType Directory -Path $resourcesDir -Force | Out-Null
 
     # Copy published files into Contents/MacOS
-    Copy-Item -Path "$publishOut\*" -Destination $macOSDir -Recurse -Force
+    Copy-Item -Path "$publishOut/*" -Destination $macOSDir -Recurse -Force
 
     # Copy Info.plist
     $plistSrc = Join-Path $ScriptDir "Info.plist"
@@ -48,7 +48,7 @@ foreach ($targetArch in $Architectures) {
     }
 
     # Copy icon if available
-    $icoSrc = Join-Path $ScriptDir "Assets\icon.ico"
+    $icoSrc = Join-Path $ScriptDir "Assets/icon.ico"
     if (Test-Path $icoSrc) {
         Copy-Item -Path $icoSrc -Destination (Join-Path $resourcesDir "icon.ico") -Force
     }

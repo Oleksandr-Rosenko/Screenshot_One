@@ -208,6 +208,68 @@ namespace ScreenShot_One_Avalonia
             });
         }
 
+        private const string MacLaunchAgentLabel = "com.screenshotone.app";
+
+        /// <summary>Шлях до файлу автозапуску на Mac (~/Library/LaunchAgents/com.screenshotone.app.plist).</summary>
+        public static string MacLaunchAgentPath => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "LaunchAgents", MacLaunchAgentLabel + ".plist");
+
+        /// <summary>
+        /// Аргументи запуску для LaunchAgent: якщо програма запущена з .app-бандла — «open -a Шлях.app»
+        /// (так macOS запускає її як звичайну програму), інакше — сам виконуваний файл.
+        /// </summary>
+        public static string[] GetMacLaunchArguments(string exePath)
+        {
+            const string marker = ".app/Contents/MacOS/";
+            int idx = exePath.IndexOf(marker, StringComparison.Ordinal);
+            if (idx > 0)
+                return new[] { "/usr/bin/open", "-a", exePath.Substring(0, idx + 4) };
+            return new[] { exePath };
+        }
+
+        /// <summary>Вміст plist для LaunchAgent (RunAtLoad — запуск при вході в систему).</summary>
+        public static string BuildMacLaunchAgentPlist(string[] programArguments)
+        {
+            var args = new System.Text.StringBuilder();
+            foreach (var a in programArguments)
+                args.Append("        <string>").Append(System.Security.SecurityElement.Escape(a)).Append("</string>\n");
+
+            return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                   "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
+                   "<plist version=\"1.0\">\n<dict>\n" +
+                   $"    <key>Label</key>\n    <string>{MacLaunchAgentLabel}</string>\n" +
+                   "    <key>ProgramArguments</key>\n    <array>\n" + args +
+                   "    </array>\n" +
+                   "    <key>RunAtLoad</key>\n    <true/>\n" +
+                   "</dict>\n</plist>\n";
+        }
+
+        /// <summary>
+        /// Автозапуск на macOS. Раніше працював лише на Windows (реєстр), а на Mac перемикач нічого не робив.
+        /// </summary>
+        private static void UpdateMacLaunchAgent()
+        {
+            try
+            {
+                string path = MacLaunchAgentPath;
+                if (Current.StartOnBoot)
+                {
+                    string? exePath = Environment.ProcessPath;
+                    if (string.IsNullOrEmpty(exePath)) return;
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    File.WriteAllText(path, BuildMacLaunchAgentPlist(GetMacLaunchArguments(exePath)));
+                }
+                else if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "Автозапуск macOS (LaunchAgent)");
+            }
+        }
+
         public static void UnregisterAll()
         {
             try { HotkeyService.Stop(); }
@@ -216,6 +278,12 @@ namespace ScreenShot_One_Avalonia
 
         private static void UpdateRegistryAutoStart()
         {
+            if (OperatingSystem.IsMacOS())
+            {
+                UpdateMacLaunchAgent();
+                return;
+            }
+
             try
             {
                 if (!OperatingSystem.IsWindows()) return;

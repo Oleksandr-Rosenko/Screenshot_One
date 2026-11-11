@@ -67,8 +67,8 @@ namespace ScreenShot_One_Avalonia
 
             try
             {
-                Core.Initialize();
-                _libVLC = new LibVLC();
+                // Спільний LibVLC (див. VlcShared): плагіни VLC завантажуються один раз на програму, а не при кожному відкритті
+                _libVLC = VlcShared.Instance;
                 _mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(_libVLC);
 
                 _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(25) };
@@ -163,7 +163,7 @@ namespace ScreenShot_One_Avalonia
                     if (_libVLC == null || _mediaPlayer == null || _isClosedCleanly) return;
 
                     var media = new LibVLCSharp.Shared.Media(_libVLC, _sourceFile, FromType.FromPath);
-                    _mediaPlayer.Media = media;
+                    VlcShared.ReplaceMedia(_mediaPlayer, media);
 
                     _mediaPlayer.Play();
 
@@ -228,7 +228,7 @@ namespace ScreenShot_One_Avalonia
                 try
                 {
                     var media = new LibVLCSharp.Shared.Media(_libVLC, _sourceFile, FromType.FromPath);
-                    _mediaPlayer.Media = media;
+                    VlcShared.ReplaceMedia(_mediaPlayer, media);
                 }
                 catch (Exception ex)
                 {
@@ -324,7 +324,6 @@ namespace ScreenShot_One_Avalonia
             try
             {
                 var player = _mediaPlayer;
-                var vlc = _libVLC;
 
                 if (VideoPlayer != null) VideoPlayer.MediaPlayer = null;
 
@@ -341,7 +340,7 @@ namespace ScreenShot_One_Avalonia
                             player.Media?.Dispose();
                             player.Dispose();
                         }
-                        vlc?.Dispose();
+                        // LibVLC спільний на всю програму (VlcShared) — тут його не звільняємо
                     }
                     catch (Exception logEx) { AppLog.Warn(logEx); }
                 });
@@ -1089,7 +1088,7 @@ namespace ScreenShot_One_Avalonia
                         }
 
                         var newMedia = new LibVLCSharp.Shared.Media(_libVLC, _sourceFile, FromType.FromPath);
-                        _mediaPlayer.Media = newMedia;
+                        VlcShared.ReplaceMedia(_mediaPlayer, newMedia);
                         _mediaPlayer.Play();
 
                         for (int i = 0; i < 25 && (_mediaPlayer.Length <= 0 || !_mediaPlayer.IsPlaying); i++)
@@ -1125,7 +1124,7 @@ namespace ScreenShot_One_Avalonia
                     {
                         if (_libVLC != null && _mediaPlayer != null && File.Exists(_sourceFile))
                         {
-                            _mediaPlayer.Media = new LibVLCSharp.Shared.Media(_libVLC, _sourceFile, FromType.FromPath);
+                            VlcShared.ReplaceMedia(_mediaPlayer, new LibVLCSharp.Shared.Media(_libVLC, _sourceFile, FromType.FromPath));
                             _isVideoLoaded = true;
                             _timer?.Start();
                         }

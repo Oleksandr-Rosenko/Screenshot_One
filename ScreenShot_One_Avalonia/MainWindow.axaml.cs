@@ -53,7 +53,7 @@ namespace ScreenShot_One_Avalonia
                 var currentScreen = this.Screens.ScreenFromPoint(mousePos) ?? this.Screens.Primary ?? this.Screens.All.FirstOrDefault();
                 _currentScreenBounds = currentScreen?.Bounds ?? new PixelRect(0, 0, 1920, 1080);
 
-                _avaloniaBackground = ScreenCaptureService.Instance.CaptureRect(_currentScreenBounds);
+                _avaloniaBackground = ScreenCaptureService.Instance.CaptureRect(_currentScreenBounds, currentScreen?.Scaling ?? 1.0);
             }
             catch (Exception ex)
             {
@@ -191,13 +191,21 @@ namespace ScreenShot_One_Avalonia
             {
                 if (_avaloniaBackground != null)
                 {
-                    int cropX = realX - _currentScreenBounds.X;
-                    int cropY = realY - _currentScreenBounds.Y;
+                    // Знімок може мати інший піксельний розмір, ніж межі екрана (напр. Retina з нестандартним масштабом) —
+                    // переводимо координати виділення в пікселі знімка. Беремо PixelSize, а не Size (Size залежить від DPI).
+                    var bgSize = _avaloniaBackground.PixelSize;
+                    double kx = _currentScreenBounds.Width > 0 ? bgSize.Width / (double)_currentScreenBounds.Width : 1.0;
+                    double ky = _currentScreenBounds.Height > 0 ? bgSize.Height / (double)_currentScreenBounds.Height : 1.0;
+
+                    int cropX = (int)Math.Round((realX - _currentScreenBounds.X) * kx);
+                    int cropY = (int)Math.Round((realY - _currentScreenBounds.Y) * ky);
+                    realWidth = Math.Max(1, (int)Math.Round(realWidth * kx));
+                    realHeight = Math.Max(1, (int)Math.Round(realHeight * ky));
 
                     cropX = Math.Max(0, cropX);
                     cropY = Math.Max(0, cropY);
-                    realWidth = Math.Min(realWidth, (int)_avaloniaBackground.Size.Width - cropX);
-                    realHeight = Math.Min(realHeight, (int)_avaloniaBackground.Size.Height - cropY);
+                    realWidth = Math.Min(realWidth, bgSize.Width - cropX);
+                    realHeight = Math.Min(realHeight, bgSize.Height - cropY);
 
                     if (realWidth > 0 && realHeight > 0)
                     {

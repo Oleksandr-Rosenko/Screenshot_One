@@ -20,7 +20,11 @@ namespace ScreenShot_One_Avalonia
             // замість того щоб програма тихо зникла з трею.
             AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             {
-                if (e.ExceptionObject is Exception ex) AppLog.Error(ex, "UnhandledException");
+                if (e.ExceptionObject is Exception ex)
+                {
+                    AppLog.Error(ex, "UnhandledException");
+                    CrashReport.Record(ex);
+                }
             };
             System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, e) =>
             {

@@ -374,6 +374,7 @@ namespace ScreenShot_One_Avalonia
                 try
                 {
                     SettingsManager.UnregisterAll();
+                    HistoryManager.WaitForPendingSaves(TimeSpan.FromSeconds(5));
                     _updateManager?.ApplyUpdatesAndRestart(_updateInfo);
                 }
                 catch (Exception ex)
@@ -460,6 +461,13 @@ namespace ScreenShot_One_Avalonia
 
         public static async Task CheckAndShowAsync(bool isManual = true)
         {
+            // На Mac немає інсталятора Velopack — окрема перевірка через GitHub (див. MacUpdateChecker)
+            if (OperatingSystem.IsMacOS())
+            {
+                await MacUpdateChecker.CheckAsync(isManual);
+                return;
+            }
+
             if (isManual)
             {
                 await Dispatcher.UIThread.InvokeAsync(async () =>

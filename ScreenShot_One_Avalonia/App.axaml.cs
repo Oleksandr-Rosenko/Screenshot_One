@@ -40,6 +40,22 @@ namespace ScreenShot_One_Avalonia
 
                 SettingsManager.OnAllScreensCapture += () => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => CaptureAllScreensSimultaneously());
 
+                // macOS: одразу пояснюємо, якщо немає дозволу «Запис екрана» (інакше скріншоти «порожні»)
+                Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+                {
+                    await System.Threading.Tasks.Task.Delay(1500);
+                    await MacPermissions.WarnIfScreenCaptureDeniedAsync();
+                    // Якщо минулого разу програма впала — пропонуємо відкрити журнал
+                    await CrashReport.OfferLogIfCrashedAsync();
+                });
+
+                // Прогріваємо VLC у фоні, щоб перше відкриття відеоредактора не підвисало
+                _ = System.Threading.Tasks.Task.Run(async () =>
+                {
+                    await System.Threading.Tasks.Task.Delay(3000);
+                    VlcShared.Prewarm();
+                });
+
                 // Автоматична фонова перевірка оновлень через 6 секунд після запуску
                 _ = System.Threading.Tasks.Task.Run(async () =>
                 {
@@ -193,6 +209,8 @@ namespace ScreenShot_One_Avalonia
             exitItem.Click += (s, e) =>
             {
                 SettingsManager.UnregisterAll();
+                // Дописуємо фонові збереження історії, щоб останній скріншот не загубився
+                HistoryManager.WaitForPendingSaves(TimeSpan.FromSeconds(5));
                 desktop.Shutdown();
 
             };

@@ -26,6 +26,8 @@ concurrency:
 jobs:
   release:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
     defaults:
       run:
         shell: pwsh
@@ -108,3 +110,61 @@ jobs:
       - name: Release notes
         if: steps.ver.outputs.exists == 'false'
         run: python publish_notes.py $env:GH_TOKEN "${{ steps.ver.outputs.version }}"
+
+  # macOS-архіви (arm64 і x64) — у той самий реліз. Mac-версія оновлюється вручну з архіву,
+  # програма сама підказує про нову версію (MacUpdateChecker). Крок пропускається, якщо архіви вже є.
+  macos:
+    needs: release
+    runs-on: macos-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: ScreenShot_One_Avalonia
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # restore мультитаргет-проєкту зачіпає і net10.0-windows
+      EnableWindowsTargeting: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check existing macOS assets
+        id: assets
+        run: |
+          $version = "${{ needs.release.outputs.version }}"
+          $names = gh release view $version --repo $env:GITHUB_REPOSITORY --json assets -q '.assets[].name' 2>$null
+          if ($names -match 'macOS-arm64\.zip' -and $names -match 'macOS-x64\.zip') {
+            Write-Host "macOS archives for $version already uploaded."
+            "skip=true" >> $env:GITHUB_OUTPUT
+          } else {
+            "skip=false" >> $env:GITHUB_OUTPUT
+          }
+          exit 0
+
+      - name: Write credentials.json
+        if: steps.assets.outputs.skip == 'false'
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        run: |
+          if (-not $env:GOOGLE_CREDENTIALS_JSON) { Write-Error "Secret GOOGLE_CREDENTIALS_JSON is not set."; exit 1 }
+          [System.IO.File]::WriteAllText((Join-Path $PWD 'credentials.json'), $env:GOOGLE_CREDENTIALS_JSON)
+
+      - uses: actions/setup-dotnet@v4
+        if: steps.assets.outputs.skip == 'false'
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-python@v5
+        if: steps.assets.outputs.skip == 'false'
+        with:
+          python-version: '3.12'
+
+      - name: Build macOS bundles
+        if: steps.assets.outputs.skip == 'false'
+        run: ./Build-MacApp.ps1 -Arch all -Version "${{ needs.release.outputs.version }}"
+
+      - name: Upload macOS archives
+        if: steps.assets.outputs.skip == 'false'
+        run: |
+          $zips = Get-ChildItem dist/macOS -Filter *.zip | ForEach-Object { $_.FullName }
+          if (-not $zips) { throw "No macOS archives were built" }
+          gh release upload "${{ needs.release.outputs.version }}" $zips --clobber --repo $env:GITHUB_REPOSITORY

@@ -39,6 +39,16 @@ namespace ScreenShot_One_Avalonia
             [CallerLineNumber] int line = 0)
             => WriteLine("ERROR", $"{Path.GetFileName(file)}:{line} {member}{(context != null ? " (" + context + ")" : "")}: {ex}");
 
+        /// <summary>
+        /// Запуск Task «у фоні» з логуванням помилки. Заміна async void поза обробниками подій:
+        /// виключення з async void валить програму, а тут — потрапляє в лог.
+        /// </summary>
+        public static async void FireAndForget(this System.Threading.Tasks.Task task, string context)
+        {
+            try { await task; }
+            catch (Exception ex) { Error(ex, context); }
+        }
+
         private static void WriteLine(string level, string message)
         {
             string text = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{level}] {message}";
