@@ -27,6 +27,7 @@ namespace ScreenShot_One_Avalonia
         private LibVLCSharp.Shared.MediaPlayer? _mediaPlayer;
         private string _sourceFile;
         private DispatcherTimer? _timer;
+        private long _lastDisplayedTime = -1;
 
         private bool _isDraggingSlider = false;
         private bool _wasPlayingBeforeDrag = false;
@@ -70,7 +71,7 @@ namespace ScreenShot_One_Avalonia
                 _libVLC = new LibVLC();
                 _mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(_libVLC);
 
-                _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+                _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(25) };
                 _timer.Tick += Timer_Tick;
 
                 TrimStartSlider.PropertyChanged += TrimSlider_PropertyChanged;
@@ -428,6 +429,12 @@ namespace ScreenShot_One_Avalonia
                             MainPlayIcon.Kind = Material.Icons.MaterialIconKind.Play;
                         }
                     }
+
+                    if (!_mediaPlayer.IsPlaying && current == _lastDisplayedTime && !_trimSeekPending)
+                    {
+                        return;
+                    }
+                    _lastDisplayedTime = current;
 
                     if (total - current < 150) current = total;
 

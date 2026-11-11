@@ -7,6 +7,12 @@
         Title="Редактор відео"
         WindowState="Maximized">
 
+	<suki:SukiWindow.Styles>
+		<Style Selector="TextBlock.MonoTime">
+			<Setter Property="FontFamily" Value="Cascadia Code, Consolas, Menlo, Monaco, monospace"/>
+		</Style>
+	</suki:SukiWindow.Styles>
+
 	<Grid>
 		<DockPanel LastChildFill="True">
 
@@ -82,21 +88,21 @@
 								<Border Name="BorderTrimStartBadge" Background="#2000E676" BorderBrush="#00E676" BorderThickness="1" CornerRadius="6" Padding="8,3">
 									<StackPanel Orientation="Horizontal" Spacing="4">
 										<TextBlock Name="TxtTrimStartLabel" Text="Початок:" FontSize="12" Foreground="{DynamicResource SukiTextLow}"/>
-										<TextBlock Name="TxtTrimStartBadge" Text="00:00.00" FontSize="12" FontWeight="Bold" Foreground="#00E676"/>
+										<TextBlock Name="TxtTrimStartBadge" Classes="MonoTime" Text="00:00.00" FontSize="12" FontWeight="Bold" Foreground="#00E676"/>
 									</StackPanel>
 								</Border>
 
 								<Border Name="BorderTrimDurationBadge" Background="#2000B0FF" BorderBrush="#00B0FF" BorderThickness="1" CornerRadius="6" Padding="8,3">
 									<StackPanel Orientation="Horizontal" Spacing="4">
 										<TextBlock Name="TxtTrimDurationLabel" Text="Вибрано:" FontSize="12" Foreground="{DynamicResource SukiTextLow}"/>
-										<TextBlock Name="TxtTrimDurationBadge" Text="00:00.00" FontSize="12" FontWeight="Bold" Foreground="#00B0FF"/>
+										<TextBlock Name="TxtTrimDurationBadge" Classes="MonoTime" Text="00:00.00" FontSize="12" FontWeight="Bold" Foreground="#00B0FF"/>
 									</StackPanel>
 								</Border>
 
 								<Border Name="BorderTrimEndBadge" Background="#20FF5252" BorderBrush="#FF5252" BorderThickness="1" CornerRadius="6" Padding="8,3">
 									<StackPanel Orientation="Horizontal" Spacing="4">
 										<TextBlock Name="TxtTrimEndLabel" Text="Кінець:" FontSize="12" Foreground="{DynamicResource SukiTextLow}"/>
-										<TextBlock Name="TxtTrimEndBadge" Text="00:00.00" FontSize="12" FontWeight="Bold" Foreground="#FF5252"/>
+										<TextBlock Name="TxtTrimEndBadge" Classes="MonoTime" Text="00:00.00" FontSize="12" FontWeight="Bold" Foreground="#FF5252"/>
 									</StackPanel>
 								</Border>
 							</StackPanel>
@@ -156,7 +162,7 @@
 										<TextBlock Text="+0.5s" FontSize="11"/>
 									</Button>
 								</StackPanel>
-								<TextBlock Grid.Column="4" Name="TxtTrimStartVal" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+								<TextBlock Grid.Column="4" Name="TxtTrimStartVal" Classes="MonoTime" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
 							</Grid>
 
 							<!-- End Slider Row -->
@@ -179,7 +185,7 @@
 										<TextBlock Text="+0.5s" FontSize="11"/>
 									</Button>
 								</StackPanel>
-								<TextBlock Grid.Column="4" Name="TxtTrimEndVal" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+								<TextBlock Grid.Column="4" Name="TxtTrimEndVal" Classes="MonoTime" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
 							</Grid>
 						</Grid>
 					</Grid>
@@ -190,7 +196,7 @@
 					<StackPanel Spacing="8">
 						<!-- Timeline Row -->
 						<Grid ColumnDefinitions="70,*,70" VerticalAlignment="Center">
-							<TextBlock Name="TxtCurrentTime" Text="00:00.00" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SukiTextLow}"/>
+							<TextBlock Name="TxtCurrentTime" Classes="MonoTime" Text="00:00.00" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SukiTextLow}"/>
 
 							<!-- Interactive Range Timeline container -->
 							<Grid Grid.Column="1" Margin="12,0" Height="30" VerticalAlignment="Center">
@@ -229,7 +235,7 @@
 								</Slider>
 							</Grid>
 
-							<TextBlock Grid.Column="2" Name="TxtTotalTime" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SukiTextLow}"/>
+							<TextBlock Grid.Column="2" Name="TxtTotalTime" Classes="MonoTime" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SukiTextLow}"/>
 						</Grid>
 
 						<!-- Playback Controls Row -->
