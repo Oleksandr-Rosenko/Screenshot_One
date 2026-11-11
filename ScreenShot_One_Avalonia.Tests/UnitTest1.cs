@@ -630,5 +630,52 @@ namespace ScreenShot_One_Avalonia.Tests
             Assert.Contains("concat=n=2:v=1", cs);
             Assert.Contains("Audio:", cs);
         }
+
+        [Fact]
+        public void AppSettings_PublicUploadWarning_DefaultsToFalse_And_SerializesCorrectly()
+        {
+            Assert.False(new AppSettings().PublicUploadWarningAccepted);
+
+            var settings = new AppSettings { PublicUploadWarningAccepted = true };
+            var deserialized = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(settings));
+
+            Assert.NotNull(deserialized);
+            Assert.True(deserialized.PublicUploadWarningAccepted);
+
+            // Старий settings.json без цього поля має читатися з безпечним значенням за замовчуванням
+            var legacy = JsonSerializer.Deserialize<AppSettings>("{\"Theme\":\"Light\"}");
+            Assert.NotNull(legacy);
+            Assert.False(legacy.PublicUploadWarningAccepted);
+        }
+
+        [Fact]
+        public void AppLog_WritesMessagesAndExceptionsToLogFile()
+        {
+            string marker = "test-marker-" + Guid.NewGuid();
+            AppLog.Write(marker);
+            AppLog.Warn(new InvalidOperationException(marker + "-warn"));
+
+            Assert.True(File.Exists(AppLog.LogFilePath), $"Log file should exist at {AppLog.LogFilePath}");
+            string content;
+            using (var fs = new FileStream(AppLog.LogFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var reader = new StreamReader(fs))
+                content = reader.ReadToEnd();
+
+            Assert.Contains(marker, content);
+            Assert.Contains(marker + "-warn", content);
+            Assert.Contains("[WARN]", content);
+        }
+
+        [Fact]
+        public void HistoryManager_GeneratesMillisecondPrecisionIds()
+        {
+            var method = typeof(HistoryManager).GetMethod("GenerateUniqueId",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            Assert.NotNull(method);
+
+            string id = (string)method.Invoke(null, null)!;
+            // yyyyMMdd_HHmmss_fff — сумісний префікс зі старими ID, але з мілісекундами
+            Assert.Matches(@"^\d{8}_\d{6}_\d{3}(-\d+)?$", id);
+        }
     }
 }

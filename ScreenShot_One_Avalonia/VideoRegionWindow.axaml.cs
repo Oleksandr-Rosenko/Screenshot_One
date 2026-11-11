@@ -27,7 +27,7 @@ namespace ScreenShot_One_Avalonia
             this.Topmost = true;
             this.ShowInTaskbar = false;
 
-            try { this.TransparencyLevelHint = new[] { WindowTransparencyLevel.Transparent }; } catch { }
+            try { this.TransparencyLevelHint = new[] { WindowTransparencyLevel.Transparent }; } catch (Exception logEx) { AppLog.Warn(logEx); }
 
             this.Background = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0));
 
@@ -38,7 +38,7 @@ namespace ScreenShot_One_Avalonia
                 var bounds = targetScreen?.Bounds ?? new PixelRect(0, 0, 1920, 1080);
                 this.Position = new PixelPoint(bounds.X, bounds.Y);
             }
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
 
             this.WindowState = WindowState.FullScreen;
 
@@ -70,7 +70,7 @@ namespace ScreenShot_One_Avalonia
                     if (img != null && avaloniaBitmap != null) img.Source = avaloniaBitmap;
                 }
             }
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
         }
 
         private void UpdateMagnifier(Point pos)

@@ -57,7 +57,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Помилка заморозки: {ex.Message}");
+                AppLog.Write($"Помилка заморозки: {ex.Message}");
             }
         }
 
@@ -211,7 +211,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Критична помилка: {ex.Message}");
+                AppLog.Write($"Критична помилка: {ex.Message}");
             }
 
             this.Close();

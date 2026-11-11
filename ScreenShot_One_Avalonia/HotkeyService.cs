@@ -85,7 +85,7 @@ namespace ScreenShot_One_Avalonia
         private static void Raise(HotkeyAction action)
         {
             try { _onPressed?.Invoke(action); }
-            catch (Exception ex) { Debug.WriteLine($"[Hotkeys] Помилка обробника {action}: {ex.Message}"); }
+            catch (Exception ex) { AppLog.Write($"[Hotkeys] Помилка обробника {action}: {ex.Message}"); }
         }
 
         private static IEnumerable<(HotkeyAction Action, int Key, int Modifiers)> GetConfiguredHotkeys()
@@ -198,7 +198,7 @@ namespace ScreenShot_One_Avalonia
                     _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(null), 0);
                     if (_hookId == IntPtr.Zero)
                     {
-                        Debug.WriteLine($"[Hotkeys] SetWindowsHookEx не вдався, код {Marshal.GetLastWin32Error()}");
+                        AppLog.Write($"[Hotkeys] SetWindowsHookEx не вдався, код {Marshal.GetLastWin32Error()}");
                     }
                     ready.Set();
 
@@ -258,7 +258,7 @@ namespace ScreenShot_One_Avalonia
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"[Hotkeys] Помилка в hook: {ex.Message}");
+                        AppLog.Write($"[Hotkeys] Помилка в hook: {ex.Message}");
                     }
                 }
 
@@ -336,13 +336,13 @@ namespace ScreenShot_One_Avalonia
                     {
                         var spec = new[] { new EventTypeSpec { EventClass = kEventClassKeyboard, EventKind = kEventHotKeyPressed } };
                         int status = InstallEventHandler(GetApplicationEventTarget(), _handler, (nuint)spec.Length, spec, IntPtr.Zero, out _handlerRef);
-                        if (status != 0) Debug.WriteLine($"[Hotkeys] InstallEventHandler: {status}");
+                        if (status != 0) AppLog.Write($"[Hotkeys] InstallEventHandler: {status}");
                     }
                     RegisterAll();
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[Hotkeys] Не вдалося підключити гарячі клавіші macOS: {ex.Message}");
+                    AppLog.Write($"[Hotkeys] Не вдалося підключити гарячі клавіші macOS: {ex.Message}");
                 }
             }
 
@@ -357,7 +357,7 @@ namespace ScreenShot_One_Avalonia
                         _handlerRef = IntPtr.Zero;
                     }
                 }
-                catch { }
+                catch (Exception logEx) { AppLog.Warn(logEx); }
             }
 
             internal static void RegisterAll()
@@ -367,7 +367,7 @@ namespace ScreenShot_One_Avalonia
                 {
                     if (!VkToMacKeyCode.TryGetValue(key, out uint macKey))
                     {
-                        Debug.WriteLine($"[Hotkeys] Клавіша {key} для {action} не підтримується на macOS");
+                        AppLog.Write($"[Hotkeys] Клавіша {key} для {action} не підтримується на macOS");
                         continue;
                     }
 
@@ -382,11 +382,11 @@ namespace ScreenShot_One_Avalonia
                         var id = new EventHotKeyID { Signature = HotkeySignature, Id = (uint)action };
                         int status = RegisterEventHotKey(macKey, carbonMods, id, GetApplicationEventTarget(), 0, out IntPtr hotKeyRef);
                         if (status == 0 && hotKeyRef != IntPtr.Zero) _registered.Add(hotKeyRef);
-                        else Debug.WriteLine($"[Hotkeys] RegisterEventHotKey {action}: {status}");
+                        else AppLog.Write($"[Hotkeys] RegisterEventHotKey {action}: {status}");
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"[Hotkeys] RegisterEventHotKey {action}: {ex.Message}");
+                        AppLog.Write($"[Hotkeys] RegisterEventHotKey {action}: {ex.Message}");
                     }
                 }
             }
@@ -395,7 +395,7 @@ namespace ScreenShot_One_Avalonia
             {
                 foreach (var hotKeyRef in _registered)
                 {
-                    try { UnregisterEventHotKey(hotKeyRef); } catch { }
+                    try { UnregisterEventHotKey(hotKeyRef); } catch (Exception logEx) { AppLog.Warn(logEx); }
                 }
                 _registered.Clear();
             }
@@ -415,7 +415,7 @@ namespace ScreenShot_One_Avalonia
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[Hotkeys] Помилка обробки події macOS: {ex.Message}");
+                    AppLog.Write($"[Hotkeys] Помилка обробки події macOS: {ex.Message}");
                 }
                 return eventNotHandledErr;
             }

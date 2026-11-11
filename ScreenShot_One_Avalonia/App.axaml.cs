@@ -30,11 +30,11 @@ namespace ScreenShot_One_Avalonia
 
                 SettingsManager.LoadAndRegister();
 
-                SettingsManager.OnRegionCapture += () => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => new MainWindow().Show());
+                SettingsManager.OnRegionCapture += () => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => ShowSingle(() => new MainWindow()));
 
                 SettingsManager.OnFullScreenCapture += () => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => CaptureAndOpenFullScreen());
 
-                SettingsManager.OnVideoRecord += () => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => new VideoControlWindow().Show());
+                SettingsManager.OnVideoRecord += () => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => ShowSingle(() => new VideoControlWindow()));
 
                 // НОВЕ: Зв'язуємо гарячу клавішу з новим методом знімку всіх екранів
 
@@ -51,6 +51,31 @@ namespace ScreenShot_One_Avalonia
 
             base.OnFrameworkInitializationCompleted();
 
+        }
+
+        /// <summary>
+        /// Показує вікно типу T в одному екземплярі. Раніше кожне натискання гарячої клавіші чи пункту трею
+        /// створювало нове вікно — подвійне натискання відкривало два оверлеї виділення або дві панелі запису відео.
+        /// Повторно використовується лише ВИДИМЕ вікно: приховані (напр. історія, поки відкритий редактор,
+        /// або оверлей, що вже робить знімок) не чіпаємо, щоб не зламати їхній сценарій.
+        /// </summary>
+        private static T ShowSingle<T>(Func<T> factory) where T : Window
+        {
+            if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                foreach (var w in desktop.Windows)
+                {
+                    if (w is T existing && existing.IsVisible)
+                    {
+                        if (existing.WindowState == WindowState.Minimized) existing.WindowState = WindowState.Normal;
+                        existing.Activate();
+                        return existing;
+                    }
+                }
+            }
+            var window = factory();
+            window.Show();
+            return window;
         }
 
         private void InitializeTrayIcon(IClassicDesktopStyleApplicationLifetime desktop)
@@ -78,7 +103,7 @@ namespace ScreenShot_One_Avalonia
 
             var regionItem = new NativeMenuItem("Зробити скріншот зони");
 
-            regionItem.Click += (s, e) => new MainWindow().Show();
+            regionItem.Click += (s, e) => ShowSingle(() => new MainWindow());
 
             menu.Add(regionItem);
 
@@ -131,7 +156,7 @@ namespace ScreenShot_One_Avalonia
 
                 countdownWindow.Close();
 
-                Avalonia.Threading.Dispatcher.UIThread.Post(() => new MainWindow().Show());
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => ShowSingle(() => new MainWindow()));
             };
             menu.Add(regionDelayedItem);
 
@@ -145,17 +170,17 @@ namespace ScreenShot_One_Avalonia
             menu.Add(allScreensItem);
 
             var videoPanelItem = new NativeMenuItem("Записати відео");
-            videoPanelItem.Click += (s, e) => new VideoControlWindow().Show();
+            videoPanelItem.Click += (s, e) => ShowSingle(() => new VideoControlWindow());
             menu.Add(videoPanelItem);
 
             menu.Add(new NativeMenuItemSeparator());
 
             var historyItem = new NativeMenuItem("Історія");
-            historyItem.Click += (s, e) => new HistoryWindow().Show();
+            historyItem.Click += (s, e) => ShowSingle(() => new HistoryWindow());
             menu.Add(historyItem);
 
             var settingsItem = new NativeMenuItem("Налаштування");
-            settingsItem.Click += (s, e) => new SettingsWindow().Show();
+            settingsItem.Click += (s, e) => ShowSingle(() => new SettingsWindow());
             menu.Add(settingsItem);
 
             var checkUpdatesItem = new NativeMenuItem("Перевірити оновлення");
@@ -199,7 +224,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Не вдалося завантажити іконку трею {assetName}: {ex.Message}");
+                AppLog.Write($"Не вдалося завантажити іконку трею {assetName}: {ex.Message}");
                 return null;
             }
         }
@@ -221,7 +246,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("Помилка повноекранного скріншота: " + ex.Message);
+                AppLog.Write("Помилка повноекранного скріншота: " + ex.Message);
             }
         }
 
@@ -241,7 +266,7 @@ namespace ScreenShot_One_Avalonia
 
             {
 
-                System.Diagnostics.Debug.WriteLine("Помилка створення скріншота всіх моніторів: " + ex.Message);
+                AppLog.Write("Помилка створення скріншота всіх моніторів: " + ex.Message);
 
             }
 

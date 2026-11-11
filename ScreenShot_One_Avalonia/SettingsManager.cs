@@ -34,6 +34,9 @@ namespace ScreenShot_One_Avalonia
         public DateTime? LastUpdateDismissedUtc { get; set; }
         public string? LastDismissedVersion { get; set; }
 
+        // Користувач підтвердив, що розуміє: завантажені файли доступні за посиланням усім (див. UploadConsent)
+        public bool PublicUploadWarningAccepted { get; set; } = false;
+
         // Версія схеми налаштувань — для разових міграцій (див. SettingsManager.Migrate)
         public int SettingsVersion { get; set; } = 0;
     }
@@ -65,7 +68,7 @@ namespace ScreenShot_One_Avalonia
             {
                 _isSuspended = value;
                 try { HotkeyService.SetSuspended(value); }
-                catch (Exception ex) { Debug.WriteLine($"Помилка перемикання гарячих клавіш: {ex.Message}"); }
+                catch (Exception ex) { AppLog.Write($"Помилка перемикання гарячих клавіш: {ex.Message}"); }
             }
         }
 
@@ -84,15 +87,15 @@ namespace ScreenShot_One_Avalonia
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"Помилка читання старих налаштувань: {ex.Message}. Видаляємо битий файл.");
-                        try { File.Delete(ConfigPath); } catch { }
+                        AppLog.Write($"Помилка читання старих налаштувань: {ex.Message}. Видаляємо битий файл.");
+                        try { File.Delete(ConfigPath); } catch (Exception logEx) { AppLog.Warn(logEx); }
                         Current = new AppSettings();
                     }
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Критична помилка доступу до файлової системи: {ex.Message}");
+                AppLog.Write($"Критична помилка доступу до файлової системи: {ex.Message}");
                 Current = new AppSettings();
             }
 
@@ -106,7 +109,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Помилка підключення гарячих клавіш: {ex.Message}");
+                AppLog.Write($"Помилка підключення гарячих клавіш: {ex.Message}");
             }
 
             UpdateRegistryAutoStart();
@@ -177,7 +180,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Помилка збереження налаштувань: {ex.Message}");
+                AppLog.Write($"Помилка збереження налаштувань: {ex.Message}");
             }
         }
 
@@ -200,7 +203,7 @@ namespace ScreenShot_One_Avalonia
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Помилка застосування теми: {ex.Message}");
+                    AppLog.Write($"Помилка застосування теми: {ex.Message}");
                 }
             });
         }
@@ -208,7 +211,7 @@ namespace ScreenShot_One_Avalonia
         public static void UnregisterAll()
         {
             try { HotkeyService.Stop(); }
-            catch (Exception ex) { Debug.WriteLine($"Помилка відключення гарячих клавіш: {ex.Message}"); }
+            catch (Exception ex) { AppLog.Write($"Помилка відключення гарячих клавіш: {ex.Message}"); }
         }
 
         private static void UpdateRegistryAutoStart()
@@ -231,7 +234,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Помилка роботи з реєстром (Автозавантаження): {ex.Message}");
+                AppLog.Write($"Помилка роботи з реєстром (Автозавантаження): {ex.Message}");
             }
         }
     }

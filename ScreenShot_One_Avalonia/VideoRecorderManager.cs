@@ -145,7 +145,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[WindowsVideoRecorder] GetDisplays error: {ex.Message}");
+                AppLog.Write($"[WindowsVideoRecorder] GetDisplays error: {ex.Message}");
             }
             return monitorList;
         }
@@ -235,7 +235,7 @@ namespace ScreenShot_One_Avalonia
                 thisRecorder.OnRecordingFailed += (s, e) =>
                 {
                     _lastError = string.IsNullOrWhiteSpace(e.Error) ? "Невідома помилка запису." : e.Error;
-                    Debug.WriteLine($"[WindowsVideoRecorder] Recording failed: {_lastError}");
+                    AppLog.Write($"[WindowsVideoRecorder] Recording failed: {_lastError}");
 
                     completion.TrySetResult(VideoRecorderManager.IsNonEmptyFile(path) ? path : string.Empty);
 
@@ -269,7 +269,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Критична помилка старту запису відео: {ex.Message}");
+                AppLog.Write($"Критична помилка старту запису відео: {ex.Message}");
                 _isRecording = false;
                 _recorder = null;
                 _completion = null;
@@ -298,7 +298,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[WindowsVideoRecorder] Stop error: {ex.Message}");
+                AppLog.Write($"[WindowsVideoRecorder] Stop error: {ex.Message}");
             }
 
             // Чекаємо OnRecordingComplete / OnRecordingFailed — тільки тоді файл повністю записаний
@@ -316,7 +316,7 @@ namespace ScreenShot_One_Avalonia
             // Dispose не викликаємо з потоку подій самої бібліотеки
             Task.Run(() =>
             {
-                try { recorder.Dispose(); } catch { }
+                try { recorder.Dispose(); } catch (Exception logEx) { AppLog.Warn(logEx); }
             });
         }
     }
@@ -457,7 +457,7 @@ namespace ScreenShot_One_Avalonia
             catch (Exception ex)
             {
                 _isStarting = false;
-                Debug.WriteLine($"[MacVideoRecorder] Start error: {ex.Message}");
+                AppLog.Write($"[MacVideoRecorder] Start error: {ex.Message}");
                 return RecordingStartResult.Fail($"Не вдалося запустити ffmpeg: {ex.Message}");
             }
 
@@ -504,12 +504,12 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[MacVideoRecorder] Stop error: {ex.Message}");
-                try { if (!proc.HasExited) proc.Kill(); } catch { }
+                AppLog.Write($"[MacVideoRecorder] Stop error: {ex.Message}");
+                try { if (!proc.HasExited) proc.Kill(); } catch (Exception logEx) { AppLog.Warn(logEx); }
             }
             finally
             {
-                try { proc.Dispose(); } catch { }
+                try { proc.Dispose(); } catch (Exception logEx) { AppLog.Warn(logEx); }
             }
 
             return VideoRecorderManager.IsNonEmptyFile(path) ? path : string.Empty;

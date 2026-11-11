@@ -109,7 +109,7 @@ namespace ScreenShot_One_Avalonia
                 ComboMonitor.ItemsSource = monitorList;
                 if (monitorList.Count > 0) ComboMonitor.SelectedIndex = 0;
             }
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
         }
 
         private void Border_PointerPressed(object? sender, PointerPressedEventArgs e)

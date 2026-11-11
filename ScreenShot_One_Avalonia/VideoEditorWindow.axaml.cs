@@ -148,7 +148,7 @@ namespace ScreenShot_One_Avalonia
                             }
                             catch (Exception exBak)
                             {
-                                Debug.WriteLine($"Session backup error: {exBak.Message}");
+                                AppLog.Write($"Session backup error: {exBak.Message}");
                             }
                         }
                     }
@@ -198,7 +198,7 @@ namespace ScreenShot_One_Avalonia
                 {
                     Task.Run(() =>
                     {
-                        try { _mediaPlayer?.Stop(); } catch { }
+                        try { _mediaPlayer?.Stop(); } catch (Exception logEx) { AppLog.Warn(logEx); }
                     });
 
                     Dispatcher.UIThread.Post(() =>
@@ -232,7 +232,7 @@ namespace ScreenShot_One_Avalonia
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"EnsurePlayerReadyForPlayback error: {ex.Message}");
+                    AppLog.Write($"EnsurePlayerReadyForPlayback error: {ex.Message}");
                 }
             }
         }
@@ -274,7 +274,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch
             {
-                Debug.WriteLine($"[CRITICAL ERROR] {title}: {ex}");
+                AppLog.Write($"[CRITICAL ERROR] {title}: {ex}");
             }
         }
 
@@ -294,7 +294,7 @@ namespace ScreenShot_One_Avalonia
                 {
                     if (File.Exists(filePath) && IsFileReady(filePath)) return;
                 }
-                catch { }
+                catch (Exception logEx) { AppLog.Warn(logEx); }
                 await Task.Delay(100);
             }
         }
@@ -343,10 +343,10 @@ namespace ScreenShot_One_Avalonia
                         }
                         vlc?.Dispose();
                     }
-                    catch { }
+                    catch (Exception logEx) { AppLog.Warn(logEx); }
                 });
             }
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
         }
 
         private void Timer_Tick(object? sender, EventArgs e)
@@ -444,7 +444,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Timer error: {ex}");
+                AppLog.Write($"Timer error: {ex}");
             }
         }
 
@@ -468,7 +468,7 @@ namespace ScreenShot_One_Avalonia
                     repeatBtn.Opacity = isVisible ? 1.0 : 0.0;
                 }
             }
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
         }
 
         private void UpdateButtonStyles()
@@ -488,7 +488,7 @@ namespace ScreenShot_One_Avalonia
                     TxtBtnUpload.FontWeight = FontWeight.Bold;
                 }
             }
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
         }
 
         private void UpdateTrimHighlight()
@@ -609,7 +609,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"SetTrimMode error: {ex}");
+                AppLog.Write($"SetTrimMode error: {ex}");
             }
         }
 
@@ -696,7 +696,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"TrimSlider error: {ex}");
+                AppLog.Write($"TrimSlider error: {ex}");
             }
         }
 
@@ -779,7 +779,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"PreviewTrim error: {ex}");
+                AppLog.Write($"PreviewTrim error: {ex}");
             }
         }
 
@@ -878,7 +878,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"BtnTrimMode_IsCheckedChanged error: {ex}");
+                AppLog.Write($"BtnTrimMode_IsCheckedChanged error: {ex}");
             }
         }
 
@@ -933,7 +933,7 @@ namespace ScreenShot_One_Avalonia
                 }
                 catch (Exception exDetach)
                 {
-                    Debug.WriteLine($"VLC detach error: {exDetach.Message}");
+                    AppLog.Write($"VLC detach error: {exDetach.Message}");
                 }
 
                 await Task.Delay(150);
@@ -984,7 +984,7 @@ namespace ScreenShot_One_Avalonia
                         }
                         catch (Exception exProbe)
                         {
-                            Debug.WriteLine($"Audio probe failed: {exProbe.Message}");
+                            AppLog.Write($"Audio probe failed: {exProbe.Message}");
                         }
 
                         string args;
@@ -1130,7 +1130,7 @@ namespace ScreenShot_One_Avalonia
                             _timer?.Start();
                         }
                     }
-                    catch { }
+                    catch (Exception logEx) { AppLog.Warn(logEx); }
                 }
                 finally
                 {
@@ -1150,6 +1150,7 @@ namespace ScreenShot_One_Avalonia
 
         private async void BtnUpload_Click(object? sender, RoutedEventArgs e)
         {
+            if (!await UploadConsent.ConfirmAsync(this)) return;
             _isVideoKept = true;
 
             BtnSave.IsEnabled = false;
@@ -1224,7 +1225,7 @@ namespace ScreenShot_One_Avalonia
             if (!string.IsNullOrEmpty(_backupOriginalFile))
             {
                 try { if (File.Exists(_backupOriginalFile)) File.Delete(_backupOriginalFile); }
-                catch { }
+                catch (Exception logEx) { AppLog.Warn(logEx); }
             }
 
             if (_isNewRecording && !_isVideoKept)
@@ -1234,7 +1235,7 @@ namespace ScreenShot_One_Avalonia
                 {
                     await Task.Delay(500);
                     try { if (File.Exists(pathToDelete)) File.Delete(pathToDelete); }
-                    catch (Exception ex) { Debug.WriteLine($"Не вдалося видалити тимчасове відео: {ex.Message}"); }
+                    catch (Exception ex) { AppLog.Write($"Не вдалося видалити тимчасове відео: {ex.Message}"); }
                 });
             }
         }

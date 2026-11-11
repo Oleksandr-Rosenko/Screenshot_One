@@ -274,7 +274,7 @@ namespace ScreenShot_One_Avalonia
 
             {
 
-                Debug.WriteLine($"Помилка вставки з буфера: {ex.Message}");
+                AppLog.Write($"Помилка вставки з буфера: {ex.Message}");
 
             }
 
@@ -335,7 +335,7 @@ namespace ScreenShot_One_Avalonia
                     }
                 }
             }
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
 
 #if WINDOWS
             if (OperatingSystem.IsWindows())
@@ -371,14 +371,14 @@ namespace ScreenShot_One_Avalonia
                                 }
                             }
                         }
-                        catch { }
+                        catch (Exception logEx) { AppLog.Warn(logEx); }
                     });
                     t.SetApartmentState(System.Threading.ApartmentState.STA);
                     t.Start();
                     t.Join(1000);
                     if (winFormsBmp != null) return winFormsBmp;
                 }
-                catch { }
+                catch (Exception logEx) { AppLog.Warn(logEx); }
             }
 #endif
 
@@ -631,14 +631,14 @@ namespace ScreenShot_One_Avalonia
                                 AddImageOverlay(bmp, shape.X1, shape.Y1, w, h, addToUndo: false);
                             }
                         }
-                        catch { }
+                        catch (Exception logEx) { AppLog.Warn(logEx); }
                     }
 
                 }
 
             }
 
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
 
         }
 
@@ -1069,7 +1069,7 @@ namespace ScreenShot_One_Avalonia
 
             }
 
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
 
         }
 
@@ -1155,7 +1155,7 @@ namespace ScreenShot_One_Avalonia
                     }
                 }
             }
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
         }
 
         private void DrawingCanvas_PointerReleased(object? sender, PointerReleasedEventArgs e)
@@ -1664,7 +1664,6 @@ namespace ScreenShot_One_Avalonia
         // ФІКС 1: Використовуємо вже створену картинку для збереження історії, щоб не рендерити двічі!
 
         private void SaveToHistoryDatabase(RenderTargetBitmap? rtb = null)
-
         {
             try
             {
@@ -1672,7 +1671,13 @@ namespace ScreenShot_One_Avalonia
                 _editingId = HistoryManager.SaveScreenshot(_originalImage, finalRtb, ExtractShapes(), _editingId);
                 _isSavedToHistory = true;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // Раніше тут був порожній catch: якщо диск повний або файл зайнятий,
+                // скріншот мовчки не потрапляв в історію. Тепер — лог і повідомлення.
+                AppLog.Error(ex, "Збереження в історію");
+                MessageBoxManager.GetMessageBoxStandard("Помилка", $"Не вдалося зберегти скріншот в історію: {ex.Message}").ShowWindowAsync();
+            }
         }
 
         // ФІКС 2: ПОВЕРНУЛИ ПЕРЕВІРЕНИЙ КОД WINFORMS ДЛЯ WINDOWS
@@ -1716,7 +1721,7 @@ namespace ScreenShot_One_Avalonia
 
                         {
 
-                            Debug.WriteLine($"Помилка WinForms буфера: {ex.Message}");
+                            AppLog.Write($"Помилка WinForms буфера: {ex.Message}");
 
                         }
                     });
@@ -1747,6 +1752,8 @@ namespace ScreenShot_One_Avalonia
 
         private async void BtnDriveUpload_Click(object? sender, RoutedEventArgs e)
         {
+            if (!await UploadConsent.ConfirmAsync(this)) return;
+            string? tempPath = null;
             try
             {
                 ToastNotification.IsVisible = true;
@@ -1755,11 +1762,10 @@ namespace ScreenShot_One_Avalonia
                 var rtb = CreateRenderedBitmap();
                 if (!_isSavedToHistory) SaveToHistoryDatabase(rtb);
 
-                string tempPath = Path.Combine(Path.GetTempPath(), $"upload_{Guid.NewGuid()}.png");
+                tempPath = Path.Combine(Path.GetTempPath(), $"upload_{Guid.NewGuid()}.png");
                 using (var fs = new FileStream(tempPath, FileMode.Create)) { rtb.Save(fs); }
 
                 string webLink = await GoogleDriveManager.UploadImageAsync(tempPath);
-                File.Delete(tempPath);
 
                 if (SettingsManager.Current.CopyLinkOnUpload)
                 {
@@ -1777,14 +1783,25 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
+                AppLog.Error(ex, "Завантаження в хмару");
                 var box = MessageBoxManager.GetMessageBoxStandard("Помилка", $"Помилка завантаження: {ex.Message}");
                 await box.ShowWindowDialogAsync(this);
                 ToastNotification.IsVisible = false;
+            }
+            finally
+            {
+                // Раніше тимчасовий PNG видалявся лише при успіху — після кожної помилки лишався в %TEMP%.
+                if (tempPath != null)
+                {
+                    try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (Exception logEx) { AppLog.Warn(logEx); }
+                }
             }
         }
 
         private async void BtnPublicUpload_Click(object? sender, RoutedEventArgs e)
         {
+            if (!await UploadConsent.ConfirmAsync(this)) return;
+            string? tempPath = null;
             try
             {
                 ToastNotification.IsVisible = true;
@@ -1793,11 +1810,10 @@ namespace ScreenShot_One_Avalonia
                 var rtb = CreateRenderedBitmap();
                 if (!_isSavedToHistory) SaveToHistoryDatabase(rtb);
 
-                string tempPath = Path.Combine(Path.GetTempPath(), $"upload_{Guid.NewGuid()}.png");
+                tempPath = Path.Combine(Path.GetTempPath(), $"upload_{Guid.NewGuid()}.png");
                 using (var fs = new FileStream(tempPath, FileMode.Create)) { rtb.Save(fs); }
 
                 string webLink = await PublicCloudManager.UploadImageAsync(tempPath);
-                File.Delete(tempPath);
 
                 if (SettingsManager.Current.CopyLinkOnUpload)
                 {
@@ -1815,9 +1831,18 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
+                AppLog.Error(ex, "Завантаження в хмару");
                 var box = MessageBoxManager.GetMessageBoxStandard("Помилка", $"Помилка завантаження: {ex.Message}");
                 await box.ShowWindowDialogAsync(this);
                 ToastNotification.IsVisible = false;
+            }
+            finally
+            {
+                // Раніше тимчасовий PNG видалявся лише при успіху — після кожної помилки лишався в %TEMP%.
+                if (tempPath != null)
+                {
+                    try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (Exception logEx) { AppLog.Warn(logEx); }
+                }
             }
         }
 

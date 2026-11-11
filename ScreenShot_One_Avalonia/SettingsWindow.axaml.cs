@@ -40,7 +40,7 @@ namespace ScreenShot_One_Avalonia
                     }
                 }
             }
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
 
             TxtCurrentVersion.Text = $"Поточна версія програми: {currentVersionStr}";
 

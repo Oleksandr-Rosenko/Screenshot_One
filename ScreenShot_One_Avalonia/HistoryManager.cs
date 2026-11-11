@@ -45,9 +45,27 @@ namespace ScreenShot_One_Avalonia
 
         static HistoryManager() { if (!Directory.Exists(HistoryFolderPath)) Directory.CreateDirectory(HistoryFolderPath); }
 
+        // Компактний JSON: з WriteIndented файли метаданих (особливо з Base64-вставками) були помітно більші.
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions { WriteIndented = false };
+
+        /// <summary>
+        /// Унікальний ID скріншота. Раніше ID мав точність до секунди (yyyyMMdd_HHmmss),
+        /// тож два скріншоти за одну секунду перезаписували один одного в історії.
+        /// Формат лишається сумісним зі старими записами (той самий префікс дати й часу).
+        /// </summary>
+        private static string GenerateUniqueId()
+        {
+            string baseId = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+            string id = baseId;
+            int suffix = 1;
+            while (File.Exists(Path.Combine(HistoryFolderPath, $"{id}_flattened.png")))
+                id = $"{baseId}-{suffix++}";
+            return id;
+        }
+
         public static string SaveScreenshot(Bitmap original, Bitmap flattened, List<ShapeData> shapes, string? existingId = null)
         {
-            string id = string.IsNullOrEmpty(existingId) ? DateTime.Now.ToString("yyyyMMdd_HHmmss") : existingId;
+            string id = string.IsNullOrEmpty(existingId) ? GenerateUniqueId() : existingId;
 
             string originalPath = Path.Combine(HistoryFolderPath, $"{id}_original.png");
             string flattenedPath = Path.Combine(HistoryFolderPath, $"{id}_flattened.png");
@@ -58,7 +76,7 @@ namespace ScreenShot_One_Avalonia
 
             if (shapes != null)
             {
-                File.WriteAllText(jsonPath, JsonSerializer.Serialize(shapes, new JsonSerializerOptions { WriteIndented = true }));
+                File.WriteAllText(jsonPath, JsonSerializer.Serialize(shapes, JsonOptions));
             }
 
             if (string.IsNullOrEmpty(existingId)) EnforceMaxLimit(500);
@@ -84,7 +102,7 @@ namespace ScreenShot_One_Avalonia
                 if (File.Exists(Path.Combine(dir, $"{id}_original.png"))) File.Delete(Path.Combine(dir, $"{id}_original.png"));
                 if (File.Exists(Path.Combine(dir, $"{id}_meta.json"))) File.Delete(Path.Combine(dir, $"{id}_meta.json"));
             }
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
         }
     }
 }

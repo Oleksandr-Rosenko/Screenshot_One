@@ -64,7 +64,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[WindowsScreenCapture] Error: {ex.Message}");
+                AppLog.Write($"[WindowsScreenCapture] Error: {ex.Message}");
                 return null;
             }
         }
@@ -105,7 +105,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[WindowsScreenCapture] Crop error: {ex.Message}");
+                AppLog.Write($"[WindowsScreenCapture] Crop error: {ex.Message}");
                 return null;
             }
         }
@@ -146,11 +146,11 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[MacScreenCapture] Error: {ex.Message}");
+                AppLog.Write($"[MacScreenCapture] Error: {ex.Message}");
             }
             finally
             {
-                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
+                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch (Exception logEx) { AppLog.Warn(logEx); }
             }
             return null;
         }
@@ -183,11 +183,11 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[MacScreenCapture] Error: {ex.Message}");
+                AppLog.Write($"[MacScreenCapture] Error: {ex.Message}");
             }
             finally
             {
-                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
+                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch (Exception logEx) { AppLog.Warn(logEx); }
             }
             return null;
         }
@@ -223,12 +223,12 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[MacScreenCapture] Crop error: {ex.Message}");
+                AppLog.Write($"[MacScreenCapture] Crop error: {ex.Message}");
             }
             finally
             {
-                try { if (File.Exists(tempIn)) File.Delete(tempIn); } catch { }
-                try { if (File.Exists(tempOut)) File.Delete(tempOut); } catch { }
+                try { if (File.Exists(tempIn)) File.Delete(tempIn); } catch (Exception logEx) { AppLog.Warn(logEx); }
+                try { if (File.Exists(tempOut)) File.Delete(tempOut); } catch (Exception logEx) { AppLog.Warn(logEx); }
             }
             return null;
         }

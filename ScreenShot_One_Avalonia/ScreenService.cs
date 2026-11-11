@@ -97,7 +97,7 @@ namespace ScreenShot_One_Avalonia
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[ScreenService] Не вдалося отримати список екранів: {ex.Message}");
+                    AppLog.Write($"[ScreenService] Не вдалося отримати список екранів: {ex.Message}");
                 }
             }
             return null;
@@ -175,7 +175,7 @@ namespace ScreenShot_One_Avalonia
                         return new PixelPoint(pt.X, pt.Y);
                     }
                 }
-                catch { }
+                catch (Exception logEx) { AppLog.Warn(logEx); }
             }
 
             // Cross-platform fallback: center of primary screen

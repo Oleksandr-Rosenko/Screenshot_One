@@ -96,7 +96,7 @@ namespace ScreenShot_One_Avalonia
                     }
                 }
             }
-            catch { }
+            catch (Exception logEx) { AppLog.Warn(logEx); }
             return null;
 
         }
@@ -187,7 +187,7 @@ namespace ScreenShot_One_Avalonia
                     {
                         foreach (var ext in imgExtensions)
                         {
-                            try { screenshotFiles.AddRange(Directory.GetFiles(folder, ext)); } catch { }
+                            try { screenshotFiles.AddRange(Directory.GetFiles(folder, ext)); } catch (Exception logEx) { AppLog.Warn(logEx); }
                         }
                     }
                 }
@@ -209,7 +209,7 @@ namespace ScreenShot_One_Avalonia
                 var videoFiles = new List<string>();
                 if (Directory.Exists(videoFolder))
                 {
-                    try { videoFiles.AddRange(Directory.GetFiles(videoFolder, "*.mp4")); } catch { }
+                    try { videoFiles.AddRange(Directory.GetFiles(videoFolder, "*.mp4")); } catch (Exception logEx) { AppLog.Warn(logEx); }
                 }
 
                 var vids = videoFiles.Select(f => new FileInfo(f))
@@ -256,7 +256,7 @@ namespace ScreenShot_One_Avalonia
                             Avalonia.Threading.Dispatcher.UIThread.Post(() => item.ImageSource = bmp);
                         }
                     }
-                    catch { }
+                    catch (Exception logEx) { AppLog.Warn(logEx); }
                 }
 
                 foreach (var item in videos)
@@ -269,7 +269,7 @@ namespace ScreenShot_One_Avalonia
                             Avalonia.Threading.Dispatcher.UIThread.Post(() => item.ImageSource = bmp);
                         }
                     }
-                    catch { }
+                    catch (Exception logEx) { AppLog.Warn(logEx); }
                 }
             });
         }
@@ -362,7 +362,7 @@ namespace ScreenShot_One_Avalonia
                         if (File.Exists(filePath)) File.Delete(filePath);
                         LoadHistory();
                     }
-                    catch { }
+                    catch (Exception logEx) { AppLog.Warn(logEx); }
                 }
             }
         }
@@ -390,7 +390,7 @@ namespace ScreenShot_One_Avalonia
                         if (Directory.Exists(vidPath)) foreach (var f in Directory.GetFiles(vidPath)) File.Delete(f);
                     }
                 }
-                catch { }
+                catch (Exception logEx) { AppLog.Warn(logEx); }
 
                 LoadHistory();
             }
@@ -400,6 +400,7 @@ namespace ScreenShot_One_Avalonia
         {
             if (sender is Button button && button.Tag is string filePath)
             {
+                if (!await UploadConsent.ConfirmAsync(this)) return;
                 try
                 {
                     ShowToast("Вивантаження на Google Диск...");
@@ -457,7 +458,7 @@ namespace ScreenShot_One_Avalonia
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"Error opening video editor: {ex}");
+                            AppLog.Write($"Error opening video editor: {ex}");
                         }
                         finally
                         {
@@ -520,7 +521,7 @@ namespace ScreenShot_One_Avalonia
                                 var newThumb = GenerateVideoThumbnail(targetItem.Path);
                                 if (newThumb != null) targetItem.ImageSource = newThumb;
                             }
-                            catch { }
+                            catch (Exception logEx) { AppLog.Warn(logEx); }
 
                             VideosListBox.SelectedItem = targetItem;
                             VideosListBox.ScrollIntoView(targetItem);
@@ -545,14 +546,14 @@ namespace ScreenShot_One_Avalonia
                                     }
                                 }
                             }
-                            catch { }
+                            catch (Exception logEx) { AppLog.Warn(logEx); }
 
                             ScreenshotsListBox.SelectedItem = targetItem;
                             ScreenshotsListBox.ScrollIntoView(targetItem);
                         }
                     }
                 }
-                catch { }
+                catch (Exception logEx) { AppLog.Warn(logEx); }
             }, DispatcherPriority.Loaded);
         }
 }
