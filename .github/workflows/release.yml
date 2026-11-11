@@ -1,0 +1,110 @@
+name: Release
+
+# Автоматичний деплой (те саме, що робить Deploy.ps1, але на Windows-машині GitHub):
+# коли в main потрапляє нова <Version> у .csproj, а релізу з такою версією ще немає,
+# збирається програма, пакується Velopack і публікується як GitHub Release.
+# Користувачі отримують оновлення через вбудований механізм оновлень.
+#
+# Одноразове налаштування: Settings → Secrets and variables → Actions → New repository secret
+#   GOOGLE_CREDENTIALS_JSON = повний вміст файлу credentials.json (ключ Google Drive)
+# Без цього секрету реліз НЕ публікується: інакше в нових версіях зламалось би завантаження на Drive.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ScreenShot_One_Avalonia/ScreenShot_One_Avalonia.csproj'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: ScreenShot_One_Avalonia
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: ver
+        run: |
+          [xml]$proj = Get-Content ScreenShot_One_Avalonia.csproj
+          $version = ($proj.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -First 1).Version
+          $velopack = ($proj.Project.ItemGroup.PackageReference | Where-Object { $_.Include -eq 'Velopack' }).Version
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "velopack=$velopack" >> $env:GITHUB_OUTPUT
+          gh release view $version --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $version already exists — nothing to deploy."
+            "exists=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "Release $version not found — deploying."
+            "exists=false" >> $env:GITHUB_OUTPUT
+          }
+          exit 0
+
+      - name: Write credentials.json
+        if: steps.ver.outputs.exists == 'false'
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        run: |
+          if (-not $env:GOOGLE_CREDENTIALS_JSON) {
+            Write-Error "Secret GOOGLE_CREDENTIALS_JSON is not set (Settings → Secrets and variables → Actions). Release skipped so that Google Drive upload does not break for users."
+            exit 1
+          }
+          [System.IO.File]::WriteAllText((Join-Path $PWD 'credentials.json'), $env:GOOGLE_CREDENTIALS_JSON)
+
+      - uses: actions/setup-dotnet@v4
+        if: steps.ver.outputs.exists == 'false'
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Download ffmpeg
+        if: steps.ver.outputs.exists == 'false'
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP "ffmpeg.zip"
+          Invoke-WebRequest "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip" -OutFile $zip
+          Expand-Archive $zip -DestinationPath (Join-Path $env:RUNNER_TEMP "ffmpeg")
+          $exe = Get-ChildItem (Join-Path $env:RUNNER_TEMP "ffmpeg") -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          Copy-Item $exe.FullName "ffmpeg.exe"
+
+      - name: Test
+        if: steps.ver.outputs.exists == 'false'
+        working-directory: .
+        run: dotnet test ScreenShot_One_Avalonia.Tests -c Release -p:Platform=x64
+
+      - name: Publish
+        if: steps.ver.outputs.exists == 'false'
+        run: dotnet publish -f net10.0-windows -c Release -r win-x64 -p:Platform=x64 --self-contained true
+
+      - name: Install vpk
+        if: steps.ver.outputs.exists == 'false'
+        run: |
+          dotnet tool install -g vpk --version "${{ steps.ver.outputs.velopack }}"
+          if ($LASTEXITCODE -ne 0) { dotnet tool install -g vpk }
+
+      - name: Velopack pack & upload
+        if: steps.ver.outputs.exists == 'false'
+        run: |
+          $repoUrl = "https://github.com/$env:GITHUB_REPOSITORY"
+          $version = "${{ steps.ver.outputs.version }}"
+          # Попередній реліз — для дельта-оновлень (менший розмір завантаження для користувачів)
+          vpk download github --repoUrl $repoUrl --token $env:GH_TOKEN
+          vpk pack -u ScreenShotOne -v $version -p "bin\x64\Release\net10.0-windows\win-x64\publish" -e Screenshot_One.exe
+          if ($LASTEXITCODE -ne 0) { throw "Pack failed" }
+          vpk upload github --repoUrl $repoUrl --token $env:GH_TOKEN --publish
+          if ($LASTEXITCODE -ne 0) { throw "Upload failed" }
+
+      - name: Release notes
+        if: steps.ver.outputs.exists == 'false'
+        run: python publish_notes.py $env:GH_TOKEN "${{ steps.ver.outputs.version }}"
