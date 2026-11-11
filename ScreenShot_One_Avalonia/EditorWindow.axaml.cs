@@ -483,7 +483,7 @@ namespace ScreenShot_One_Avalonia
                 Height = 14,
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
-                Background = Brushes.DodgerBlue,
+                Background = AccentBrush,
                 CornerRadius = new CornerRadius(3),
                 Cursor = new Cursor(StandardCursorType.BottomRightCorner),
                 Margin = new Thickness(0, 0, -4, -4),
@@ -965,7 +965,7 @@ namespace ScreenShot_One_Avalonia
                             MinWidth = 100,
                             MinHeight = 30,
                             Background = new SolidColorBrush(Color.FromArgb(220, 255, 255, 255)),
-                            BorderBrush = Brushes.DeepSkyBlue,
+                            BorderBrush = AccentBrush,
                             BorderThickness = new Thickness(2),
                             Padding = new Thickness(5),
                             AcceptsReturn = true,
@@ -1527,7 +1527,7 @@ namespace ScreenShot_One_Avalonia
                 Foreground = tb.Foreground,
                 FontWeight = FontWeight.Bold,
                 Background = Brushes.White,
-                BorderBrush = Brushes.DeepSkyBlue,
+                BorderBrush = AccentBrush,
                 BorderThickness = new Thickness(2),
                 Padding = new Thickness(2),
                 MinWidth = 50
@@ -1845,6 +1845,9 @@ namespace ScreenShot_One_Avalonia
         }
 
         // Ctrl на Windows, Cmd на Mac (раніше Cmd+Z / Cmd+V на Mac не працювали — перевірявся лише Ctrl)
+        // Акцент палітри для службових рамок (редагування тексту, виділення вставленої картинки)
+        private IBrush AccentBrush => (this.FindResource("AccentBrush") as IBrush) ?? Brushes.SeaGreen;
+
         private static KeyModifiers PrimaryModifier => OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
 
         private void Window_KeyDown(object? sender, KeyEventArgs e)

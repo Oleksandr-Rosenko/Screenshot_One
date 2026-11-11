@@ -17,11 +17,11 @@
 
 		<Path Name="OverlayPath" Fill="#50000000" />
 
-		<Line Name="CrosshairH" Stroke="DeepSkyBlue" StrokeThickness="1" Opacity="0.6" IsHitTestVisible="False"/>
-		<Line Name="CrosshairV" Stroke="DeepSkyBlue" StrokeThickness="1" Opacity="0.6" IsHitTestVisible="False"/>
+		<Line Name="CrosshairH" Stroke="#62C9A0" StrokeThickness="1" Opacity="0.6" IsHitTestVisible="False"/>
+		<Line Name="CrosshairV" Stroke="#62C9A0" StrokeThickness="1" Opacity="0.6" IsHitTestVisible="False"/>
 
 		<Rectangle Name="SelectionRectangle"
-                   Stroke="DeepSkyBlue"
+                   Stroke="#62C9A0"
                    StrokeThickness="2"
                    Fill="Transparent"
                    IsVisible="False"/>
@@ -37,7 +37,7 @@
 						</Image.RenderTransform>
 					</Image>
 				</Canvas>
-				<Path Stroke="DeepSkyBlue" StrokeThickness="1" Data="M 75 0 L 75 150 M 0 75 L 150 75" Opacity="0.8"/>
+				<Path Stroke="#62C9A0" StrokeThickness="1" Data="M 75 0 L 75 150 M 0 75 L 150 75" Opacity="0.8"/>
 				<Border VerticalAlignment="Bottom" Background="#AA000000" Padding="0,4">
 					<TextBlock Name="MagnifierText" Text="0 x 0" Foreground="White" FontSize="13" HorizontalAlignment="Center" FontWeight="Bold"/>
 				</Border>

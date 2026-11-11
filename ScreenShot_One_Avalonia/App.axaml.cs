@@ -117,7 +117,11 @@ namespace ScreenShot_One_Avalonia
             VideoRecorderManager.OnStatusChanged += isRecording =>
                 Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
-                    if (_trayIcon != null) _trayIcon.Icon = LoadTrayIcon(isRecording);
+                    if (_trayIcon != null)
+                    {
+                        _trayIcon.Icon = LoadTrayIcon(isRecording);
+                        if (OperatingSystem.IsMacOS()) MacOSProperties.SetIsTemplateIcon(_trayIcon, !isRecording);
+                    }
                 });
 
             var menu = new NativeMenu();
@@ -227,6 +231,7 @@ namespace ScreenShot_One_Avalonia
             menu.Add(exitItem);
 
             _trayIcon.Menu = menu;
+            if (OperatingSystem.IsMacOS()) MacOSProperties.SetIsTemplateIcon(_trayIcon, true);
 
             _trayIcon.IsVisible = true;
 
@@ -239,7 +244,11 @@ namespace ScreenShot_One_Avalonia
 
         {
 
-            string assetName = isRecording ? "tray-recording.png" : "tray.png";
+            // macOS: у звичайному стані — шаблонна іконка (чорна з прозорістю; система сама підлаштовує під світлу/темну
+            // панель меню), під час запису — кольорова з червоною точкою. Windows: м'ятний знак.
+            string assetName = OperatingSystem.IsMacOS()
+                ? (isRecording ? "tray-mac-recording.png" : "tray-mac.png")
+                : (isRecording ? "tray-recording.png" : "tray.png");
 
             try
 

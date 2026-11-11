@@ -60,6 +60,12 @@ foreach ($targetArch in $Architectures) {
     }
 
     # Copy icon if available
+    # Іконка програми для Finder/Dock (Info.plist → CFBundleIconFile = icon.icns)
+    $icnsSrc = Join-Path $ScriptDir "Assets/icon.icns"
+    if (Test-Path $icnsSrc) {
+        Copy-Item -Path $icnsSrc -Destination (Join-Path $resourcesDir "icon.icns") -Force
+    }
+
     $icoSrc = Join-Path $ScriptDir "Assets/icon.ico"
     if (Test-Path $icoSrc) {
         Copy-Item -Path $icoSrc -Destination (Join-Path $resourcesDir "icon.ico") -Force

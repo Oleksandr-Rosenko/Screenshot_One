@@ -23,6 +23,9 @@ namespace ScreenShot_One_Avalonia
 {
     public partial class VideoEditorWindow : SukiWindow
     {
+        // Кольори з палітри «Хвоя і м'ята» (App.axaml)
+        private IBrush ThemeBrush(string key) => (this.FindResource(key) as IBrush) ?? Brushes.Gray;
+
         private LibVLC? _libVLC;
         private LibVLCSharp.Shared.MediaPlayer? _mediaPlayer;
         private string _sourceFile;
@@ -43,7 +46,7 @@ namespace ScreenShot_One_Avalonia
         private DateTime _lastTrimChangeTime = DateTime.MinValue;
         private double _lastTrimValue = 0;
         private bool _isCutoutMode = false;
-        private static readonly IBrush InactiveTrimTextBrush = new SolidColorBrush(Color.Parse("#94A3B8"));
+        private IBrush InactiveTrimTextBrush => ThemeBrush("MutedTextBrush");
 
         private HistoryWindow? _historyOwner;
         private HistoryItem? _sourceHistoryItem;
@@ -477,13 +480,13 @@ namespace ScreenShot_One_Avalonia
                 bool isDark = this.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark;
                 if (BtnUpload != null)
                 {
-                    BtnUpload.Background = isDark ? new SolidColorBrush(Color.Parse("#1E293B")) : new SolidColorBrush(Color.Parse("#F1F5F9"));
-                    BtnUpload.BorderBrush = new SolidColorBrush(Color.Parse("#94A3B8"));
+                    BtnUpload.Background = ThemeBrush("PanelBrush");
+                    BtnUpload.BorderBrush = ThemeBrush("MutedTextBrush");
                     BtnUpload.BorderThickness = new Thickness(1.5);
                 }
                 if (TxtBtnUpload != null)
                 {
-                    TxtBtnUpload.Foreground = isDark ? Brushes.White : new SolidColorBrush(Color.Parse("#0F172A"));
+                    TxtBtnUpload.Foreground = ThemeBrush("ToolbarIconBrush");
                     TxtBtnUpload.FontWeight = FontWeight.Bold;
                 }
             }
@@ -517,20 +520,20 @@ namespace ScreenShot_One_Avalonia
                     if (TxtMaskRight != null) { TxtMaskRight.Text = "✂ ВИДАЛЯЄТЬСЯ"; TxtMaskRight.Foreground = Brushes.White; TxtMaskRight.IsVisible = rightVal > 10; }
 
                     // Middle: Vivid Green (Keep)
-                    TrimMaskActive.Background = new SolidColorBrush(Color.Parse("#10B981"));
+                    TrimMaskActive.Background = new SolidColorBrush(Color.Parse("#3AA882"));
                     if (TxtMaskActive != null) { TxtMaskActive.Text = "✓ ЗБЕРІГАЄТЬСЯ"; TxtMaskActive.Foreground = Brushes.White; TxtMaskActive.IsVisible = activeVal > 12; }
                 }
                 else
                 {
                     // Mode: Cutout Middle
                     // Left/Right: Vivid Green (Keep)
-                    TrimMaskLeft.Background = new SolidColorBrush(Color.Parse("#10B981"));
-                    TrimMaskRight.Background = new SolidColorBrush(Color.Parse("#10B981"));
+                    TrimMaskLeft.Background = new SolidColorBrush(Color.Parse("#3AA882"));
+                    TrimMaskRight.Background = new SolidColorBrush(Color.Parse("#3AA882"));
                     if (TxtMaskLeft != null) { TxtMaskLeft.Text = "✓ ЗБЕРІГАЄТЬСЯ"; TxtMaskLeft.Foreground = Brushes.White; TxtMaskLeft.IsVisible = startVal > 10; }
                     if (TxtMaskRight != null) { TxtMaskRight.Text = "✓ ЗБЕРІГАЄТЬСЯ"; TxtMaskRight.Foreground = Brushes.White; TxtMaskRight.IsVisible = rightVal > 10; }
 
                     // Middle: Vibrant Red (Cut)
-                    TrimMaskActive.Background = new SolidColorBrush(Color.Parse("#EF4444"));
+                    TrimMaskActive.Background = new SolidColorBrush(Color.Parse("#D9614C"));
                     if (TxtMaskActive != null) { TxtMaskActive.Text = "✂ ВИДАЛЯЄТЬСЯ"; TxtMaskActive.Foreground = Brushes.White; TxtMaskActive.IsVisible = activeVal > 12; }
                 }
             }
@@ -551,14 +554,14 @@ namespace ScreenShot_One_Avalonia
                     if (!_isCutoutMode)
                     {
                         IconTrimHeader.Kind = Material.Icons.MaterialIconKind.ArrowCollapseHorizontal;
-                        IconTrimHeader.Foreground = new SolidColorBrush(Color.Parse("#10B981"));
+                        IconTrimHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882"));
                         TxtTrimHeader.Text = "Режим обрізки (Залишити діапазон)";
-                        TxtTrimHeader.Foreground = new SolidColorBrush(Color.Parse("#10B981"));
+                        TxtTrimHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882"));
 
                         // Mode Segmented Buttons
                         if (BtnTrimModeKeep != null)
                         {
-                            BtnTrimModeKeep.Background = new SolidColorBrush(Color.Parse("#10B981"));
+                            BtnTrimModeKeep.Background = new SolidColorBrush(Color.Parse("#3AA882"));
                             if (IconTrimModeKeep != null) IconTrimModeKeep.Foreground = Brushes.White;
                             if (TxtTrimModeKeep != null) { TxtTrimModeKeep.FontWeight = FontWeight.Bold; TxtTrimModeKeep.Foreground = Brushes.White; }
                         }
@@ -575,30 +578,30 @@ namespace ScreenShot_One_Avalonia
                         if (TxtTrimEndLabel != null) TxtTrimEndLabel.Text = "Кінець:";
 
                         // Sliders
-                        if (TxtTrimStartRowHeader != null) { TxtTrimStartRowHeader.Text = "Початок (звідки залишити)"; TxtTrimStartRowHeader.Foreground = new SolidColorBrush(Color.Parse("#10B981")); }
-                        if (TrimStartSlider != null) TrimStartSlider.Foreground = new SolidColorBrush(Color.Parse("#10B981"));
-                        if (TxtTrimEndRowHeader != null) { TxtTrimEndRowHeader.Text = "Кінець (доки залишити)"; TxtTrimEndRowHeader.Foreground = new SolidColorBrush(Color.Parse("#10B981")); }
-                        if (TrimEndSlider != null) TrimEndSlider.Foreground = new SolidColorBrush(Color.Parse("#10B981"));
+                        if (TxtTrimStartRowHeader != null) { TxtTrimStartRowHeader.Text = "Початок (звідки залишити)"; TxtTrimStartRowHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882")); }
+                        if (TrimStartSlider != null) TrimStartSlider.Foreground = new SolidColorBrush(Color.Parse("#3AA882"));
+                        if (TxtTrimEndRowHeader != null) { TxtTrimEndRowHeader.Text = "Кінець (доки залишити)"; TxtTrimEndRowHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882")); }
+                        if (TrimEndSlider != null) TrimEndSlider.Foreground = new SolidColorBrush(Color.Parse("#3AA882"));
 
                         if (TxtPreviewTrim != null) TxtPreviewTrim.Text = "Прев'ю збереженого";
                         if (TxtConfirmTrim != null) TxtConfirmTrim.Text = "Зберегти виділене";
-                        if (IconConfirmTrim != null) { IconConfirmTrim.Kind = Material.Icons.MaterialIconKind.Check; IconConfirmTrim.Foreground = Brushes.White; }
+                        if (IconConfirmTrim != null) { IconConfirmTrim.Kind = Material.Icons.MaterialIconKind.Check; IconConfirmTrim.Foreground = ThemeBrush("OnAccentBrush"); }
                         if (TxtBtnSave != null) TxtBtnSave.Text = "Обрізати та зберегти";
 
                         // Status Banner Styling (Compact & calm)
                         if (TrimStatusBanner != null)
                         {
-                            TrimStatusBanner.Background = isDark ? new SolidColorBrush(Color.Parse("#1E293B")) : new SolidColorBrush(Color.Parse("#F8FAFC"));
-                            TrimStatusBanner.BorderBrush = new SolidColorBrush(Color.Parse("#FCA5A5"));
+                            TrimStatusBanner.Background = ThemeBrush("PanelBrush");
+                            TrimStatusBanner.BorderBrush = new SolidColorBrush(Color.Parse("#E8A598"));
                         }
                         if (IconTrimStatusBanner != null)
                         {
                             IconTrimStatusBanner.Kind = Material.Icons.MaterialIconKind.ContentCut;
-                            IconTrimStatusBanner.Foreground = new SolidColorBrush(Color.Parse("#EF4444"));
+                            IconTrimStatusBanner.Foreground = new SolidColorBrush(Color.Parse("#D9614C"));
                         }
                         if (TxtTrimStatusBanner != null)
                         {
-                            TxtTrimStatusBanner.Foreground = isDark ? new SolidColorBrush(Color.Parse("#FEF2F2")) : new SolidColorBrush(Color.Parse("#334155"));
+                            TxtTrimStatusBanner.Foreground = ThemeBrush("ToolbarIconBrush");
                         }
                     }
                 }
@@ -842,13 +845,13 @@ namespace ScreenShot_One_Avalonia
 
                 if (isTrim)
                 {
-                    BtnTrimMode.Background = isDark ? new SolidColorBrush(Color.Parse("#78350F")) : new SolidColorBrush(Color.Parse("#FEF3C7"));
-                    BtnTrimMode.BorderBrush = new SolidColorBrush(Color.Parse("#F59E0B"));
+                    BtnTrimMode.Background = isDark ? new SolidColorBrush(Color.Parse("#78350F")) : new SolidColorBrush(Color.Parse("#F6EBD3"));
+                    BtnTrimMode.BorderBrush = new SolidColorBrush(Color.Parse("#D9A441"));
                     BtnTrimMode.BorderThickness = new Thickness(1.5);
                     if (TxtBtnTrimMode != null)
                     {
                         TxtBtnTrimMode.Text = "Обрізка: Увімкнено";
-                        TxtBtnTrimMode.Foreground = isDark ? new SolidColorBrush(Color.Parse("#FCD34D")) : new SolidColorBrush(Color.Parse("#B45309"));
+                        TxtBtnTrimMode.Foreground = isDark ? new SolidColorBrush(Color.Parse("#FCD34D")) : new SolidColorBrush(Color.Parse("#9A6A1F"));
                     }
 
                     if (TimelineTrackBorder != null) TimelineTrackBorder.Height = 24;

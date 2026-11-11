@@ -28,6 +28,11 @@ namespace ScreenShot_One_Avalonia
 
     public partial class UpdateWindow : SukiWindow
     {
+        // Кольори з палітри «Хвоя і м'ята» (App.axaml) замість жорстко прописаного синього
+        private IBrush Accent => (this.FindResource("AccentBrush") as IBrush) ?? Brushes.SeaGreen;
+        private IBrush AccentSoft => (this.FindResource("ActiveToolBrush") as IBrush) ?? Brushes.Transparent;
+        private IBrush Danger => (this.FindResource("DangerBrush") as IBrush) ?? Brushes.IndianRed;
+
         private static UpdateWindow? _activeWindow;
 
         private UpdateWindowState _state = UpdateWindowState.Checking;
@@ -100,15 +105,15 @@ namespace ScreenShot_One_Avalonia
 
             TxtTitle.Text = "Перевірка оновлень...";
             IconHeader.Kind = MaterialIconKind.Radar;
-            IconHeader.Foreground = Brushes.DeepSkyBlue;
-            BorderIconHeader.Background = new SolidColorBrush(Color.FromArgb(30, 0, 191, 255));
+            IconHeader.Foreground = Accent;
+            BorderIconHeader.Background = AccentSoft;
 
             TxtCurrentVersion.Text = _currentVersion.Trim().TrimStart('v', 'V');
             TxtArrow.IsVisible = false;
             BorderNewVersion.IsVisible = false;
 
             IconCardHeader.Kind = MaterialIconKind.ServerNetwork;
-            IconCardHeader.Foreground = Brushes.DeepSkyBlue;
+            IconCardHeader.Foreground = Accent;
             TxtCardHeader.Text = "Пошук нових релізів:";
             TxtChangelog.Text = "Підключення до сервера оновлень GitHub та перевірка наявності свіжих пакунків...";
 
@@ -154,17 +159,17 @@ namespace ScreenShot_One_Avalonia
             IconHeader.Kind = MaterialIconKind.RocketLaunch;
             // SukiPrimaryColor у SukiUI — це Color, а не пензель. Пряме приведення (IBrush) кидало InvalidCastException,
             // і замість «Доступне оновлення» показувалась помилка — оновитися через програму було неможливо.
-            IconHeader.Foreground = GetThemeBrush("SukiPrimaryColor", Brushes.DeepSkyBlue);
-            BorderIconHeader.Background = GetThemeBrush("SukiPrimaryColor10", new SolidColorBrush(Color.FromArgb(30, 0, 191, 255)));
+            IconHeader.Foreground = Accent;
+            BorderIconHeader.Background = AccentSoft;
 
             TxtCurrentVersion.Text = _currentVersion.Trim().TrimStart('v', 'V');
             TxtArrow.IsVisible = true;
             BorderNewVersion.IsVisible = true;
             TxtNewVersion.Text = _newVersion.Trim().TrimStart('v', 'V');
-            TxtNewVersion.Foreground = new SolidColorBrush(Color.Parse("#10B981"));
+            TxtNewVersion.Foreground = Accent;
 
             IconCardHeader.Kind = MaterialIconKind.FormatListBulleted;
-            IconCardHeader.Foreground = GetThemeBrush("SukiPrimaryColor", Brushes.DeepSkyBlue);
+            IconCardHeader.Foreground = Accent;
             TxtCardHeader.Text = "Що нового в цій версії:";
 
             PanelProgress.IsVisible = false;
@@ -192,17 +197,17 @@ namespace ScreenShot_One_Avalonia
 
             TxtTitle.Text = "У вас найновіша версія!";
             IconHeader.Kind = MaterialIconKind.CheckCircleOutline;
-            IconHeader.Foreground = Brushes.DeepSkyBlue;
-            BorderIconHeader.Background = new SolidColorBrush(Color.FromArgb(30, 0, 191, 255));
+            IconHeader.Foreground = Accent;
+            BorderIconHeader.Background = AccentSoft;
 
             TxtCurrentVersion.Text = _currentVersion.Trim().TrimStart('v', 'V');
             TxtArrow.IsVisible = true;
             BorderNewVersion.IsVisible = true;
             TxtNewVersion.Text = "Актуальна";
-            TxtNewVersion.Foreground = Brushes.DeepSkyBlue;
+            TxtNewVersion.Foreground = Accent;
 
             IconCardHeader.Kind = MaterialIconKind.ShieldCheckOutline;
-            IconCardHeader.Foreground = Brushes.DeepSkyBlue;
+            IconCardHeader.Foreground = Accent;
             TxtCardHeader.Text = "Статус системи:";
             TxtChangelog.Text = "Програма працює на останній стабільній версії. Всі доступні оновлення та виправлення вже встановлені.";
 
@@ -380,7 +385,7 @@ namespace ScreenShot_One_Avalonia
                 catch (Exception ex)
                 {
                     TxtStatusMessage.Text = $"Не вдалося перезапустити: {ex.Message}";
-                    TxtStatusMessage.Foreground = Brushes.Red;
+                    TxtStatusMessage.Foreground = Danger;
                 }
                 return;
             }
@@ -426,7 +431,7 @@ namespace ScreenShot_One_Avalonia
                 BtnAction.IsEnabled = true;
                 BtnLater.IsEnabled = true;
                 TxtStatusMessage.Text = $"Помилка завантаження: {ex.Message}";
-                TxtStatusMessage.Foreground = Brushes.Red;
+                TxtStatusMessage.Foreground = Danger;
             }
         }
 
