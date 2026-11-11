@@ -156,6 +156,37 @@ namespace ScreenShot_One_Avalonia.Tests
         }
 
         [Fact]
+        public void HistoryItem_FriendlyDateAndSize_AreHumanReadable()
+        {
+            var now = new DateTime(2026, 11, 11, 15, 0, 0);
+            Assert.Equal("Сьогодні, 13:04", HistoryItem.FriendlyDate(new DateTime(2026, 11, 11, 13, 4, 0), now));
+            Assert.Equal("Вчора, 18:20", HistoryItem.FriendlyDate(new DateTime(2026, 11, 10, 18, 20, 0), now));
+            Assert.Equal("3 березня, 09:15", HistoryItem.FriendlyDate(new DateTime(2026, 3, 3, 9, 15, 0), now));
+            Assert.Equal("31 грудня 2025, 23:59", HistoryItem.FriendlyDate(new DateTime(2025, 12, 31, 23, 59, 0), now));
+
+            Assert.Equal("512 Б", HistoryItem.FriendlySize(512));
+            Assert.Equal("245 КБ", HistoryItem.FriendlySize(245 * 1024));
+            Assert.Equal("2,4 МБ", HistoryItem.FriendlySize((long)(2.4 * 1024 * 1024)));
+        }
+
+        [Fact]
+        public void HistoryItem_ReadPngSize_ReadsHeaderWithoutDecoding()
+        {
+            HeadlessAvalonia.Run(() =>
+            {
+                string path = Path.Combine(Path.GetTempPath(), $"sso_png_{Guid.NewGuid():N}.png");
+                try
+                {
+                    using (var bmp = MakeGradient(321, 123)) bmp.Save(path);
+                    Assert.Equal((321, 123), HistoryItem.ReadPngSize(path));
+                    File.WriteAllText(path, "not a png");
+                    Assert.Null(HistoryItem.ReadPngSize(path));
+                }
+                finally { if (File.Exists(path)) File.Delete(path); }
+            });
+        }
+
+        [Fact]
         public void MacUpdateChecker_ParseRelease_PicksArchiveForArchitecture()
         {
             string json = @"{

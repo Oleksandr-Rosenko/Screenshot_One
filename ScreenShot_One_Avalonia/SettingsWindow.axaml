@@ -2,86 +2,158 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
         x:Class="ScreenShot_One_Avalonia.SettingsWindow"
-        Title="Налаштування" SizeToContent="Height" Width="560" MaxHeight="900"
+        Title="Налаштування" SizeToContent="Height" Width="600" MaxHeight="900"
         WindowStartupLocation="CenterScreen"
         Icon="/Assets/icon.ico">
 
+	<suki:SukiWindow.Styles>
+		<!-- Розділ: картка з рядками «назва ліворуч — керування праворуч» -->
+		<Style Selector="Border.section">
+			<Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Padding" Value="16,6"/>
+		</Style>
+		<Style Selector="TextBlock.sectionTitle">
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}"/>
+			<Setter Property="Margin" Value="4,0,0,6"/>
+		</Style>
+		<Style Selector="Grid.row">
+			<Setter Property="MinHeight" Value="48"/>
+		</Style>
+		<Style Selector="TextBlock.label">
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="TextWrapping" Value="Wrap"/>
+		</Style>
+		<Style Selector="TextBlock.hint">
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}"/>
+			<Setter Property="TextWrapping" Value="Wrap"/>
+		</Style>
+		<Style Selector="Border.divider">
+			<Setter Property="Height" Value="1"/>
+			<Setter Property="Background" Value="{DynamicResource PanelBorderBrush}"/>
+		</Style>
+		<Style Selector="TextBox.hotkey">
+			<Setter Property="Width" Value="220"/>
+			<Setter Property="IsReadOnly" Value="True"/>
+			<Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Menlo, monospace"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="Margin" Value="0,6"/>
+		</Style>
+	</suki:SukiWindow.Styles>
+
 	<ScrollViewer VerticalScrollBarVisibility="Auto">
-	<StackPanel Margin="20" Spacing="15">
-		<TextBlock Text="Загальні налаштування" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+	<StackPanel Margin="18,14,18,18" Spacing="18">
 
-		<ToggleSwitch Name="ChkStartOnBoot" Content="Запускати програму разом із системою" FontSize="16"/>
-		<ToggleSwitch Name="ChkCopyToClipboard" Content="Копіювати скріншот в буфер відразу після створення" FontSize="16"/>
-		<ToggleSwitch Name="ChkCopyLink" Content="Копіювати публічне посилання після завантаження в хмару" FontSize="16"/>
-
-		<Grid ColumnDefinitions="*, Auto" Margin="0,5">
-			<TextBlock Text="Тема оформлення:" FontSize="16" VerticalAlignment="Center"/>
-			<ComboBox Name="ComboTheme" Grid.Column="1" Width="220" SelectionChanged="ComboTheme_SelectionChanged">
-				<ComboBoxItem Content="Темна"/>
-				<ComboBoxItem Content="Світла"/>
-			</ComboBox>
-		</Grid>
-
-		<Border Height="1" Background="{DynamicResource SukiBorderBrush}" Margin="0,10"/>
-
-		<TextBlock Text="Знімки та файли" FontSize="18" FontWeight="Bold"/>
-
-		<Grid ColumnDefinitions="*, Auto" Margin="0,5">
-			<TextBlock Text="Після знімка:" FontSize="16" VerticalAlignment="Center"/>
-			<ComboBox Name="ComboAfterCapture" Grid.Column="1" Width="260">
-				<ComboBoxItem Content="Відкривати редактор"/>
-				<ComboBoxItem Content="Показувати мініатюру"/>
-			</ComboBox>
-		</Grid>
-
-		<StackPanel Spacing="6">
-			<TextBlock Text="Папка для збереження:" FontSize="16"/>
-			<Grid ColumnDefinitions="*, Auto">
-				<TextBox Name="TxtSaveFolder" IsReadOnly="True" FontSize="13"/>
-				<Button Name="BtnChooseFolder" Grid.Column="1" Content="Обрати…" Margin="8,0,0,0" Click="BtnChooseFolder_Click"/>
-			</Grid>
+		<!-- Загальні -->
+		<StackPanel>
+			<TextBlock Classes="sectionTitle" Text="ЗАГАЛЬНІ"/>
+			<Border Classes="section">
+				<StackPanel>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<TextBlock Classes="label" Text="Запускати програму разом із системою"/>
+						<ToggleSwitch Grid.Column="1" Name="ChkStartOnBoot" OnContent="" OffContent="" VerticalAlignment="Center"/>
+					</Grid>
+					<Border Classes="divider"/>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<TextBlock Classes="label" Text="Копіювати скріншот у буфер одразу після знімка"/>
+						<ToggleSwitch Grid.Column="1" Name="ChkCopyToClipboard" OnContent="" OffContent="" VerticalAlignment="Center"/>
+					</Grid>
+					<Border Classes="divider"/>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<TextBlock Classes="label" Text="Копіювати посилання після завантаження в хмару"/>
+						<ToggleSwitch Grid.Column="1" Name="ChkCopyLink" OnContent="" OffContent="" VerticalAlignment="Center"/>
+					</Grid>
+					<Border Classes="divider"/>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<TextBlock Classes="label" Text="Тема оформлення"/>
+						<ComboBox Grid.Column="1" Name="ComboTheme" Width="240" VerticalAlignment="Center" SelectionChanged="ComboTheme_SelectionChanged">
+							<ComboBoxItem Content="Темна"/>
+							<ComboBoxItem Content="Світла"/>
+						</ComboBox>
+					</Grid>
+				</StackPanel>
+			</Border>
 		</StackPanel>
 
-		<Grid ColumnDefinitions="*, Auto" Margin="0,5">
-			<TextBlock Text="Формат файлу:" FontSize="16" VerticalAlignment="Center"/>
-			<ComboBox Name="ComboSaveFormat" Grid.Column="1" Width="260">
-				<ComboBoxItem Content="PNG (без втрат)"/>
-				<ComboBoxItem Content="JPG (менший розмір)"/>
-			</ComboBox>
-		</Grid>
+		<!-- Знімки та файли -->
+		<StackPanel>
+			<TextBlock Classes="sectionTitle" Text="ЗНІМКИ ТА ФАЙЛИ"/>
+			<Border Classes="section">
+				<StackPanel>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<TextBlock Classes="label" Text="Після знімка"/>
+						<ComboBox Grid.Column="1" Name="ComboAfterCapture" Width="240" VerticalAlignment="Center">
+							<ComboBoxItem Content="Відкривати редактор"/>
+							<ComboBoxItem Content="Показувати мініатюру"/>
+						</ComboBox>
+					</Grid>
+					<Border Classes="divider"/>
+					<StackPanel Margin="0,10" Spacing="8">
+						<TextBlock Classes="label" Text="Папка для збереження"/>
+						<Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+							<TextBox Name="TxtSaveFolder" IsReadOnly="True" FontSize="13"/>
+							<Button Name="BtnChooseFolder" Grid.Column="1" Content="Обрати…" Click="BtnChooseFolder_Click"/>
+						</Grid>
+					</StackPanel>
+					<Border Classes="divider"/>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<TextBlock Classes="label" Text="Формат файлу"/>
+						<ComboBox Grid.Column="1" Name="ComboSaveFormat" Width="240" VerticalAlignment="Center">
+							<ComboBoxItem Content="PNG — без втрат"/>
+							<ComboBoxItem Content="JPG — менший розмір"/>
+						</ComboBox>
+					</Grid>
+					<Border Classes="divider"/>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,8">
+							<TextBlock Classes="label" Text="Автоматично зберігати кожен скріншот"/>
+							<TextBlock Classes="hint" Text="У папку вище, при «Копіювати та закрити» і з мініатюри"/>
+						</StackPanel>
+						<ToggleSwitch Grid.Column="1" Name="ChkAutoSave" OnContent="" OffContent="" VerticalAlignment="Center"/>
+					</Grid>
+				</StackPanel>
+			</Border>
+		</StackPanel>
 
-		<ToggleSwitch Name="ChkAutoSave" Content="Автоматично зберігати кожен скріншот у цю папку" FontSize="16"/>
+		<!-- Гарячі клавіші -->
+		<StackPanel>
+			<TextBlock Classes="sectionTitle" Text="ГАРЯЧІ КЛАВІШІ"/>
+			<Border Classes="section">
+				<StackPanel>
+					<TextBlock Classes="hint" Text="Клікніть у поле й натисніть потрібну комбінацію клавіш." Margin="0,10,0,4"/>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<TextBlock Classes="label" Text="Скріншот зони"/>
+						<TextBox Grid.Column="1" Name="TxtRegionKey" Classes="hotkey" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="Region"/>
+					</Grid>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<TextBlock Classes="label" Text="Скріншот екрана"/>
+						<TextBox Grid.Column="1" Name="TxtFullScreenKey" Classes="hotkey" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="FullScreen"/>
+					</Grid>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<TextBlock Classes="label" Text="Скріншот усіх екранів"/>
+						<TextBox Grid.Column="1" Name="TxtAllScreensKey" Classes="hotkey" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="AllScreens"/>
+					</Grid>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<TextBlock Classes="label" Text="Запис відео"/>
+						<TextBox Grid.Column="1" Name="TxtVideoKey" Classes="hotkey" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="Video"/>
+					</Grid>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<TextBlock Classes="label" Text="Розпізнати текст (OCR)"/>
+						<TextBox Grid.Column="1" Name="TxtOcrKey" Classes="hotkey" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="Ocr"/>
+					</Grid>
+				</StackPanel>
+			</Border>
+		</StackPanel>
 
-		<Border Height="1" Background="{DynamicResource SukiBorderBrush}" Margin="0,10"/>
-
-		<TextBlock Text="Гарячі клавіші (Клікніть у поле та натисніть кнопку)" FontSize="18" FontWeight="Bold"/>
-
-		<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*, Auto" Margin="0,10">
-			<TextBlock Grid.Row="0" Text="Скріншот зони:" FontSize="16" VerticalAlignment="Center"/>
-			<TextBox Grid.Row="0" Grid.Column="1" Name="TxtRegionKey" Width="220" IsReadOnly="True" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="Region" Margin="0,5"/>
-
-			<TextBlock Grid.Row="1" Text="Скріншот екрана:" FontSize="16" VerticalAlignment="Center"/>
-			<TextBox Grid.Row="1" Grid.Column="1" Name="TxtFullScreenKey" Width="220" IsReadOnly="True" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="FullScreen" Margin="0,5"/>
-
-			<TextBlock Grid.Row="2" Text="Запис відео:" FontSize="16" VerticalAlignment="Center"/>
-			<TextBox Grid.Row="2" Grid.Column="1" Name="TxtVideoKey" Width="220" IsReadOnly="True" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="Video" Margin="0,5"/>
-
-			<TextBlock Grid.Row="3" Text="Скріншот усіх екранів:" FontSize="16" VerticalAlignment="Center"/>
-			<TextBox Grid.Row="3" Grid.Column="1" Name="TxtAllScreensKey" Width="220" IsReadOnly="True" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="AllScreens" Margin="0,5"/>
-
-			<TextBlock Grid.Row="4" Text="Розпізнати текст (OCR):" FontSize="16" VerticalAlignment="Center"/>
-			<TextBox Grid.Row="4" Grid.Column="1" Name="TxtOcrKey" Width="220" IsReadOnly="True" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="Ocr" Margin="0,5"/>
-		</Grid>
-
-		<Border Height="1" Background="{DynamicResource SukiBorderBrush}" Margin="0,10"/>
-
-		<Button Classes="Primary" Content="Зберегти та закрити" FontWeight="Bold" FontSize="16"
-                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10" Click="BtnSave_Click"/>
-		<TextBlock Name="TxtCurrentVersion"
-           HorizontalAlignment="Center"
-           Margin="0,15,0,0"
-           Opacity="0.5"
-           FontSize="13"/>
+		<Button Classes="Flat" Content="Зберегти та закрити" FontWeight="SemiBold" FontSize="15"
+                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10" CornerRadius="10" Click="BtnSave_Click"/>
+		<TextBlock Name="TxtCurrentVersion" HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" FontSize="12"/>
 	</StackPanel>
 	</ScrollViewer>
 </suki:SukiWindow>

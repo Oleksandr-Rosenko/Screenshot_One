@@ -20,6 +20,60 @@ namespace ScreenShot_One_Avalonia
         public string Path { get; set; } = "";
         public string FileName { get; set; } = "";
         public string DateString { get; set; } = "";
+        // 2.7.0: «Сьогодні, 13:04» і «1200 × 700 · 245 КБ» замість технічного імені файлу
+        public string Title { get; set; } = "";
+        public string Details { get; set; } = "";
+
+        private static readonly string[] MonthsGenitive =
+            { "січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня" };
+
+        /// <summary>Людська дата: «Сьогодні, 13:04», «Вчора, 18:20», «11 листопада, 09:15», «3 березня 2025, 10:00».</summary>
+        public static string FriendlyDate(DateTime time, DateTime now)
+        {
+            string hm = time.ToString("HH:mm");
+            if (time.Date == now.Date) return $"Сьогодні, {hm}";
+            if (time.Date == now.Date.AddDays(-1)) return $"Вчора, {hm}";
+            string day = $"{time.Day} {MonthsGenitive[time.Month - 1]}";
+            return time.Year == now.Year ? $"{day}, {hm}" : $"{day} {time.Year}, {hm}";
+        }
+
+        /// <summary>«245 КБ», «2,4 МБ».</summary>
+        public static string FriendlySize(long bytes)
+        {
+            if (bytes < 1024) return $"{bytes} Б";
+            if (bytes < 1024 * 1024) return $"{bytes / 1024.0:0} КБ";
+            return $"{bytes / (1024.0 * 1024.0):0.#} МБ".Replace('.', ',');
+        }
+
+        /// <summary>Розмір PNG без декодування — з заголовка IHDR (байти 16–23).</summary>
+        public static (int Width, int Height)? ReadPngSize(string path)
+        {
+            try
+            {
+                using var fs = File.OpenRead(path);
+                var header = new byte[24];
+                if (fs.Read(header, 0, 24) < 24 || header[0] != 0x89 || header[1] != (byte)'P') return null;
+                int w = (header[16] << 24) | (header[17] << 16) | (header[18] << 8) | header[19];
+                int h = (header[20] << 24) | (header[21] << 16) | (header[22] << 8) | header[23];
+                return (w, h);
+            }
+            catch { return null; }
+        }
+
+        public static HistoryItem FromFile(FileInfo file, bool isVideo)
+        {
+            string details = FriendlySize(file.Length);
+            if (!isVideo && ReadPngSize(file.FullName) is { } size) details = $"{size.Width} × {size.Height} · {details}";
+            return new HistoryItem
+            {
+                Path = file.FullName,
+                FileName = file.Name,
+                DateString = file.CreationTime.ToString("dd.MM.yyyy HH:mm"),
+                Title = FriendlyDate(file.CreationTime, DateTime.Now),
+                Details = isVideo ? $"Відео · {details}" : details,
+                ImageSource = null
+            };
+        }
 
         private Bitmap? _imageSource;
         public Bitmap? ImageSource
@@ -164,11 +218,11 @@ namespace ScreenShot_One_Avalonia
         {
             int currentVersion = ++_loadHistoryVersion;
 
-            _screenshotItems.Clear();
-            _videoItems.Clear();
-            ScreenshotsListBox.ItemsSource = null;
+            // Прив'язаний до відображення список НЕ змінюємо на місці: сітка (WrapPanel) не терпить
+            // мутацій без сповіщень і падала з ArgumentOutOfRange. Щоразу прив'язуємо новий список.
+            _screenshotItems = new List<HistoryItem>();
+            _videoItems = new List<HistoryItem>();
             ScreenshotsListBox.ItemsSource = _screenshotItems;
-            VideosListBox.ItemsSource = null;
             VideosListBox.ItemsSource = _videoItems;
             UpdatePlaceholders();
 
@@ -198,13 +252,7 @@ namespace ScreenShot_One_Avalonia
                                              .Where(f => !f.EndsWith("_original.png", StringComparison.OrdinalIgnoreCase))
                                              .Select(f => new FileInfo(f))
                                              .OrderByDescending(f => f.CreationTime)
-                                             .Select(file => new HistoryItem
-                                             {
-                                                 Path = file.FullName,
-                                                 FileName = file.Name,
-                                                 DateString = file.CreationTime.ToString("dd.MM.yyyy HH:mm"),
-                                                 ImageSource = null
-                                             })
+                                             .Select(file => HistoryItem.FromFile(file, isVideo: false))
                                              .ToList();
 
                 string videoFolder = System.IO.Path.Combine(appDataFolder, "Videos");
@@ -216,13 +264,7 @@ namespace ScreenShot_One_Avalonia
 
                 var vids = videoFiles.Select(f => new FileInfo(f))
                                      .OrderByDescending(f => f.CreationTime)
-                                     .Select(file => new HistoryItem
-                                     {
-                                         Path = file.FullName,
-                                         FileName = file.Name,
-                                         DateString = file.CreationTime.ToString("dd.MM.yyyy HH:mm"),
-                                         ImageSource = null
-                                     })
+                                     .Select(file => HistoryItem.FromFile(file, isVideo: true))
                                      .ToList();
 
                 return (screens, vids);
@@ -230,13 +272,9 @@ namespace ScreenShot_One_Avalonia
 
             if (currentVersion != _loadHistoryVersion) return;
 
-            _screenshotItems.AddRange(newScreenshots);
-            _videoItems.AddRange(newVideos);
-
-            ScreenshotsListBox.ItemsSource = null;
+            _screenshotItems = newScreenshots;
+            _videoItems = newVideos;
             ScreenshotsListBox.ItemsSource = _screenshotItems;
-
-            VideosListBox.ItemsSource = null;
             VideosListBox.ItemsSource = _videoItems;
 
             UpdatePlaceholders();

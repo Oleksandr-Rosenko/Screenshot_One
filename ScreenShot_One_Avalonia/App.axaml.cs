@@ -18,6 +18,8 @@ namespace ScreenShot_One_Avalonia
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
+            // М'ятний акцент одразу (до завантаження налаштувань), щоб не блимав стандартний синій SukiUI
+            AppTheme.ApplyAccent(RequestedThemeVariant ?? Avalonia.Styling.ThemeVariant.Dark);
         }
 
         public override void OnFrameworkInitializationCompleted()

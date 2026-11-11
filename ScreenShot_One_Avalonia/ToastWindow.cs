@@ -30,22 +30,25 @@ namespace ScreenShot_One_Avalonia
             _text = new TextBlock
             {
                 Text = message,
-                Foreground = Brushes.White,
                 FontSize = 14,
                 TextWrapping = TextWrapping.Wrap,
                 MaxWidth = 380,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            Content = new Border
+            // Кольори з палітри (App.axaml), тож сповіщення світле у світлій темі й темне в темній
+            var card = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(235, 24, 24, 24)),
                 CornerRadius = new CornerRadius(12),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(85, 255, 255, 255)),
                 BorderThickness = new Thickness(1),
                 Padding = new Thickness(16, 12),
                 Margin = new Thickness(6),
+                BoxShadow = BoxShadows.Parse("0 6 24 0 #40000000"),
                 Child = _text
             };
+            card.Bind(Border.BackgroundProperty, card.GetResourceObservable("PanelBrush"));
+            card.Bind(Border.BorderBrushProperty, card.GetResourceObservable("PanelBorderBrush"));
+            _text.Bind(TextBlock.ForegroundProperty, _text.GetResourceObservable("SukiText", v => v is Color c ? new SolidColorBrush(c) : v));
+            Content = card;
         }
 
         public static ToastWindow ShowMessage(string message, int closeAfterMs = 0)
@@ -107,7 +110,7 @@ namespace ScreenShot_One_Avalonia
                 await ClipboardHelper.CopyTextAsync(text, toast);
                 string preview = text.Replace(Environment.NewLine, " ");
                 if (preview.Length > 80) preview = preview.Substring(0, 80) + "…";
-                toast.SetMessage($"✓ Текст скопійовано ({text.Length} симв.)\n{preview}", 3500);
+                toast.SetMessage($"Текст скопійовано ({text.Length} симв.)\n{preview}", 3500);
             }
             catch (OcrUnavailableException ex)
             {

@@ -523,7 +523,7 @@ namespace ScreenShot_One_Avalonia.Tests
             string xaml = File.ReadAllText(GetSourceFilePath("SettingsWindow.axaml"));
             Assert.Contains("Name=\"ComboTheme\"", xaml);
             Assert.Contains("SelectionChanged=\"ComboTheme_SelectionChanged\"", xaml);
-            Assert.Contains("Тема оформлення:", xaml);
+            Assert.Contains("Тема оформлення", xaml);
 
             string code = File.ReadAllText(GetSourceFilePath("SettingsWindow.axaml.cs"));
             Assert.Contains("_initialTheme", code);
@@ -535,34 +535,27 @@ namespace ScreenShot_One_Avalonia.Tests
         [Fact]
 
         public void App_And_Editor_Implement_AdaptiveCanvasTheming_And_SemanticTokens()
-
         {
-
+            // 2.7.0: палітра «Хвоя і м'ята» замість кольорів Tailwind (zinc/slate)
             string appXaml = File.ReadAllText(GetSourceFilePath("App.axaml"));
-
-            Assert.Contains("CanvasBackdropBrush", appXaml);
-
-            Assert.Contains("Color=\"#18181B\"", appXaml);
-
-            Assert.Contains("Color=\"#E2E8F0\"", appXaml);
-            Assert.Contains("ToolbarIconBrush", appXaml);
-            Assert.Contains("Color=\"#F4F4F5\"", appXaml);
-            Assert.Contains("Color=\"#1E293B\"", appXaml);
+            foreach (var token in new[] { "CanvasBackdropBrush", "ToolbarIconBrush", "AppBackgroundBrush", "PanelBrush", "AccentBrush", "OnAccentBrush", "ActiveToolBrush" })
+                Assert.Contains($"x:Key=\"{token}\"", appXaml);
+            foreach (var tailwind in new[] { "#18181B", "#F4F4F5", "#E2E8F0", "#1E293B" })
+                Assert.DoesNotContain(tailwind, appXaml);
+            // Суцільні вікна без градієнта SukiUI і без «скла»
+            Assert.Contains("sukic|SukiBackground", appXaml);
+            Assert.Contains("Panel#PART_Root", appXaml);
+            Assert.Contains("IsOpaque", appXaml);
 
             string editorXaml = File.ReadAllText(GetSourceFilePath("EditorWindow.axaml"));
-            Assert.Contains("Foreground=\"{DynamicResource ToolbarIconBrush}\"", editorXaml);
-            Assert.Contains("Foreground=\"#D97706\"", editorXaml);
-
             Assert.Contains("Background=\"{DynamicResource CanvasBackdropBrush}\"", editorXaml);
-
-            Assert.Contains("Stroke=\"{DynamicResource SukiBorderBrush}\"", editorXaml);
+            Assert.Contains("Classes=\"Basic tool\"", editorXaml);
+            // Панель інструментів без горизонтальної прокрутки
+            Assert.DoesNotContain("HorizontalScrollBarVisibility=\"Auto\" VerticalScrollBarVisibility=\"Disabled\"", editorXaml);
 
             string videoEditorXaml = File.ReadAllText(GetSourceFilePath("VideoEditorWindow.axaml"));
-
             Assert.Contains("Foreground=\"{DynamicResource SukiTextLow}\"", videoEditorXaml);
-
             Assert.DoesNotContain("Foreground=\"#88FFFFFF\"", videoEditorXaml);
-
         }
 
         [Fact]

@@ -24,6 +24,10 @@ namespace ScreenShot_One_Avalonia
         [DllImport("user32.dll")]
         public static extern uint SetWindowDisplayAffinity(IntPtr hwnd, uint dwAffinity);
 
+        // Кольори таймера в тонах палітри (панель завжди темна)
+        private static readonly IBrush TimerBrush = new SolidColorBrush(Color.Parse("#E2EDEA"));
+        private static readonly IBrush PausedBrush = new SolidColorBrush(Color.Parse("#F0B54A"));
+
         private DispatcherTimer _timer;
         private DateTime _startTime;
         // Час, записаний до останньої паузи (таймер не рахує паузи)
@@ -130,7 +134,7 @@ namespace ScreenShot_One_Avalonia
                         _startTime = DateTime.Now;
                         _timer.Start();
                         TxtPauseIcon.Text = "⏸";
-                        TxtTimer.Foreground = Brushes.White;
+                        TxtTimer.Foreground = TimerBrush;
                     }
                     else
                     {
@@ -145,7 +149,7 @@ namespace ScreenShot_One_Avalonia
                         _timer.Stop();
                         TxtTimer.Text = FormatElapsed(_elapsedBeforePause);
                         TxtPauseIcon.Text = "▶";
-                        TxtTimer.Foreground = Brushes.Orange;
+                        TxtTimer.Foreground = PausedBrush;
                     }
                     else
                     {
@@ -331,7 +335,7 @@ namespace ScreenShot_One_Avalonia
                 RecordIcon.Width = 12; RecordIcon.Height = 12;
                 _elapsedBeforePause = TimeSpan.Zero;
                 _startTime = DateTime.Now; TxtTimer.Text = "00:00"; _timer.Start();
-                BtnPause.IsVisible = true; TxtPauseIcon.Text = "⏸"; TxtTimer.Foreground = Brushes.White;
+                BtnPause.IsVisible = true; TxtPauseIcon.Text = "⏸"; TxtTimer.Foreground = TimerBrush;
                 ChkRecordMic.IsEnabled = false; ChkRecordAudio.IsEnabled = false;
             }
             else
@@ -340,7 +344,7 @@ namespace ScreenShot_One_Avalonia
                 RecordIcon.CornerRadius = new CornerRadius(8);
                 RecordIcon.Width = 16; RecordIcon.Height = 16;
                 _timer.Stop(); TxtTimer.Text = "00:00";
-                BtnPause.IsVisible = false; TxtTimer.Foreground = Brushes.White;
+                BtnPause.IsVisible = false; TxtTimer.Foreground = TimerBrush;
                 ChkRecordMic.IsEnabled = true; ChkRecordAudio.IsEnabled = true;
             }
         }

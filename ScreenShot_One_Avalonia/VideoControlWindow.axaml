@@ -1,12 +1,14 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ScreenShot_One_Avalonia"
+        xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="ScreenShot_One_Avalonia.VideoControlWindow"
-        Title="Запис відео" Height="70" Width="930"
+        Title="Запис відео" Height="70" Width="1000"
         WindowDecorations="None" Background="Transparent" TransparencyLevelHint="Transparent"
         Topmost="True" ShowInTaskbar="False">
 
-	<Border Background="#CC111111" CornerRadius="35" Padding="15,10" PointerPressed="Border_PointerPressed" BorderBrush="#55FFFFFF" BorderThickness="1" Margin="5">
+	<!-- Панель плаває поверх екрана, тому завжди темна — у хвойних тонах палітри -->
+	<Border Background="#F2111816" CornerRadius="35" Padding="15,10" PointerPressed="Border_PointerPressed" BorderBrush="#40CFE0DB" BorderThickness="1" Margin="5">
 		<StackPanel Orientation="Horizontal" Spacing="15" VerticalAlignment="Center" HorizontalAlignment="Center">
 
 			<Button Name="BtnRecordToggle" Click="BtnRecordToggle_Click" Background="Transparent" Width="40" Height="40" CornerRadius="20" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="Старт/Стоп">
@@ -14,12 +16,12 @@
 			</Button>
 
 			<Button Name="BtnPause" Click="BtnPause_Click" IsVisible="False" Background="Transparent" Width="36" Height="36" CornerRadius="18" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="Пауза / Продовжити">
-				<TextBlock Name="TxtPauseIcon" Text="⏸" Foreground="White" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+				<TextBlock Name="TxtPauseIcon" Text="⏸" Foreground="#E2EDEA" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 			</Button>
 
-			<TextBlock Name="TxtTimer" Text="00:00" Foreground="White" FontSize="18" VerticalAlignment="Center" FontWeight="Bold" Width="60"/>
+			<TextBlock Name="TxtTimer" Text="00:00" Foreground="#E2EDEA" FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="18" VerticalAlignment="Center" FontWeight="Bold" Width="60"/>
 
-			<ComboBox Name="ComboRecordArea" SelectedIndex="0" Width="140" VerticalAlignment="Center">
+			<ComboBox Name="ComboRecordArea" SelectedIndex="0" Width="165" VerticalAlignment="Center">
 				<ComboBoxItem Content="Весь екран"/>
 				<ComboBoxItem Content="Вибрана зона"/>
 			</ComboBox>
@@ -32,15 +34,21 @@
 				</ComboBox.ItemTemplate>
 			</ComboBox>
 
-			<CheckBox Name="ChkShowMouse" Content="Кліки" IsChecked="True" Foreground="White" VerticalAlignment="Center"/>
+			<CheckBox Name="ChkShowMouse" IsChecked="True" Foreground="#E2EDEA" VerticalAlignment="Center" ToolTip.Tip="Показувати кліки миші">
+				<StackPanel Orientation="Horizontal" Spacing="5"><material:MaterialIcon Kind="CursorDefaultClickOutline" Width="16" Height="16" Foreground="#CFE0DB"/><TextBlock Text="Кліки"/></StackPanel>
+			</CheckBox>
 
-			<CheckBox Name="ChkRecordAudio" Content="🔊 Звук" IsChecked="True" Foreground="White" VerticalAlignment="Center" ToolTip.Tip="Записувати звуки системи (музика, сповіщення)"/>
+			<CheckBox Name="ChkRecordAudio" IsChecked="True" Foreground="#E2EDEA" VerticalAlignment="Center" ToolTip.Tip="Записувати звуки системи (музика, сповіщення)">
+				<StackPanel Orientation="Horizontal" Spacing="5"><material:MaterialIcon Kind="VolumeHigh" Width="16" Height="16" Foreground="#CFE0DB"/><TextBlock Text="Звук"/></StackPanel>
+			</CheckBox>
 
-			<CheckBox Name="ChkRecordMic" Content="🎙 Мікрофон" IsChecked="False" Foreground="White" VerticalAlignment="Center" ToolTip.Tip="Записувати голос з мікрофона"/>
+			<CheckBox Name="ChkRecordMic" IsChecked="False" Foreground="#E2EDEA" VerticalAlignment="Center" ToolTip.Tip="Записувати голос з мікрофона">
+				<StackPanel Orientation="Horizontal" Spacing="5"><material:MaterialIcon Kind="Microphone" Width="16" Height="16" Foreground="#CFE0DB"/><TextBlock Text="Мікрофон"/></StackPanel>
+			</CheckBox>
 
 			<Separator Classes="Vertical" Height="30" Margin="5,0"/>
 
-			<Button Name="BtnClose" Click="BtnClose_Click" Content="✕" Background="Transparent" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Width="30" Height="30" CornerRadius="15" Foreground="LightGray" FontSize="16" VerticalAlignment="Center" ToolTip.Tip="Закрити"/>
+			<Button Name="BtnClose" Click="BtnClose_Click" Content="✕" Background="Transparent" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Width="30" Height="30" CornerRadius="15" Foreground="#869C96" FontSize="16" VerticalAlignment="Center" ToolTip.Tip="Закрити"/>
 		</StackPanel>
 	</Border>
 </Window>

@@ -6,40 +6,32 @@
         WindowDecorations="None" Background="Transparent" TransparencyLevelHint="Transparent"
         Topmost="True" ShowInTaskbar="False" ShowActivated="False" CanResize="False">
 
-	<Border Name="RootBorder" Background="#E6181818" CornerRadius="14" Padding="8" Margin="6"
-	        BorderBrush="#55FFFFFF" BorderThickness="1">
+	<Border Name="RootBorder" Background="{DynamicResource PanelBrush}" CornerRadius="14" Padding="8" Margin="6"
+	        BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" BoxShadow="0 6 24 0 #40000000">
 		<StackPanel Spacing="8">
 			<!-- Мініатюра: подвійний клік — редагувати, перетягування — вставити файл у будь-яку програму -->
-			<Border Name="ThumbBorder" CornerRadius="8" ClipToBounds="True" Cursor="Hand" Background="#33000000"
+			<Border Name="ThumbBorder" CornerRadius="8" ClipToBounds="True" Cursor="Hand" Background="{DynamicResource CanvasBackdropBrush}"
 			        ToolTip.Tip="Перетягніть у будь-яку програму · Подвійний клік — редагувати">
 				<Image Name="ThumbImage" Stretch="Uniform" MaxHeight="190"/>
 			</Border>
 
-			<Grid ColumnDefinitions="*,*,*,Auto">
-				<Button Name="BtnEdit" Grid.Column="0" Classes="Basic" Click="BtnEdit_Click" ToolTip.Tip="Редагувати" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
-					<StackPanel Orientation="Horizontal" Spacing="4">
-						<material:MaterialIcon Kind="Pencil" Width="18" Height="18" Foreground="White"/>
-						<TextBlock Text="Редагувати" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
-					</StackPanel>
+			<!-- Кнопки-іконки з підказками (раніше підписи не вміщались і обрізались) -->
+			<Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+				<Button Name="BtnEdit" Grid.Column="0" Classes="Basic tool" Click="BtnEdit_Click" ToolTip.Tip="Редагувати (подвійний клік по мініатюрі)">
+					<material:MaterialIcon Kind="PencilOutline"/>
 				</Button>
-				<Button Name="BtnCopy" Grid.Column="1" Classes="Basic" Click="BtnCopy_Click" ToolTip.Tip="Копіювати в буфер" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
-					<StackPanel Orientation="Horizontal" Spacing="4">
-						<material:MaterialIcon Kind="ContentCopy" Width="18" Height="18" Foreground="White"/>
-						<TextBlock Text="Копіювати" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
-					</StackPanel>
+				<Button Name="BtnCopy" Grid.Column="1" Classes="Basic tool" Click="BtnCopy_Click" ToolTip.Tip="Копіювати в буфер">
+					<material:MaterialIcon Kind="ContentCopy"/>
 				</Button>
-				<Button Name="BtnSaveFile" Grid.Column="2" Classes="Basic" Click="BtnSaveFile_Click" ToolTip.Tip="Зберегти у папку" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
-					<StackPanel Orientation="Horizontal" Spacing="4">
-						<material:MaterialIcon Kind="ContentSaveOutline" Width="18" Height="18" Foreground="White"/>
-						<TextBlock Text="Зберегти" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
-					</StackPanel>
+				<Button Name="BtnSaveFile" Grid.Column="2" Classes="Basic tool" Click="BtnSaveFile_Click" ToolTip.Tip="Зберегти у папку">
+					<material:MaterialIcon Kind="ContentSaveOutline"/>
 				</Button>
-				<Button Name="BtnDismiss" Grid.Column="3" Classes="Basic" Click="BtnDismiss_Click" ToolTip.Tip="Закрити" Padding="6,0">
-					<material:MaterialIcon Kind="Close" Width="18" Height="18" Foreground="LightGray"/>
+				<Button Name="BtnDismiss" Grid.Column="4" Classes="Basic tool" Click="BtnDismiss_Click" ToolTip.Tip="Закрити">
+					<material:MaterialIcon Kind="Close"/>
 				</Button>
 			</Grid>
 
-			<TextBlock Name="TxtStatus" IsVisible="False" Foreground="LimeGreen" FontSize="12" HorizontalAlignment="Center"/>
+			<TextBlock Name="TxtStatus" IsVisible="False" Foreground="{DynamicResource AccentBrush}" FontSize="12" HorizontalAlignment="Center"/>
 		</StackPanel>
 	</Border>
 </Window>

@@ -1,25 +1,162 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:suki="clr-namespace:SukiUI;assembly=SukiUI"
+             xmlns:sukic="clr-namespace:SukiUI.Controls;assembly=SukiUI"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="ScreenShot_One_Avalonia.App"
              RequestedThemeVariant="Dark">
+	<!--
+	  Палітра «Хвоя і м'ята» (2.7.0).
+	  Темна: хвойний графіт + м'ятний акцент. Світла: шавлієві вікна, теплі «паперові» панелі, м'ятне полотно.
+	  Окрім власних токенів, тут перевизначено кольори SukiUI (Color-ресурси Suki*), щоб усі її контроли
+	  брали нашу палітру замість стандартної. Акцент (SukiPrimaryColor) задає AppTheme через SukiColorTheme.
+	-->
 	<Application.Resources>
 		<ResourceDictionary>
 			<ResourceDictionary.ThemeDictionaries>
 				<ResourceDictionary x:Key="Dark">
-					<SolidColorBrush x:Key="CanvasBackdropBrush" Color="#18181B" />
-					<SolidColorBrush x:Key="ToolbarIconBrush" Color="#F4F4F5" />
+					<!-- Власні токени -->
+					<SolidColorBrush x:Key="AppBackgroundBrush" Color="#111816" />
+					<SolidColorBrush x:Key="PanelBrush" Color="#18211F" />
+					<SolidColorBrush x:Key="PanelBorderBrush" Color="#263431" />
+					<SolidColorBrush x:Key="CanvasBackdropBrush" Color="#0C1210" />
+					<SolidColorBrush x:Key="ToolbarIconBrush" Color="#CFE0DB" />
+					<SolidColorBrush x:Key="MutedTextBrush" Color="#869C96" />
+					<SolidColorBrush x:Key="AccentBrush" Color="#62C9A0" />
+					<SolidColorBrush x:Key="OnAccentBrush" Color="#0B1A14" />
+					<SolidColorBrush x:Key="ActiveToolBrush" Color="#3362C9A0" />
+					<SolidColorBrush x:Key="HoverBrush" Color="#14CFE0DB" />
+					<SolidColorBrush x:Key="DangerBrush" Color="#E5735F" />
+					<SolidColorBrush x:Key="ToastBrush" Color="#F21E2927" />
+					<!-- Кольори SukiUI -->
+					<Color x:Key="SukiBackground">#111816</Color>
+					<Color x:Key="SukiLightBackground">#111816</Color>
+					<Color x:Key="SukiCardBackground">#18211F</Color>
+					<Color x:Key="SukiGlassCardBackground">#18211F</Color>
+					<Color x:Key="SukiGlassCardOpaqueBackground">#18211F</Color>
+					<Color x:Key="SukiStrongBackground">#18211F</Color>
+					<Color x:Key="SukiPopupBackground">#1C2725</Color>
+					<Color x:Key="SukiControlTouchBackground">#3A4A46</Color>
+					<Color x:Key="SukiBorderBrush">#263431</Color>
+					<Color x:Key="SukiLightBorderBrush">#2F3E3B</Color>
+					<Color x:Key="SukiMediumBorderBrush">#3A4A46</Color>
+					<Color x:Key="SukiControlBorderBrush">#455752</Color>
+					<Color x:Key="SukiMenuBorderBrush">#2F3E3B</Color>
+					<Color x:Key="SukiText">#E2EDEA</Color>
+					<Color x:Key="SukiLowText">#BFD0CB</Color>
+					<Color x:Key="SukiMuteText">#869C96</Color>
+					<Color x:Key="SukiDisabledText">#52645F</Color>
 				</ResourceDictionary>
 				<ResourceDictionary x:Key="Light">
-					<SolidColorBrush x:Key="CanvasBackdropBrush" Color="#E2E8F0" />
-					<SolidColorBrush x:Key="ToolbarIconBrush" Color="#1E293B" />
+					<SolidColorBrush x:Key="AppBackgroundBrush" Color="#EAECE5" />
+					<SolidColorBrush x:Key="PanelBrush" Color="#FCFAF6" />
+					<SolidColorBrush x:Key="PanelBorderBrush" Color="#D4D8CD" />
+					<SolidColorBrush x:Key="CanvasBackdropBrush" Color="#D7E3DF" />
+					<SolidColorBrush x:Key="ToolbarIconBrush" Color="#242A25" />
+					<SolidColorBrush x:Key="MutedTextBrush" Color="#6C746B" />
+					<SolidColorBrush x:Key="AccentBrush" Color="#2E8F6F" />
+					<SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF" />
+					<SolidColorBrush x:Key="ActiveToolBrush" Color="#2E2E8F6F" />
+					<SolidColorBrush x:Key="HoverBrush" Color="#10242A25" />
+					<SolidColorBrush x:Key="DangerBrush" Color="#B8432F" />
+					<SolidColorBrush x:Key="ToastBrush" Color="#F2FCFAF6" />
+					<Color x:Key="SukiBackground">#EAECE5</Color>
+					<Color x:Key="SukiLightBackground">#EAECE5</Color>
+					<Color x:Key="SukiCardBackground">#FCFAF6</Color>
+					<Color x:Key="SukiGlassCardBackground">#FCFAF6</Color>
+					<Color x:Key="SukiGlassCardOpaqueBackground">#FCFAF6</Color>
+					<Color x:Key="SukiStrongBackground">#FCFAF6</Color>
+					<Color x:Key="SukiPopupBackground">#FCFAF6</Color>
+					<Color x:Key="SukiControlTouchBackground">#E1E4DB</Color>
+					<Color x:Key="SukiBorderBrush">#D4D8CD</Color>
+					<Color x:Key="SukiLightBorderBrush">#E1E4DB</Color>
+					<Color x:Key="SukiMediumBorderBrush">#C5CABD</Color>
+					<Color x:Key="SukiControlBorderBrush">#B0B6A8</Color>
+					<Color x:Key="SukiMenuBorderBrush">#E1E4DB</Color>
+					<Color x:Key="SukiText">#1A201C</Color>
+					<Color x:Key="SukiLowText">#414842</Color>
+					<Color x:Key="SukiMuteText">#6C746B</Color>
+					<Color x:Key="SukiDisabledText">#A9AFA3</Color>
 				</ResourceDictionary>
 			</ResourceDictionary.ThemeDictionaries>
 		</ResourceDictionary>
 	</Application.Resources>
 	<Application.Styles>
-		<suki:SukiTheme ThemeColor="Blue" />
+		<suki:SukiTheme />
 		<materialIcons:MaterialIconStyles />
+
+		<!-- Суцільні вікна: без градієнта SukiUI і без напівпрозорих шарів (через них шапка й порожні місця були «брудними») -->
+		<Style Selector="sukic|SukiBackground">
+			<Setter Property="IsVisible" Value="False" />
+		</Style>
+		<Style Selector="sukic|SukiWindow /template/ Panel#PART_Root">
+			<Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
+		</Style>
+		<!-- Без ефекту «скла»: звичайні непрозорі картки -->
+		<Style Selector="sukic|GlassCard">
+			<Setter Property="IsOpaque" Value="True" />
+		</Style>
+
+		<!-- Текст на акцентних кнопках: у темній темі темний (світло-м'ятний фон), у світлій — білий -->
+		<Style Selector="Button.Flat">
+			<Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+		</Style>
+		<Style Selector="RadioButton.Chips:checked TextBlock">
+			<Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+		</Style>
+		<Style Selector="RadioButton.Chips:checked materialIcons|MaterialIcon">
+			<Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+		</Style>
+
+		<!-- Кнопки інструментів: іконки одного кольору, активний інструмент — м'ятна підсвітка -->
+		<Style Selector="Button.tool">
+			<Setter Property="Padding" Value="8" />
+			<Setter Property="CornerRadius" Value="8" />
+			<Setter Property="Background" Value="Transparent" />
+		</Style>
+		<Style Selector="Button.tool materialIcons|MaterialIcon">
+			<Setter Property="Foreground" Value="{DynamicResource ToolbarIconBrush}" />
+			<Setter Property="Width" Value="22" />
+			<Setter Property="Height" Value="22" />
+		</Style>
+		<Style Selector="Button.tool.active">
+			<Setter Property="Background" Value="{DynamicResource ActiveToolBrush}" />
+		</Style>
+		<Style Selector="Button.tool.active materialIcons|MaterialIcon">
+			<Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+		</Style>
+		<!-- Маленька стрілка біля групи інструментів (відкриває варіанти) -->
+		<Style Selector="Button.more">
+			<Setter Property="Padding" Value="1,8" />
+			<Setter Property="Width" Value="16" />
+			<Setter Property="Background" Value="Transparent" />
+			<Setter Property="CornerRadius" Value="6" />
+		</Style>
+		<Style Selector="Button.more materialIcons|MaterialIcon">
+			<Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+			<Setter Property="Width" Value="14" />
+			<Setter Property="Height" Value="14" />
+		</Style>
+		<!-- Пункти у випадаючих меню груп -->
+		<Style Selector="Button.menuitem">
+			<Setter Property="HorizontalAlignment" Value="Stretch" />
+			<Setter Property="HorizontalContentAlignment" Value="Left" />
+			<Setter Property="Padding" Value="10,7" />
+			<Setter Property="CornerRadius" Value="6" />
+			<Setter Property="Background" Value="Transparent" />
+		</Style>
+		<Style Selector="Button.menuitem materialIcons|MaterialIcon">
+			<Setter Property="Foreground" Value="{DynamicResource ToolbarIconBrush}" />
+			<Setter Property="Width" Value="20" />
+			<Setter Property="Height" Value="20" />
+		</Style>
+		<Style Selector="Button.menuitem.active">
+			<Setter Property="Background" Value="{DynamicResource ActiveToolBrush}" />
+		</Style>
+		<Style Selector="TextBlock.shortcut">
+			<Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+			<Setter Property="FontSize" Value="12" />
+			<Setter Property="VerticalAlignment" Value="Center" />
+		</Style>
 	</Application.Styles>
 </Application>

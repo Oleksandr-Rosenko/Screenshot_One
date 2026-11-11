@@ -242,6 +242,7 @@ namespace ScreenShot_One_Avalonia
                     }
                     var sukiTheme = SukiTheme.GetInstance();
                     sukiTheme.ChangeBaseTheme(variant);
+                    AppTheme.ApplyAccent(variant);
                 }
                 catch (Exception ex)
                 {

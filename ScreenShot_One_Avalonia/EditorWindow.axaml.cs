@@ -118,7 +118,7 @@ namespace ScreenShot_One_Avalonia
             _originalImage = capturedImage;
             UpdateCanvasImage(capturedImage);
 
-            BtnCurrentColorIndicator.Background = _currentBrush;
+            ColorSwatch.Background = _currentBrush;
 
             this.KeyDown += Window_KeyDown;
             this.KeyUp += Window_KeyUp;
@@ -214,7 +214,8 @@ namespace ScreenShot_One_Avalonia
             if (_isSplitMode) return;
             _isSplitMode = true;
             SetTool(DrawingTool.None, BtnSplit);
-            BtnSplit.Background = new SolidColorBrush(Color.FromArgb(100, 30, 144, 255));
+            BtnImageGroup.Flyout?.Hide();
+            BtnImageGroup.Classes.Set("active", true); // режим колажу — підсвічуємо групу «Додати зображення»
 
             double gap = 20;
             double rightX = ScreenshotImage.Width + gap;
@@ -583,7 +584,7 @@ namespace ScreenShot_One_Avalonia
             DrawingCanvas.Height = Math.Max(ScreenshotImage.Height, bmp.Size.Height);
 
             FitToScreen();
-            BtnSplit.Background = Brushes.Transparent;
+            BtnImageGroup.Classes.Set("active", false);
         }
 
         private void LoadShapesFromJson(string jsonPath)
@@ -1480,7 +1481,7 @@ namespace ScreenShot_One_Avalonia
         private void ExitCropMode()
         {
             _activeTool = DrawingTool.None;
-            BtnCrop.Background = Brushes.Transparent;
+            BtnCrop.Classes.Set("active", false);
             CropOverlayGrid.IsVisible = false;
             MainScrollViewer.HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
             MainScrollViewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
@@ -1647,7 +1648,6 @@ namespace ScreenShot_One_Avalonia
         private void BtnBlur_Click(object? sender, RoutedEventArgs e) => SetTool(DrawingTool.Blur, BtnBlur);
         private void BtnEllipse_Click(object? sender, RoutedEventArgs e) => SetTool(DrawingTool.Ellipse, BtnEllipse);
         private void BtnLine_Click(object? sender, RoutedEventArgs e) => SetTool(DrawingTool.Line, BtnLine);
-        private void BtnPixelate_Click(object? sender, RoutedEventArgs e) => SetTool(DrawingTool.Pixelate, BtnPixelate);
         private void BtnSpotlight_Click(object? sender, RoutedEventArgs e) => SetTool(DrawingTool.Spotlight, BtnSpotlight);
 
         private void ComboStrokeWidth_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1724,9 +1724,124 @@ namespace ScreenShot_One_Avalonia
 
             ColorPalettePopup.IsOpen = false;
             _activeTool = _activeTool == tool ? DrawingTool.None : tool;
-            BtnSelect.Background = BtnStamp.Background = BtnRectangle.Background = BtnArrow.Background = BtnConnector.Background = BtnPencil.Background = BtnText.Background = BtnHighlighter.Background = BtnBlur.Background = BtnCrop.Background = BtnSplit.Background = Brushes.Transparent;
-            BtnEllipse.Background = BtnLine.Background = BtnPixelate.Background = BtnSpotlight.Background = Brushes.Transparent;
-            if (_activeTool != DrawingTool.None) btn.Background = new SolidColorBrush(Color.FromArgb(100, 255, 165, 0));
+            UpdateToolHighlight(btn);
+        }
+
+        // ---- Групи інструментів (2.7.0) ----
+        // Кнопка групи показує й активує останній вибраний у ній інструмент; стрілка поруч відкриває варіанти.
+
+        private DrawingTool _shapesTool = DrawingTool.Rectangle;
+        private DrawingTool _linesTool = DrawingTool.Arrow;
+        private DrawingTool _drawTool = DrawingTool.Pencil;
+        private DrawingTool _hideTool = DrawingTool.Blur;
+
+        private Button[] AllToolButtons => new[]
+        {
+            BtnSelect, BtnCrop, BtnStamp, BtnText, BtnImageGroup,
+            BtnShapesGroup, BtnLinesGroup, BtnDrawGroup, BtnHideGroup,
+            BtnRectangle, BtnEllipse, BtnArrow, BtnLine, BtnConnector, BtnPencil, BtnHighlighter, BtnBlur, BtnSpotlight
+        };
+
+        private (Button Group, Material.Icons.Avalonia.MaterialIcon Icon)? GroupFor(DrawingTool tool) => tool switch
+        {
+            DrawingTool.Rectangle or DrawingTool.Ellipse => (BtnShapesGroup, IcoShapesGroup),
+            DrawingTool.Arrow or DrawingTool.Line or DrawingTool.Connector => (BtnLinesGroup, IcoLinesGroup),
+            DrawingTool.Pencil or DrawingTool.Highlighter => (BtnDrawGroup, IcoDrawGroup),
+            DrawingTool.Blur or DrawingTool.Spotlight => (BtnHideGroup, IcoHideGroup),
+            _ => null
+        };
+
+        private static Material.Icons.MaterialIconKind IconFor(DrawingTool tool) => tool switch
+        {
+            DrawingTool.Ellipse => Material.Icons.MaterialIconKind.EllipseOutline,
+            DrawingTool.Arrow => Material.Icons.MaterialIconKind.ArrowTopRight,
+            DrawingTool.Line => Material.Icons.MaterialIconKind.VectorLine,
+            DrawingTool.Connector => Material.Icons.MaterialIconKind.VectorPolyline,
+            DrawingTool.Pencil => Material.Icons.MaterialIconKind.Pencil,
+            DrawingTool.Highlighter => Material.Icons.MaterialIconKind.Marker,
+            DrawingTool.Blur => Material.Icons.MaterialIconKind.Blur,
+            DrawingTool.Spotlight => Material.Icons.MaterialIconKind.SpotlightBeam,
+            _ => Material.Icons.MaterialIconKind.RectangleOutline
+        };
+
+        private Button ButtonFor(DrawingTool tool) => tool switch
+        {
+            DrawingTool.Select => BtnSelect,
+            DrawingTool.Crop => BtnCrop,
+            DrawingTool.Stamp => BtnStamp,
+            DrawingTool.Text => BtnText,
+            DrawingTool.Rectangle => BtnRectangle,
+            DrawingTool.Ellipse => BtnEllipse,
+            DrawingTool.Arrow => BtnArrow,
+            DrawingTool.Line => BtnLine,
+            DrawingTool.Connector => BtnConnector,
+            DrawingTool.Pencil => BtnPencil,
+            DrawingTool.Highlighter => BtnHighlighter,
+            DrawingTool.Blur => BtnBlur,
+            DrawingTool.Spotlight => BtnSpotlight,
+            _ => BtnSelect
+        };
+
+        /// <summary>Підсвічує активний інструмент (клас "active" — стиль у App.axaml) і оновлює іконку групи.</summary>
+        private void UpdateToolHighlight(Button btn)
+        {
+            foreach (var b in AllToolButtons) b.Classes.Set("active", false);
+            if (_isSplitMode) BtnImageGroup.Classes.Set("active", true);
+
+            foreach (var more in new[] { BtnShapesGroupMore, BtnLinesGroupMore, BtnDrawGroupMore, BtnHideGroupMore })
+                more.Flyout?.Hide();
+
+            if (_activeTool == DrawingTool.None) return;
+
+            var group = GroupFor(_activeTool);
+            if (group is { } g)
+            {
+                g.Group.Classes.Set("active", true);
+                g.Icon.Kind = IconFor(_activeTool);
+                ButtonFor(_activeTool).Classes.Set("active", true); // і пункт у меню групи
+                switch (_activeTool)
+                {
+                    case DrawingTool.Rectangle or DrawingTool.Ellipse: _shapesTool = _activeTool; break;
+                    case DrawingTool.Arrow or DrawingTool.Line or DrawingTool.Connector: _linesTool = _activeTool; break;
+                    case DrawingTool.Pencil or DrawingTool.Highlighter: _drawTool = _activeTool; break;
+                    case DrawingTool.Blur or DrawingTool.Spotlight: _hideTool = _activeTool; break;
+                }
+            }
+            else
+            {
+                btn.Classes.Set("active", true);
+            }
+        }
+
+        private void BtnShapesGroup_Click(object? sender, RoutedEventArgs e) => SetTool(_shapesTool, ButtonFor(_shapesTool));
+        private void BtnLinesGroup_Click(object? sender, RoutedEventArgs e) => SetTool(_linesTool, ButtonFor(_linesTool));
+        private void BtnDrawGroup_Click(object? sender, RoutedEventArgs e) => SetTool(_drawTool, ButtonFor(_drawTool));
+        private void BtnHideGroup_Click(object? sender, RoutedEventArgs e) => SetTool(_hideTool, ButtonFor(_hideTool));
+
+        /// <summary>Гарячі клавіші інструментів (без модифікаторів і не під час введення тексту).</summary>
+        private bool HandleToolShortcut(Key key)
+        {
+            DrawingTool? tool = key switch
+            {
+                Key.V => DrawingTool.Select,
+                Key.C => DrawingTool.Crop,
+                Key.N => DrawingTool.Stamp,
+                Key.R => DrawingTool.Rectangle,
+                Key.E => DrawingTool.Ellipse,
+                Key.A => DrawingTool.Arrow,
+                Key.L => DrawingTool.Line,
+                Key.P => DrawingTool.Pencil,
+                Key.H => DrawingTool.Highlighter,
+                Key.T => DrawingTool.Text,
+                Key.B => DrawingTool.Blur,
+                Key.S => DrawingTool.Spotlight,
+                _ => null
+            };
+            if (tool is not { } t) return false;
+            if (t == DrawingTool.Crop) { BtnCrop_Click(BtnCrop, new RoutedEventArgs()); return true; }
+            if (_activeTool == t) return true; // клавіша не вимикає вже вибраний інструмент
+            SetTool(t, ButtonFor(t));
+            return true;
         }
 
         // Ctrl на Windows, Cmd на Mac (раніше Cmd+Z / Cmd+V на Mac не працювали — перевірявся лише Ctrl)
@@ -1734,6 +1849,13 @@ namespace ScreenShot_One_Avalonia
 
         private void Window_KeyDown(object? sender, KeyEventArgs e)
         {
+            if (e.KeyModifiers == KeyModifiers.None && FocusManager?.GetFocusedElement() is not TextBox && !_isSpaceDown
+                && HandleToolShortcut(e.Key))
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.S && e.KeyModifiers == PrimaryModifier)
             {
                 SaveAsFileAsync().FireAndForget("Зберегти як файл");
@@ -2139,7 +2261,7 @@ namespace ScreenShot_One_Avalonia
         }
 
         private void BtnCurrentColorIndicator_Click(object? sender, RoutedEventArgs e) { ColorPalettePopup.IsOpen = !ColorPalettePopup.IsOpen; }
-        private void BtnColorVariant_Click(object? sender, RoutedEventArgs e) { if (sender is Button b && b.Background is ISolidColorBrush br) { _currentBrush = br; BtnCurrentColorIndicator.Background = br; ColorPalettePopup.IsOpen = false; } }
+        private void BtnColorVariant_Click(object? sender, RoutedEventArgs e) { if (sender is Button b && b.Background is ISolidColorBrush br) { _currentBrush = br; ColorSwatch.Background = br; ColorPalettePopup.IsOpen = false; } }
 
         private void ReturnToHistoryIfNeeded()
         {
