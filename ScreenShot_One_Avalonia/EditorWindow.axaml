@@ -50,8 +50,14 @@
 				<Button Name="BtnRectangle" Classes="Basic" ToolTip.Tip="Прямокутник" Click="BtnRectangle_Click">
 					<material:MaterialIcon Kind="RectangleOutline" Width="28" Height="28" Foreground="{DynamicResource ToolbarIconBrush}"/>
 				</Button>
+				<Button Name="BtnEllipse" Classes="Basic" ToolTip.Tip="Еліпс" Click="BtnEllipse_Click">
+					<material:MaterialIcon Kind="EllipseOutline" Width="28" Height="28" Foreground="{DynamicResource ToolbarIconBrush}"/>
+				</Button>
 				<Button Name="BtnArrow" Classes="Basic" ToolTip.Tip="Стрілочка" Click="BtnArrow_Click">
 					<material:MaterialIcon Kind="ArrowTopRight" Width="28" Height="28" Foreground="{DynamicResource ToolbarIconBrush}"/>
+				</Button>
+				<Button Name="BtnLine" Classes="Basic" ToolTip.Tip="Пряма лінія" Click="BtnLine_Click">
+					<material:MaterialIcon Kind="VectorLine" Width="28" Height="28" Foreground="{DynamicResource ToolbarIconBrush}"/>
 				</Button>
 
 				<Button Name="BtnConnector" Classes="Basic" ToolTip.Tip="Зв'язок (лінія з точками)" Click="BtnConnector_Click">
@@ -77,10 +83,23 @@
 					<ComboBoxItem Content="72"/>
 				</ComboBox>
 
+				<ComboBox Name="ComboStrokeWidth" Width="120" Margin="5,0" SelectedIndex="1" ToolTip.Tip="Товщина ліній" SelectionChanged="ComboStrokeWidth_SelectionChanged">
+					<ComboBoxItem Content="━ Тонка" Tag="2"/>
+					<ComboBoxItem Content="━ Середня" Tag="3"/>
+					<ComboBoxItem Content="━ Товста" Tag="5"/>
+					<ComboBoxItem Content="━ Дуже товста" Tag="8"/>
+				</ComboBox>
+
 				<Separator Classes="Vertical" Height="30"/>
 
 				<Button Name="BtnBlur" Classes="Basic" ToolTip.Tip="Розмиття" Click="BtnBlur_Click">
 					<material:MaterialIcon Kind="Blur" Foreground="DeepSkyBlue" Width="28" Height="28"/>
+				</Button>
+				<Button Name="BtnPixelate" Classes="Basic" ToolTip.Tip="Піксельне розмиття (для паролів і особистих даних)" Click="BtnPixelate_Click">
+					<material:MaterialIcon Kind="Checkerboard" Foreground="DeepSkyBlue" Width="28" Height="28"/>
+				</Button>
+				<Button Name="BtnSpotlight" Classes="Basic" ToolTip.Tip="Прожектор: затемнити все, крім області" Click="BtnSpotlight_Click">
+					<material:MaterialIcon Kind="SpotlightBeam" Foreground="#FBBF24" Width="28" Height="28"/>
 				</Button>
 
 				<Button Name="BtnUndo" Classes="Basic" ToolTip.Tip="Скасувати (Ctrl+Z)" Click="BtnUndo_Click">

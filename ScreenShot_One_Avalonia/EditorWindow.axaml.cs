@@ -21,7 +21,14 @@ using Path = System.IO.Path;
 
 namespace ScreenShot_One_Avalonia
 {
-    public enum DrawingTool { None, Select, Stamp, Rectangle, Arrow, Pencil, Text, Highlighter, Blur, Crop, Connector }
+    public enum DrawingTool { None, Select, Stamp, Rectangle, Arrow, Pencil, Text, Highlighter, Blur, Crop, Connector, Ellipse, Line, Pixelate, Spotlight }
+
+    /// <summary>Затемнення всього полотна, крім «дірки» (інструмент «Прожектор»).</summary>
+    internal sealed class SpotlightShape : Avalonia.Controls.Shapes.Path
+    {
+        public Rect Hole;
+        protected override Type StyleKeyOverride => typeof(Avalonia.Controls.Shapes.Path);
+    }
 
     public partial class EditorWindow : SukiWindow
     {
@@ -31,6 +38,17 @@ namespace ScreenShot_One_Avalonia
         private Point _rectStartPoint;
 
         private Rectangle? _currentRect;
+
+        // ---- 2.6.0: нові інструменти ----
+        private double _strokeWidth = 3; // товщина ліній (селектор «Товщина»)
+        private Ellipse? _currentEllipse;
+        private bool _isDrawingEllipse;
+        private Polyline? _currentLine;
+        private bool _isDrawingLine;
+        private Point _lineStartPoint;
+        private bool _isDrawingPixelate;
+        private bool _isDrawingSpotlight;
+        private Rect _dragStartHole;
 
         private bool _isDrawingRect = false;
 
@@ -602,12 +620,19 @@ namespace ScreenShot_One_Avalonia
 
                     {
 
-                        var rect = new Rectangle { Stroke = brush, StrokeThickness = 3, Fill = Brushes.Transparent, Width = shape.X2, Height = shape.Y2 };
+                        var rect = new Rectangle { Stroke = brush, StrokeThickness = shape.StrokeWidth > 0 ? shape.StrokeWidth : 3, Fill = Brushes.Transparent, Width = shape.X2, Height = shape.Y2 };
                         Canvas.SetLeft(rect, shape.X1); Canvas.SetTop(rect, shape.Y1); DrawingCanvas.Children.Add(rect);
                     }
-                    else if (shape.Type == ShapeType.Arrow || shape.Type == ShapeType.StatusArrow || shape.Type == ShapeType.Pencil || shape.Type == ShapeType.Highlighter)
+                    else if (shape.Type == ShapeType.Ellipse)
                     {
-                        double thick = shape.Type == ShapeType.Highlighter ? 16 : 3;
+                        var ell = new Ellipse { Stroke = brush, StrokeThickness = shape.StrokeWidth > 0 ? shape.StrokeWidth : 3, Fill = Brushes.Transparent, Width = shape.X2, Height = shape.Y2, Tag = ShapeType.Ellipse };
+                        Canvas.SetLeft(ell, shape.X1); Canvas.SetTop(ell, shape.Y1); DrawingCanvas.Children.Add(ell);
+                    }
+                    else if (shape.Type == ShapeType.Pixelate) { ApplyPixelateToRegion(shape.X1, shape.Y1, shape.X2, shape.Y2); }
+                    else if (shape.Type == ShapeType.Spotlight) { AddSpotlight(new Rect(shape.X1, shape.Y1, shape.X2, shape.Y2)); }
+                    else if (shape.Type == ShapeType.Arrow || shape.Type == ShapeType.StatusArrow || shape.Type == ShapeType.Pencil || shape.Type == ShapeType.Highlighter || shape.Type == ShapeType.Line)
+                    {
+                        double thick = shape.StrokeWidth > 0 ? shape.StrokeWidth : (shape.Type == ShapeType.Highlighter ? 16 : 3);
                         var poly = new Polyline { Stroke = brush, StrokeThickness = thick, StrokeJoin = PenLineJoin.Round, StrokeLineCap = PenLineCap.Round, Opacity = shape.Type == ShapeType.Highlighter ? 0.4 : 1.0 };
 
                         var pts = new Avalonia.Collections.AvaloniaList<Point>();
@@ -913,6 +938,7 @@ namespace ScreenShot_One_Avalonia
                 _isDraggingShape = true;
                 _draggedElement = targetElement;
                 _dragStartMousePos = pos;
+                if (targetElement is SpotlightShape spotStart) _dragStartHole = spotStart.Hole;
 
                 double left = double.IsNaN(Canvas.GetLeft(_draggedElement)) ? 0 : Canvas.GetLeft(_draggedElement);
                 double top = double.IsNaN(Canvas.GetTop(_draggedElement)) ? 0 : Canvas.GetTop(_draggedElement);
@@ -974,7 +1000,7 @@ namespace ScreenShot_One_Avalonia
                 {
 
                     _isDrawingRect = true; _rectStartPoint = pos;
-                    _currentRect = new Rectangle { Stroke = GetFreshBrush(), StrokeThickness = 3, Fill = Brushes.Transparent, Width = 1, Height = 1 };
+                    _currentRect = new Rectangle { Stroke = GetFreshBrush(), StrokeThickness = _strokeWidth, Fill = Brushes.Transparent, Width = 1, Height = 1 };
                     Canvas.SetLeft(_currentRect, pos.X); Canvas.SetTop(_currentRect, pos.Y);
                     DrawingCanvas.Children.Add(_currentRect);
                     _activePointer = e.Pointer; _activePointer.Capture(DrawingCanvas);
@@ -982,7 +1008,7 @@ namespace ScreenShot_One_Avalonia
                 else if (_activeTool == DrawingTool.Arrow)
                 {
                     _isDrawingArrow = true; _arrowStartPoint = pos;
-                    _currentArrow = new Polyline { Stroke = GetFreshBrush(), StrokeThickness = 3, StrokeJoin = PenLineJoin.Round, StrokeLineCap = PenLineCap.Round };
+                    _currentArrow = new Polyline { Stroke = GetFreshBrush(), StrokeThickness = _strokeWidth, StrokeJoin = PenLineJoin.Round, StrokeLineCap = PenLineCap.Round };
 
                     var pts = new Avalonia.Collections.AvaloniaList<Point>();
                     pts.Add(_arrowStartPoint);
@@ -1001,7 +1027,7 @@ namespace ScreenShot_One_Avalonia
                     _currentConnectorLine = new Line
                     {
                         Stroke = GetFreshBrush(),
-                        StrokeThickness = 3,
+                        StrokeThickness = _strokeWidth,
                         StartPoint = _connectorStartPoint,
                         EndPoint = pos
                     };
@@ -1044,7 +1070,7 @@ namespace ScreenShot_One_Avalonia
                 else if (_activeTool == DrawingTool.Pencil || _activeTool == DrawingTool.Highlighter)
                 {
                     _isDrawingPencil = true;
-                    double th = _activeTool == DrawingTool.Highlighter ? 16 : 3;
+                    double th = _activeTool == DrawingTool.Highlighter ? 16 * _strokeWidth / 3.0 : _strokeWidth;
                     _currentPencilPolyline = new Polyline
                     {
                         Stroke = GetFreshBrush(),
@@ -1060,6 +1086,32 @@ namespace ScreenShot_One_Avalonia
                     _currentPencilPolyline.Points = new Avalonia.Collections.AvaloniaList<Point>(_pencilPoints);
 
                     DrawingCanvas.Children.Add(_currentPencilPolyline);
+                    _activePointer = e.Pointer; _activePointer.Capture(DrawingCanvas);
+                }
+                else if (_activeTool == DrawingTool.Ellipse)
+                {
+                    _isDrawingEllipse = true; _rectStartPoint = pos;
+                    _currentEllipse = new Ellipse { Stroke = GetFreshBrush(), StrokeThickness = _strokeWidth, Fill = Brushes.Transparent, Width = 1, Height = 1, Tag = ShapeType.Ellipse };
+                    Canvas.SetLeft(_currentEllipse, pos.X); Canvas.SetTop(_currentEllipse, pos.Y);
+                    DrawingCanvas.Children.Add(_currentEllipse);
+                    _activePointer = e.Pointer; _activePointer.Capture(DrawingCanvas);
+                }
+                else if (_activeTool == DrawingTool.Line)
+                {
+                    _isDrawingLine = true; _lineStartPoint = pos;
+                    _currentLine = new Polyline { Stroke = GetFreshBrush(), StrokeThickness = _strokeWidth, StrokeLineCap = PenLineCap.Round, Tag = ShapeType.Line };
+                    _currentLine.Points = new Avalonia.Collections.AvaloniaList<Point> { pos, pos };
+                    DrawingCanvas.Children.Add(_currentLine);
+                    _activePointer = e.Pointer; _activePointer.Capture(DrawingCanvas);
+                }
+                else if (_activeTool == DrawingTool.Pixelate || _activeTool == DrawingTool.Spotlight)
+                {
+                    _isDrawingPixelate = _activeTool == DrawingTool.Pixelate;
+                    _isDrawingSpotlight = _activeTool == DrawingTool.Spotlight;
+                    _rectStartPoint = pos;
+                    _currentRect = new Rectangle { Stroke = Brushes.DarkGray, StrokeDashArray = new Avalonia.Collections.AvaloniaList<double> { 4, 2 }, StrokeThickness = 2, Fill = new SolidColorBrush(Color.FromArgb(50, 0, 0, 0)), Width = 1, Height = 1 };
+                    Canvas.SetLeft(_currentRect, pos.X); Canvas.SetTop(_currentRect, pos.Y);
+                    DrawingCanvas.Children.Add(_currentRect);
                     _activePointer = e.Pointer; _activePointer.Capture(DrawingCanvas);
                 }
                 else if (_activeTool == DrawingTool.Blur)
@@ -1109,6 +1161,13 @@ namespace ScreenShot_One_Avalonia
                     return;
                 }
 
+                if (_activeTool == DrawingTool.Select && _isDraggingShape && _draggedElement is SpotlightShape spot)
+                {
+                    // Прожектор займає все полотно — рухаємо лише «дірку»
+                    var d = pos - _dragStartMousePos;
+                    UpdateSpotlightGeometry(spot, new Rect(_dragStartHole.X + d.X, _dragStartHole.Y + d.Y, _dragStartHole.Width, _dragStartHole.Height));
+                    return;
+                }
                 if (_activeTool == DrawingTool.Select && _isDraggingShape && _draggedElement != null)
                 {
                     double deltaX = pos.X - _dragStartMousePos.X;
@@ -1118,7 +1177,21 @@ namespace ScreenShot_One_Avalonia
                     return;
                 }
 
-                if ((_isDrawingRect || _isDrawingBlur) && _currentRect != null)
+                if (_isDrawingEllipse && _currentEllipse != null)
+                {
+                    double ex = Math.Min(pos.X, _rectStartPoint.X); double ey = Math.Min(pos.Y, _rectStartPoint.Y);
+                    _currentEllipse.Width = Math.Max(1, Math.Max(pos.X, _rectStartPoint.X) - ex);
+                    _currentEllipse.Height = Math.Max(1, Math.Max(pos.Y, _rectStartPoint.Y) - ey);
+                    Canvas.SetLeft(_currentEllipse, ex); Canvas.SetTop(_currentEllipse, ey);
+                }
+                else if (_isDrawingLine && _currentLine != null)
+                {
+                    // Shift — рівна лінія (кратна 45°)
+                    var end = (e.KeyModifiers & KeyModifiers.Shift) != 0 ? SnapTo45(_lineStartPoint, pos) : pos;
+                    _currentLine.Points = new Avalonia.Collections.AvaloniaList<Point> { _lineStartPoint, end };
+                    _currentLine.InvalidateMeasure(); _currentLine.InvalidateVisual();
+                }
+                else if ((_isDrawingRect || _isDrawingBlur || _isDrawingPixelate || _isDrawingSpotlight) && _currentRect != null)
                 {
                     double x = Math.Min(pos.X, _rectStartPoint.X); double y = Math.Min(pos.Y, _rectStartPoint.Y);
                     _currentRect.Width = Math.Max(1, Math.Max(pos.X, _rectStartPoint.X) - x); _currentRect.Height = Math.Max(1, Math.Max(pos.Y, _rectStartPoint.Y) - y);
@@ -1266,6 +1339,34 @@ namespace ScreenShot_One_Avalonia
                 }
                 _currentPencilPolyline = null;
             }
+            else if (_isDrawingEllipse && _currentEllipse != null)
+            {
+                _isDrawingEllipse = false;
+                if (_currentEllipse.Width <= 2 && _currentEllipse.Height <= 2) DrawingCanvas.Children.Remove(_currentEllipse);
+                else PushAction(new AddShapeAction(_currentEllipse));
+                _currentEllipse = null;
+            }
+            else if (_isDrawingLine && _currentLine != null)
+            {
+                _isDrawingLine = false;
+                var lp = _currentLine.Points;
+                double len = lp.Count > 1 ? Math.Sqrt(Math.Pow(lp[1].X - lp[0].X, 2) + Math.Pow(lp[1].Y - lp[0].Y, 2)) : 0;
+                if (len <= 3) DrawingCanvas.Children.Remove(_currentLine);
+                else PushAction(new AddShapeAction(_currentLine));
+                _currentLine = null;
+            }
+            else if ((_isDrawingPixelate || _isDrawingSpotlight) && _currentRect != null)
+            {
+                bool spotlight = _isDrawingSpotlight;
+                _isDrawingPixelate = false; _isDrawingSpotlight = false;
+                double w = _currentRect.Width; double h = _currentRect.Height; double left = Canvas.GetLeft(_currentRect); double top = Canvas.GetTop(_currentRect);
+                DrawingCanvas.Children.Remove(_currentRect); _currentRect = null;
+                if (w > 5 && h > 5)
+                {
+                    if (spotlight) AddSpotlight(new Rect(left, top, w, h));
+                    else ApplyPixelateToRegion(left, top, w, h);
+                }
+            }
             else if (_isDrawingBlur && _currentRect != null)
             {
                 _isDrawingBlur = false;
@@ -1404,7 +1505,7 @@ namespace ScreenShot_One_Avalonia
         private void UpdateArrowHead(IList<Point> pts, Point start, Point end)
         {
             if (Math.Abs(start.X - end.X) < 1) return;
-            double headLength = 12; double headAngle = 30;
+            double headLength = Math.Max(12, _strokeWidth * 4); double headAngle = 30;
             double theta = Math.Atan2(end.Y - start.Y, end.X - start.X);
             double phi1 = theta + Math.PI - headAngle * Math.PI / 180;
             double headX1 = end.X + headLength * Math.Cos(phi1);
@@ -1480,14 +1581,20 @@ namespace ScreenShot_One_Avalonia
 
                 else if (child is Rectangle r)
 
-                    shapes.Add(new ShapeData { Type = ShapeType.Rectangle, X1 = childLeft, Y1 = childTop, X2 = r.Width, Y2 = r.Height, ColorHex = ((ISolidColorBrush)r.Stroke!).Color.ToString() });
+                    shapes.Add(new ShapeData { Type = ShapeType.Rectangle, X1 = childLeft, Y1 = childTop, X2 = r.Width, Y2 = r.Height, ColorHex = ((ISolidColorBrush)r.Stroke!).Color.ToString(), StrokeWidth = r.StrokeThickness });
+
+                else if (child is Ellipse ell && ell.Tag is ShapeType tEll && tEll == ShapeType.Ellipse)
+                    shapes.Add(new ShapeData { Type = ShapeType.Ellipse, X1 = childLeft, Y1 = childTop, X2 = ell.Width, Y2 = ell.Height, ColorHex = ((ISolidColorBrush)ell.Stroke!).Color.ToString(), StrokeWidth = ell.StrokeThickness });
+
+                else if (child is SpotlightShape spot)
+                    shapes.Add(new ShapeData { Type = ShapeType.Spotlight, X1 = spot.Hole.X, Y1 = spot.Hole.Y, X2 = spot.Hole.Width, Y2 = spot.Hole.Height });
 
                 else if (child is Polyline poly)
 
                 {
                     var adjustedPoints = poly.Points.Select(pt => new MyPoint { X = pt.X + childLeft, Y = pt.Y + childTop }).ToList();
 
-                    shapes.Add(new ShapeData { Type = poly.Tag is ShapeType t ? t : ShapeType.StatusArrow, PathPoints = adjustedPoints, ColorHex = ((ISolidColorBrush)poly.Stroke!).Color.ToString() });
+                    shapes.Add(new ShapeData { Type = poly.Tag is ShapeType t ? t : ShapeType.StatusArrow, PathPoints = adjustedPoints, ColorHex = ((ISolidColorBrush)poly.Stroke!).Color.ToString(), StrokeWidth = poly.StrokeThickness });
 
                 }
 
@@ -1495,9 +1602,9 @@ namespace ScreenShot_One_Avalonia
 
                     shapes.Add(new ShapeData { Type = ShapeType.Text, X1 = childLeft, Y1 = childTop, TextContent = txt.Text, FontSize = txt.FontSize, ColorHex = ((ISolidColorBrush)txt.Foreground!).Color.ToString() });
 
-                else if (child is Border b && b.Tag is ShapeType tBlur && tBlur == ShapeType.Blur)
+                else if (child is Border b && b.Tag is ShapeType tBlur && (tBlur == ShapeType.Blur || tBlur == ShapeType.Pixelate))
 
-                    shapes.Add(new ShapeData { Type = ShapeType.Blur, X1 = childLeft, Y1 = childTop, X2 = b.Width, Y2 = b.Height });
+                    shapes.Add(new ShapeData { Type = tBlur, X1 = childLeft, Y1 = childTop, X2 = b.Width, Y2 = b.Height });
                 else if (child is Panel pImg && pImg.Tag is ShapeType stImg && stImg == ShapeType.ImageOverlay)
                 {
                     var img = pImg.Children.OfType<Image>().FirstOrDefault();
@@ -1538,6 +1645,77 @@ namespace ScreenShot_One_Avalonia
         private void BtnText_Click(object? sender, RoutedEventArgs e) => SetTool(DrawingTool.Text, BtnText);
         private void BtnHighlighter_Click(object? sender, RoutedEventArgs e) => SetTool(DrawingTool.Highlighter, BtnHighlighter);
         private void BtnBlur_Click(object? sender, RoutedEventArgs e) => SetTool(DrawingTool.Blur, BtnBlur);
+        private void BtnEllipse_Click(object? sender, RoutedEventArgs e) => SetTool(DrawingTool.Ellipse, BtnEllipse);
+        private void BtnLine_Click(object? sender, RoutedEventArgs e) => SetTool(DrawingTool.Line, BtnLine);
+        private void BtnPixelate_Click(object? sender, RoutedEventArgs e) => SetTool(DrawingTool.Pixelate, BtnPixelate);
+        private void BtnSpotlight_Click(object? sender, RoutedEventArgs e) => SetTool(DrawingTool.Spotlight, BtnSpotlight);
+
+        private void ComboStrokeWidth_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+        {
+            if (ComboStrokeWidth?.SelectedItem is ComboBoxItem item &&
+                double.TryParse(item.Tag?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double w))
+                _strokeWidth = w;
+        }
+
+        /// <summary>Кінець лінії, вирівняний до найближчого кута, кратного 45° (з Shift).</summary>
+        private static Point SnapTo45(Point start, Point end)
+        {
+            var d = end - start;
+            double len = Math.Sqrt(d.X * d.X + d.Y * d.Y);
+            double angle = Math.Round(Math.Atan2(d.Y, d.X) / (Math.PI / 4)) * (Math.PI / 4);
+            return new Point(start.X + len * Math.Cos(angle), start.Y + len * Math.Sin(angle));
+        }
+
+        /// <summary>
+        /// Піксельне розмиття: фрагмент зменшується до «квадратиків» і показується без згладжування.
+        /// На відміну від звичайного розмиття, з мозаїки неможливо відновити текст (паролі, номери карток).
+        /// </summary>
+        private void ApplyPixelateToRegion(double x, double y, double width, double height)
+        {
+            int ix = (int)Math.Max(0, x); int iy = (int)Math.Max(0, y);
+            int iw = (int)Math.Min(DrawingCanvas.Width - ix, width); int ih = (int)Math.Min(DrawingCanvas.Height - iy, height);
+            if (iw <= 0 || ih <= 0) return;
+
+            Bitmap? cropped;
+            using (var rtb = CreateRenderedBitmap())
+            {
+                cropped = BitmapPixels.Crop(rtb, new PixelRect(ix, iy, iw, ih));
+            }
+            if (cropped == null) return;
+
+            const int block = 12;
+            var small = cropped.CreateScaledBitmap(new PixelSize(Math.Max(1, iw / block), Math.Max(1, ih / block)), BitmapInterpolationMode.MediumQuality);
+            cropped.Dispose();
+
+            var img = new Image { Source = small, Width = iw, Height = ih, Stretch = Stretch.Fill };
+            RenderOptions.SetBitmapInterpolationMode(img, BitmapInterpolationMode.None);
+            var container = new Border { Width = iw, Height = ih, Child = img, ClipToBounds = true, Tag = ShapeType.Pixelate };
+
+            Canvas.SetLeft(container, ix); Canvas.SetTop(container, iy);
+            DrawingCanvas.Children.Add(container);
+            PushAction(new AddShapeAction(container));
+        }
+
+        /// <summary>Прожектор: напівпрозоре затемнення всього полотна з «діркою» над потрібною областю.</summary>
+        private void AddSpotlight(Rect hole)
+        {
+            var spot = new SpotlightShape { Fill = new SolidColorBrush(Color.FromArgb(150, 0, 0, 0)), Tag = ShapeType.Spotlight };
+            UpdateSpotlightGeometry(spot, hole);
+            Canvas.SetLeft(spot, 0); Canvas.SetTop(spot, 0);
+            DrawingCanvas.Children.Add(spot);
+            PushAction(new AddShapeAction(spot));
+        }
+
+        private void UpdateSpotlightGeometry(SpotlightShape spot, Rect hole)
+        {
+            spot.Hole = hole;
+            double w = double.IsNaN(DrawingCanvas.Width) ? DrawingCanvas.Bounds.Width : DrawingCanvas.Width;
+            double h = double.IsNaN(DrawingCanvas.Height) ? DrawingCanvas.Bounds.Height : DrawingCanvas.Height;
+            var geometry = new GeometryGroup { FillRule = FillRule.EvenOdd };
+            geometry.Children.Add(new RectangleGeometry(new Rect(0, 0, w, h)));
+            geometry.Children.Add(new RectangleGeometry(hole));
+            spot.Data = geometry;
+        }
 
         private void SetTool(DrawingTool tool, Button btn)
         {
@@ -1546,6 +1724,7 @@ namespace ScreenShot_One_Avalonia
             ColorPalettePopup.IsOpen = false;
             _activeTool = _activeTool == tool ? DrawingTool.None : tool;
             BtnSelect.Background = BtnStamp.Background = BtnRectangle.Background = BtnArrow.Background = BtnConnector.Background = BtnPencil.Background = BtnText.Background = BtnHighlighter.Background = BtnBlur.Background = BtnCrop.Background = BtnSplit.Background = Brushes.Transparent;
+            BtnEllipse.Background = BtnLine.Background = BtnPixelate.Background = BtnSpotlight.Background = Brushes.Transparent;
             if (_activeTool != DrawingTool.None) btn.Background = new SolidColorBrush(Color.FromArgb(100, 255, 165, 0));
         }
 

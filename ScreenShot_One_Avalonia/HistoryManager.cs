@@ -10,7 +10,8 @@ using Avalonia.Media.Imaging;
 namespace ScreenShot_One_Avalonia
 {
     // --- ВІДНОВЛЕНІ МОДЕЛІ ДАНИХ ---
-    public enum ShapeType { Stamp, Rectangle, Arrow, StatusArrow, Pencil, Highlighter, Text, Blur, ImageOverlay }
+    // Нові типи додаються ЛИШЕ в кінець: у JSON історії enum зберігається числом
+    public enum ShapeType { Stamp, Rectangle, Arrow, StatusArrow, Pencil, Highlighter, Text, Blur, ImageOverlay, Ellipse, Line, Pixelate, Spotlight }
 
     public class MyPoint
     {
@@ -37,6 +38,8 @@ namespace ScreenShot_One_Avalonia
         public double Width { get; set; }
         public double Height { get; set; }
         public string? ImageBase64 { get; set; }
+        // Товщина лінії (0 — старі записи: товщина за замовчуванням)
+        public double StrokeWidth { get; set; }
     }
     // -------------------------------
 
