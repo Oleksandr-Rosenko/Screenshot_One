@@ -212,7 +212,7 @@ namespace ScreenShot_One_Avalonia
                         var cropped = ScreenCaptureService.Instance.CropBitmap(_avaloniaBackground, new PixelRect(cropX, cropY, realWidth, realHeight));
                         if (cropped != null)
                         {
-                            new EditorWindow(cropped).Show();
+                            CaptureRouter.Deliver(cropped);
                         }
                     }
                 }

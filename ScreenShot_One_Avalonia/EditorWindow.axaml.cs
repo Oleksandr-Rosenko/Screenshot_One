@@ -1719,68 +1719,10 @@ namespace ScreenShot_One_Avalonia
         // ФІКС 2: ПОВЕРНУЛИ ПЕРЕВІРЕНИЙ КОД WINFORMS ДЛЯ WINDOWS
         private async Task CopyImageToClipboardDirectly(Bitmap? sourceBitmap = null)
         {
-            string? tempPath = null;
+            var rtb = sourceBitmap ?? CreateRenderedBitmap();
             try
             {
-                var rtb = sourceBitmap ?? CreateRenderedBitmap();
-                tempPath = Path.Combine(Path.GetTempPath(), $"clip_{Guid.NewGuid()}.png");
-
-                // Зберігаємо фізичний файл (це надійно фіксує всі пікселі)
-                using (var fs = new FileStream(tempPath, FileMode.Create))
-                {
-                    rtb.Save(fs);
-                }
-                // Рендер, створений тут, далі не потрібен (буфер працює з файлом) — звільняємо одразу
-                if (sourceBitmap == null) rtb.Dispose();
-
-                if (OperatingSystem.IsWindows())
-                {
-                    // ЗАЛІЗОБЕТОННИЙ СТАРИЙ МЕТОД ДЛЯ WINDOWS (щоб не чорніло після закриття вікна)
-                    var thread = new System.Threading.Thread(() =>
-
-                    {
-
-                        try
-
-                        {
-
-                            using (var img = System.Drawing.Image.FromFile(tempPath))
-
-                            {
-
-                                #if WINDOWS
-                                if (OperatingSystem.IsWindows()) { System.Windows.Forms.Clipboard.SetImage(img); }
-#endif
-
-                            }
-
-                        }
-
-                        catch (Exception ex)
-
-                        {
-
-                            AppLog.Write($"Помилка WinForms буфера: {ex.Message}");
-
-                        }
-                    });
-                    thread.SetApartmentState(System.Threading.ApartmentState.STA);
-                    thread.Start();
-                    thread.Join();
-                }
-                else
-                {
-                    // ДЛЯ MAC ТА LINUX (Кросплатформенний API Avalonia 11)
-                    var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-                    if (clipboard != null)
-                    {
-                        using (var fs = new FileStream(tempPath, FileMode.Open, FileAccess.Read))
-                        {
-                            var independentBitmap = new Bitmap(fs);
-                            await clipboard.SetBitmapAsync(independentBitmap);
-                        }
-                    }
-                }
+                await ClipboardHelper.CopyImageAsync(rtb, TopLevel.GetTopLevel(this));
             }
             catch (Exception ex)
             {
@@ -1790,11 +1732,8 @@ namespace ScreenShot_One_Avalonia
             }
             finally
             {
-                // Раніше clip_*.png лишався в %TEMP% після КОЖНОГО копіювання. Буфер обміну вже має власну копію даних.
-                if (tempPath != null)
-                {
-                    try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (Exception logEx) { AppLog.Warn(logEx); }
-                }
+                // Рендер, створений тут, далі не потрібен — звільняємо одразу
+                if (sourceBitmap == null) rtb.Dispose();
             }
         }
 

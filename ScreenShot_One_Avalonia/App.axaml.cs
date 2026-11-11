@@ -258,7 +258,7 @@ namespace ScreenShot_One_Avalonia
                     var avaloniaBitmap = ScreenCaptureService.Instance.CaptureScreen(currentScreen);
                     if (avaloniaBitmap != null)
                     {
-                        new EditorWindow(avaloniaBitmap).Show();
+                        CaptureRouter.Deliver(avaloniaBitmap);
                     }
                 }
             }
@@ -276,7 +276,7 @@ namespace ScreenShot_One_Avalonia
                 var avaloniaBitmap = ScreenCaptureService.Instance.CaptureAllScreens();
                 if (avaloniaBitmap != null)
                 {
-                    new EditorWindow(avaloniaBitmap).Show();
+                    CaptureRouter.Deliver(avaloniaBitmap);
                 }
             }
 

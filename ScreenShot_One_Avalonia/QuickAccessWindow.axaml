@@ -1,0 +1,45 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        x:Class="ScreenShot_One_Avalonia.QuickAccessWindow"
+        Title="Скріншот" Width="300" SizeToContent="Height"
+        WindowDecorations="None" Background="Transparent" TransparencyLevelHint="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False" CanResize="False">
+
+	<Border Name="RootBorder" Background="#E6181818" CornerRadius="14" Padding="8" Margin="6"
+	        BorderBrush="#55FFFFFF" BorderThickness="1">
+		<StackPanel Spacing="8">
+			<!-- Мініатюра: подвійний клік — редагувати, перетягування — вставити файл у будь-яку програму -->
+			<Border Name="ThumbBorder" CornerRadius="8" ClipToBounds="True" Cursor="Hand" Background="#33000000"
+			        ToolTip.Tip="Перетягніть у будь-яку програму · Подвійний клік — редагувати">
+				<Image Name="ThumbImage" Stretch="Uniform" MaxHeight="190"/>
+			</Border>
+
+			<Grid ColumnDefinitions="*,*,*,Auto">
+				<Button Name="BtnEdit" Grid.Column="0" Classes="Basic" Click="BtnEdit_Click" ToolTip.Tip="Редагувати" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+					<StackPanel Orientation="Horizontal" Spacing="4">
+						<material:MaterialIcon Kind="Pencil" Width="18" Height="18" Foreground="White"/>
+						<TextBlock Text="Редагувати" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+					</StackPanel>
+				</Button>
+				<Button Name="BtnCopy" Grid.Column="1" Classes="Basic" Click="BtnCopy_Click" ToolTip.Tip="Копіювати в буфер" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+					<StackPanel Orientation="Horizontal" Spacing="4">
+						<material:MaterialIcon Kind="ContentCopy" Width="18" Height="18" Foreground="White"/>
+						<TextBlock Text="Копіювати" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+					</StackPanel>
+				</Button>
+				<Button Name="BtnSaveFile" Grid.Column="2" Classes="Basic" Click="BtnSaveFile_Click" ToolTip.Tip="Зберегти у папку" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+					<StackPanel Orientation="Horizontal" Spacing="4">
+						<material:MaterialIcon Kind="ContentSaveOutline" Width="18" Height="18" Foreground="White"/>
+						<TextBlock Text="Зберегти" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+					</StackPanel>
+				</Button>
+				<Button Name="BtnDismiss" Grid.Column="3" Classes="Basic" Click="BtnDismiss_Click" ToolTip.Tip="Закрити" Padding="6,0">
+					<material:MaterialIcon Kind="Close" Width="18" Height="18" Foreground="LightGray"/>
+				</Button>
+			</Grid>
+
+			<TextBlock Name="TxtStatus" IsVisible="False" Foreground="LimeGreen" FontSize="12" HorizontalAlignment="Center"/>
+		</StackPanel>
+	</Border>
+</Window>
