@@ -19,9 +19,9 @@ $Architectures = if ($Arch -eq "all") { @("arm64", "x64") } else { @($Arch) }
 foreach ($targetArch in $Architectures) {
     $rid = "osx-$targetArch"
     Write-Host "`n=== [macOS $targetArch] 1. Publishing .NET binary ($rid) ===" -ForegroundColor Cyan
-    
+
     $publishOut = Join-Path $ScriptDir "bin\$Configuration\net10.0\$rid\publish"
-    
+
     dotnet publish $ProjectFile -f net10.0 -r $rid -c $Configuration --self-contained true
     if ($LASTEXITCODE -ne 0) { throw "Publish failed for $rid" }
 
@@ -59,7 +59,7 @@ foreach ($targetArch in $Architectures) {
     if (Test-Path $zipPath) {
         Remove-Item -Path $zipPath -Force
     }
-    
+
     $packScript = Join-Path $ScriptDir "package_mac_zip.py"
     python $packScript $bundleDir $zipPath
 

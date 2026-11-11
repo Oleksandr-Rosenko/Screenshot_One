@@ -1,0 +1,8 @@
+# Єдиний формат кінців рядків у репозиторії: LF.
+# Git на Windows сам перетворить їх у CRLF при checkout (core.autocrlf), тож редактори не плутатимуться.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.ico binary
+*.exe binary
+*.dll binary

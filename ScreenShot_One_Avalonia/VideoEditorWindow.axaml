@@ -1,289 +1,289 @@
-<suki:SukiWindow xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
-        xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-        xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
-        x:Class="ScreenShot_One_Avalonia.VideoEditorWindow"
-        Title="Редактор відео"
-        WindowState="Maximized">
-
-	<suki:SukiWindow.Styles>
-		<Style Selector="TextBlock.MonoTime">
-			<Setter Property="FontFamily" Value="Cascadia Code, Consolas, Menlo, Monaco, monospace"/>
-		</Style>
-	</suki:SukiWindow.Styles>
-
-	<Grid>
-		<DockPanel LastChildFill="True">
-
-			<!-- TOP TOOLBAR (Matching EditorWindow style) -->
-			<suki:GlassCard DockPanel.Dock="Top" Margin="10,10,10,5" Padding="12,7" CornerRadius="12">
-				<Grid ColumnDefinitions="Auto,*,Auto">
-					<!-- Left: Back to History & Video Title -->
-					<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-						<Button Name="BtnBackToHistory" Classes="Basic" ToolTip.Tip="Назад до історії" Click="BtnBackToHistory_Click" IsVisible="False" Margin="0,0,4,0">
-							<StackPanel Orientation="Horizontal" Spacing="6">
-								<material:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" Foreground="DeepSkyBlue"/>
-								<TextBlock Text="До історії" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="DeepSkyBlue"/>
-							</StackPanel>
-						</Button>
-						<Separator Name="SepBackToHistory" Classes="Vertical" Height="26" IsVisible="False"/>
-
-						<material:MaterialIcon Kind="Video" Width="22" Height="22" Foreground="DeepSkyBlue" VerticalAlignment="Center"/>
-						<TextBlock Name="TxtVideoTitle" Text="Відеозапис" VerticalAlignment="Center" FontWeight="Bold" FontSize="14"/>
-					</StackPanel>
-
-					<!-- Right: Actions (Google Drive, Save) -->
-					<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-						<Button Name="BtnUpload" Classes="Basic" BorderBrush="#94A3B8" BorderThickness="1.5" CornerRadius="8" Padding="12,6" ToolTip.Tip="Вивантажити на Google Диск" Click="BtnUpload_Click">
-							<StackPanel Orientation="Horizontal" Spacing="6">
-								<material:MaterialIcon Kind="GoogleDrive" Width="20" Height="20" Foreground="#4285F4"/>
-								<TextBlock Name="TxtBtnUpload" Text="Google Диск" VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource SukiText}"/>
-							</StackPanel>
-						</Button>
-
-						<Button Name="BtnSave" Classes="Primary" Background="#2563EB" Foreground="White" CornerRadius="8" Padding="16,6" ToolTip.Tip="Зберегти відео" Click="BtnSave_Click">
-							<StackPanel Orientation="Horizontal" Spacing="6">
-								<material:MaterialIcon Kind="ContentSave" Width="20" Height="20" Foreground="White"/>
-								<TextBlock Name="TxtBtnSave" Text="Зберегти" VerticalAlignment="Center" FontWeight="Bold" Foreground="White"/>
-							</StackPanel>
-						</Button>
-					</StackPanel>
-				</Grid>
-			</suki:GlassCard>
-
-			<!-- BOTTOM CONTROLS & TIMELINE -->
-			<StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="10,0,10,12">
-
-				<!-- EXPANDABLE TRIM PANEL -->
-				<suki:GlassCard Name="TrimPanel" IsVisible="False" Margin="0,0,0,4" Padding="16,12" CornerRadius="14">
-					<Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
-						<!-- Trim Header with badges and quick actions -->
-						<Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
-							<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-								<material:MaterialIcon Name="IconTrimHeader" Kind="ContentCut" Width="20" Height="20" Foreground="#FF9800"/>
-								<TextBlock Name="TxtTrimHeader" Text="Режим обрізки" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Foreground="#FF9800"/>
-
-								<!-- Mode Segmented Switch: Keep vs Cutout -->
-								<Border Background="{DynamicResource SukiLightBackground}" BorderBrush="{DynamicResource SukiBorderBrush}" BorderThickness="1.5" CornerRadius="8" Padding="2" Margin="6,0,0,0">
-									<StackPanel Orientation="Horizontal" Spacing="2">
-										<Button Name="BtnTrimModeKeep" Classes="Basic" CornerRadius="6" Padding="10,4" ToolTip.Tip="Залишити виділену частину (обрізати краї)" Click="BtnTrimModeKeep_Click">
-											<StackPanel Orientation="Horizontal" Spacing="5">
-												<material:MaterialIcon Name="IconTrimModeKeep" Kind="ArrowCollapseHorizontal" Width="15" Height="15"/>
-												<TextBlock Name="TxtTrimModeKeep" Text="Залишити діапазон" FontSize="11" FontWeight="Bold"/>
-											</StackPanel>
-										</Button>
-										<Button Name="BtnTrimModeCut" Classes="Basic" CornerRadius="6" Padding="10,4" ToolTip.Tip="Вирізати виділений фрагмент із середини відео" Click="BtnTrimModeCut_Click">
-											<StackPanel Orientation="Horizontal" Spacing="5">
-												<material:MaterialIcon Name="IconTrimModeCut" Kind="ContentCut" Width="15" Height="15"/>
-												<TextBlock Name="TxtTrimModeCut" Text="Вирізати шматок" FontSize="11" FontWeight="Bold"/>
-											</StackPanel>
-										</Button>
-									</StackPanel>
-								</Border>
-							</StackPanel>
-
-							<!-- Time Badges -->
-							<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12" VerticalAlignment="Center">
-								<Border Name="BorderTrimStartBadge" Background="#2000E676" BorderBrush="#00E676" BorderThickness="1" CornerRadius="6" Padding="8,3">
-									<StackPanel Orientation="Horizontal" Spacing="4">
-										<TextBlock Name="TxtTrimStartLabel" Text="Початок:" FontSize="12" Foreground="{DynamicResource SukiTextLow}"/>
-										<TextBlock Name="TxtTrimStartBadge" Classes="MonoTime" Text="00:00.00" FontSize="12" FontWeight="Bold" Foreground="#00E676"/>
-									</StackPanel>
-								</Border>
-
-								<Border Name="BorderTrimDurationBadge" Background="#2000B0FF" BorderBrush="#00B0FF" BorderThickness="1" CornerRadius="6" Padding="8,3">
-									<StackPanel Orientation="Horizontal" Spacing="4">
-										<TextBlock Name="TxtTrimDurationLabel" Text="Вибрано:" FontSize="12" Foreground="{DynamicResource SukiTextLow}"/>
-										<TextBlock Name="TxtTrimDurationBadge" Classes="MonoTime" Text="00:00.00" FontSize="12" FontWeight="Bold" Foreground="#00B0FF"/>
-									</StackPanel>
-								</Border>
-
-								<Border Name="BorderTrimEndBadge" Background="#20FF5252" BorderBrush="#FF5252" BorderThickness="1" CornerRadius="6" Padding="8,3">
-									<StackPanel Orientation="Horizontal" Spacing="4">
-										<TextBlock Name="TxtTrimEndLabel" Text="Кінець:" FontSize="12" Foreground="{DynamicResource SukiTextLow}"/>
-										<TextBlock Name="TxtTrimEndBadge" Classes="MonoTime" Text="00:00.00" FontSize="12" FontWeight="Bold" Foreground="#FF5252"/>
-									</StackPanel>
-								</Border>
-							</StackPanel>
-
-							<!-- Quick actions -->
-							<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-								<Button Name="BtnPreviewTrim" Classes="Basic" CornerRadius="6" Padding="8,4" ToolTip.Tip="Прослухати/переглянути лише вибраний відрізок" Click="BtnPreviewTrim_Click">
-									<StackPanel Orientation="Horizontal" Spacing="5">
-										<material:MaterialIcon Kind="Play" Width="16" Height="16" Foreground="#00B0FF"/>
-										<TextBlock Name="TxtPreviewTrim" Text="Прев'ю обрізки" FontSize="12" FontWeight="SemiBold"/>
-									</StackPanel>
-								</Button>
-
-								<Button Name="BtnCancelTrim" Classes="Basic" CornerRadius="6" Padding="8,4" ToolTip.Tip="Скинути межі обрізки" Click="BtnCancelTrim_Click">
-									<StackPanel Orientation="Horizontal" Spacing="5">
-										<material:MaterialIcon Kind="Close" Width="16" Height="16" Foreground="#FF5252"/>
-										<TextBlock Text="Скинути" FontSize="12" FontWeight="SemiBold" Foreground="#FF5252"/>
-									</StackPanel>
-								</Button>
-
-								<Button Name="BtnConfirmTrim" Classes="Primary" Background="#2563EB" Foreground="White" CornerRadius="6" Padding="10,4" ToolTip.Tip="Обрізати та зберегти відео" Click="BtnSave_Click">
-									<StackPanel Orientation="Horizontal" Spacing="5">
-										<material:MaterialIcon Name="IconConfirmTrim" Kind="Check" Width="16" Height="16" Foreground="White"/>
-										<TextBlock Name="TxtConfirmTrim" Text="Зберегти обрізку" FontSize="12" FontWeight="Bold" Foreground="White"/>
-									</StackPanel>
-								</Button>
-							</StackPanel>
-						</Grid>
-
-						<!-- Row 1: Real-Time Human-Readable Status Banner -->
-						<Border Grid.Row="1" Name="TrimStatusBanner" CornerRadius="6" Padding="8,4" Margin="0,2,0,2" Background="{DynamicResource SukiLightBackground}" BorderBrush="{DynamicResource SukiBorderBrush}" BorderThickness="1">
-							<Grid ColumnDefinitions="Auto,*">
-								<material:MaterialIcon Name="IconTrimStatusBanner" Kind="InformationOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
-								<TextBlock Grid.Column="1" Name="TxtTrimStatusBanner" Text="Пояснення дії..." FontWeight="Medium" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap"/>
-							</Grid>
-						</Border>
-
-						<!-- Row 2: Start & End Slider Rows with fine-tuning -->
-						<Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="6">
-							<!-- Start Slider Row -->
-							<Grid Grid.Row="0" ColumnDefinitions="160,Auto,*,Auto,75" Margin="0,2">
-								<TextBlock Name="TxtTrimStartRowHeader" Text="Початок" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#00E676"/>
-								<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="4,0" VerticalAlignment="Center">
-									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="-0.5 сек" Click="BtnTrimStartMinus_Click">
-										<TextBlock Text="-0.5s" FontSize="11"/>
-									</Button>
-									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="-0.1 сек (покадрово)" Click="BtnTrimStartMinus100_Click">
-										<TextBlock Text="-0.1s" FontSize="11"/>
-									</Button>
-								</StackPanel>
-								<Slider Grid.Column="2" Name="TrimStartSlider" Minimum="0" Maximum="100" Value="0" Foreground="#00E676" VerticalAlignment="Center"/>
-								<StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" Margin="4,0" VerticalAlignment="Center">
-									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="+0.1 сек (покадрово)" Click="BtnTrimStartPlus100_Click">
-										<TextBlock Text="+0.1s" FontSize="11"/>
-									</Button>
-									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="+0.5 сек" Click="BtnTrimStartPlus_Click">
-										<TextBlock Text="+0.5s" FontSize="11"/>
-									</Button>
-								</StackPanel>
-								<TextBlock Grid.Column="4" Name="TxtTrimStartVal" Classes="MonoTime" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
-							</Grid>
-
-							<!-- End Slider Row -->
-							<Grid Grid.Row="1" ColumnDefinitions="160,Auto,*,Auto,75" Margin="0,2">
-								<TextBlock Name="TxtTrimEndRowHeader" Text="Кінець" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#FF5252"/>
-								<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="4,0" VerticalAlignment="Center">
-									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="-0.5 сек" Click="BtnTrimEndMinus_Click">
-										<TextBlock Text="-0.5s" FontSize="11"/>
-									</Button>
-									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="-0.1 сек (покадрово)" Click="BtnTrimEndMinus100_Click">
-										<TextBlock Text="-0.1s" FontSize="11"/>
-									</Button>
-								</StackPanel>
-								<Slider Grid.Column="2" Name="TrimEndSlider" Minimum="0" Maximum="100" Value="100" Foreground="#FF5252" VerticalAlignment="Center"/>
-								<StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" Margin="4,0" VerticalAlignment="Center">
-									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="+0.1 сек (покадрово)" Click="BtnTrimEndPlus100_Click">
-										<TextBlock Text="+0.1s" FontSize="11"/>
-									</Button>
-									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="+0.5 сек" Click="BtnTrimEndPlus_Click">
-										<TextBlock Text="+0.5s" FontSize="11"/>
-									</Button>
-								</StackPanel>
-								<TextBlock Grid.Column="4" Name="TxtTrimEndVal" Classes="MonoTime" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
-							</Grid>
-						</Grid>
-					</Grid>
-				</suki:GlassCard>
-
-				<!-- MAIN TIMELINE & CONTROLS CARD -->
-				<suki:GlassCard Padding="16,10" CornerRadius="16">
-					<StackPanel Spacing="8">
-						<!-- Timeline Row -->
-						<Grid ColumnDefinitions="70,*,70" VerticalAlignment="Center">
-							<TextBlock Name="TxtCurrentTime" Classes="MonoTime" Text="00:00.00" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SukiTextLow}"/>
-
-							<!-- Interactive Range Timeline container -->
-							<Grid Grid.Column="1" Margin="12,0" Height="30" VerticalAlignment="Center">
-								<!-- Background Track -->
-								<Border Name="TimelineTrackBorder" Height="8" CornerRadius="6" Background="{DynamicResource SukiLightBackground}" BorderBrush="{DynamicResource SukiBorderBrush}" BorderThickness="1" VerticalAlignment="Center" ClipToBounds="True">
-									<!-- Trim Mask Highlight Layer -->
-									<Grid Name="TrimHighlightGrid" Height="24" VerticalAlignment="Stretch" IsVisible="False">
-										<Grid.ColumnDefinitions>
-											<ColumnDefinition Width="0*"/>
-											<ColumnDefinition Width="100*"/>
-											<ColumnDefinition Width="0*"/>
-										</Grid.ColumnDefinitions>
-										<Border Name="TrimMaskLeft" Grid.Column="0" ClipToBounds="True">
-											<TextBlock Name="TxtMaskLeft" Text="✂ ВИДАЛЯЄТЬСЯ" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-										</Border>
-										<Border Name="TrimMaskActive" Grid.Column="1" ClipToBounds="True">
-											<TextBlock Name="TxtMaskActive" Text="✓ ЗБЕРІГАЄТЬСЯ" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-										</Border>
-										<Border Name="TrimMaskRight" Grid.Column="2" ClipToBounds="True">
-											<TextBlock Name="TxtMaskRight" Text="✂ ВИДАЛЯЄТЬСЯ" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-										</Border>
-									</Grid>
-								</Border>
-
-								<!-- Main Slider with pointer scrub events -->
-								<Slider Name="VideoSlider" Minimum="0" Maximum="100" Value="0"
-								        VerticalAlignment="Center" Margin="0">
-									<Slider.Styles>
-										<Style Selector="Slider.NoTrack /template/ RepeatButton">
-											<Setter Property="Opacity" Value="0"/>
-										</Style>
-										<Style Selector="Slider.NoTrack /template/ Border#PART_TrackBackground">
-											<Setter Property="Opacity" Value="0"/>
-										</Style>
-									</Slider.Styles>
-								</Slider>
-							</Grid>
-
-							<TextBlock Grid.Column="2" Name="TxtTotalTime" Classes="MonoTime" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SukiTextLow}"/>
-						</Grid>
-
-						<!-- Playback Controls Row -->
-						<Grid ColumnDefinitions="*,Auto,*">
-							<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-								<!-- Rewind 5s -->
-								<Button Name="BtnRewind5" Classes="Basic" Width="38" Height="38" CornerRadius="19" Padding="0" ToolTip.Tip="Назад на 5 секунд" Click="BtnRewind5_Click">
-									<material:MaterialIcon Kind="Rewind" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-								</Button>
-
-								<!-- Play / Pause -->
-								<Button Name="BtnPlayPause" Classes="Primary" Width="52" Height="52" CornerRadius="26" Padding="0" Click="BtnPlayPause_Click">
-									<material:MaterialIcon Name="MainPlayIcon" Kind="Play" Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-								</Button>
-
-								<!-- Forward 5s -->
-								<Button Name="BtnForward5" Classes="Basic" Width="38" Height="38" CornerRadius="19" Padding="0" ToolTip.Tip="Вперед на 5 секунд" Click="BtnForward5_Click">
-									<material:MaterialIcon Kind="FastForward" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-								</Button>
-
-								<Separator Classes="Vertical" Height="24"/>
-
-								<!-- Trim Mode Toggle -->
-								<ToggleButton Name="BtnTrimMode" Classes="Basic" Height="38" CornerRadius="19" Padding="14,0" ToolTip.Tip="Увімкнути / вимкнути режим обрізки" IsCheckedChanged="BtnTrimMode_IsCheckedChanged" Cursor="Hand">
-									<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" IsHitTestVisible="False">
-										<material:MaterialIcon Name="IconBtnTrimMode" Kind="ContentCut" Width="18" Height="18" Foreground="#FF9800"/>
-										<TextBlock Name="TxtBtnTrimMode" Text="Обрізка" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
-									</StackPanel>
-								</ToggleButton>
-							</StackPanel>
-						</Grid>
-					</StackPanel>
-				</suki:GlassCard>
-			</StackPanel>
-
-			<!-- CENTER VIDEO PLAYER -->
-			<suki:GlassCard Margin="10,0,10,8" Padding="0" ClipToBounds="True">
-				<Grid Background="Black">
-					<vlc:VideoView Name="VideoPlayer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
-					<TextBlock Name="TxtLoading" Text="Завантаження відео..." Foreground="White" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False"/>
-				</Grid>
-			</suki:GlassCard>
-
-		</DockPanel>
-
-		<!-- Toast Notification -->
-		<Border Name="ToastNotification" Background="#CC000000" CornerRadius="10" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,110" Padding="25,14" IsVisible="False" IsHitTestVisible="False">
-			<TextBlock Name="ToastText" Text="Збережено!" Foreground="White" FontSize="16" FontWeight="SemiBold"/>
-		</Border>
-	</Grid>
-</suki:SukiWindow>
+<suki:SukiWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+        xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
+        x:Class="ScreenShot_One_Avalonia.VideoEditorWindow"
+        Title="Редактор відео"
+        WindowState="Maximized">
+
+	<suki:SukiWindow.Styles>
+		<Style Selector="TextBlock.MonoTime">
+			<Setter Property="FontFamily" Value="Cascadia Code, Consolas, Menlo, Monaco, monospace"/>
+		</Style>
+	</suki:SukiWindow.Styles>
+
+	<Grid>
+		<DockPanel LastChildFill="True">
+
+			<!-- TOP TOOLBAR (Matching EditorWindow style) -->
+			<suki:GlassCard DockPanel.Dock="Top" Margin="10,10,10,5" Padding="12,7" CornerRadius="12">
+				<Grid ColumnDefinitions="Auto,*,Auto">
+					<!-- Left: Back to History & Video Title -->
+					<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+						<Button Name="BtnBackToHistory" Classes="Basic" ToolTip.Tip="Назад до історії" Click="BtnBackToHistory_Click" IsVisible="False" Margin="0,0,4,0">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<material:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" Foreground="DeepSkyBlue"/>
+								<TextBlock Text="До історії" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="DeepSkyBlue"/>
+							</StackPanel>
+						</Button>
+						<Separator Name="SepBackToHistory" Classes="Vertical" Height="26" IsVisible="False"/>
+
+						<material:MaterialIcon Kind="Video" Width="22" Height="22" Foreground="DeepSkyBlue" VerticalAlignment="Center"/>
+						<TextBlock Name="TxtVideoTitle" Text="Відеозапис" VerticalAlignment="Center" FontWeight="Bold" FontSize="14"/>
+					</StackPanel>
+
+					<!-- Right: Actions (Google Drive, Save) -->
+					<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+						<Button Name="BtnUpload" Classes="Basic" BorderBrush="#94A3B8" BorderThickness="1.5" CornerRadius="8" Padding="12,6" ToolTip.Tip="Вивантажити на Google Диск" Click="BtnUpload_Click">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<material:MaterialIcon Kind="GoogleDrive" Width="20" Height="20" Foreground="#4285F4"/>
+								<TextBlock Name="TxtBtnUpload" Text="Google Диск" VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource SukiText}"/>
+							</StackPanel>
+						</Button>
+
+						<Button Name="BtnSave" Classes="Primary" Background="#2563EB" Foreground="White" CornerRadius="8" Padding="16,6" ToolTip.Tip="Зберегти відео" Click="BtnSave_Click">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<material:MaterialIcon Kind="ContentSave" Width="20" Height="20" Foreground="White"/>
+								<TextBlock Name="TxtBtnSave" Text="Зберегти" VerticalAlignment="Center" FontWeight="Bold" Foreground="White"/>
+							</StackPanel>
+						</Button>
+					</StackPanel>
+				</Grid>
+			</suki:GlassCard>
+
+			<!-- BOTTOM CONTROLS & TIMELINE -->
+			<StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="10,0,10,12">
+
+				<!-- EXPANDABLE TRIM PANEL -->
+				<suki:GlassCard Name="TrimPanel" IsVisible="False" Margin="0,0,0,4" Padding="16,12" CornerRadius="14">
+					<Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+						<!-- Trim Header with badges and quick actions -->
+						<Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+							<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+								<material:MaterialIcon Name="IconTrimHeader" Kind="ContentCut" Width="20" Height="20" Foreground="#FF9800"/>
+								<TextBlock Name="TxtTrimHeader" Text="Режим обрізки" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Foreground="#FF9800"/>
+
+								<!-- Mode Segmented Switch: Keep vs Cutout -->
+								<Border Background="{DynamicResource SukiLightBackground}" BorderBrush="{DynamicResource SukiBorderBrush}" BorderThickness="1.5" CornerRadius="8" Padding="2" Margin="6,0,0,0">
+									<StackPanel Orientation="Horizontal" Spacing="2">
+										<Button Name="BtnTrimModeKeep" Classes="Basic" CornerRadius="6" Padding="10,4" ToolTip.Tip="Залишити виділену частину (обрізати краї)" Click="BtnTrimModeKeep_Click">
+											<StackPanel Orientation="Horizontal" Spacing="5">
+												<material:MaterialIcon Name="IconTrimModeKeep" Kind="ArrowCollapseHorizontal" Width="15" Height="15"/>
+												<TextBlock Name="TxtTrimModeKeep" Text="Залишити діапазон" FontSize="11" FontWeight="Bold"/>
+											</StackPanel>
+										</Button>
+										<Button Name="BtnTrimModeCut" Classes="Basic" CornerRadius="6" Padding="10,4" ToolTip.Tip="Вирізати виділений фрагмент із середини відео" Click="BtnTrimModeCut_Click">
+											<StackPanel Orientation="Horizontal" Spacing="5">
+												<material:MaterialIcon Name="IconTrimModeCut" Kind="ContentCut" Width="15" Height="15"/>
+												<TextBlock Name="TxtTrimModeCut" Text="Вирізати шматок" FontSize="11" FontWeight="Bold"/>
+											</StackPanel>
+										</Button>
+									</StackPanel>
+								</Border>
+							</StackPanel>
+
+							<!-- Time Badges -->
+							<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12" VerticalAlignment="Center">
+								<Border Name="BorderTrimStartBadge" Background="#2000E676" BorderBrush="#00E676" BorderThickness="1" CornerRadius="6" Padding="8,3">
+									<StackPanel Orientation="Horizontal" Spacing="4">
+										<TextBlock Name="TxtTrimStartLabel" Text="Початок:" FontSize="12" Foreground="{DynamicResource SukiTextLow}"/>
+										<TextBlock Name="TxtTrimStartBadge" Classes="MonoTime" Text="00:00.00" FontSize="12" FontWeight="Bold" Foreground="#00E676"/>
+									</StackPanel>
+								</Border>
+
+								<Border Name="BorderTrimDurationBadge" Background="#2000B0FF" BorderBrush="#00B0FF" BorderThickness="1" CornerRadius="6" Padding="8,3">
+									<StackPanel Orientation="Horizontal" Spacing="4">
+										<TextBlock Name="TxtTrimDurationLabel" Text="Вибрано:" FontSize="12" Foreground="{DynamicResource SukiTextLow}"/>
+										<TextBlock Name="TxtTrimDurationBadge" Classes="MonoTime" Text="00:00.00" FontSize="12" FontWeight="Bold" Foreground="#00B0FF"/>
+									</StackPanel>
+								</Border>
+
+								<Border Name="BorderTrimEndBadge" Background="#20FF5252" BorderBrush="#FF5252" BorderThickness="1" CornerRadius="6" Padding="8,3">
+									<StackPanel Orientation="Horizontal" Spacing="4">
+										<TextBlock Name="TxtTrimEndLabel" Text="Кінець:" FontSize="12" Foreground="{DynamicResource SukiTextLow}"/>
+										<TextBlock Name="TxtTrimEndBadge" Classes="MonoTime" Text="00:00.00" FontSize="12" FontWeight="Bold" Foreground="#FF5252"/>
+									</StackPanel>
+								</Border>
+							</StackPanel>
+
+							<!-- Quick actions -->
+							<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+								<Button Name="BtnPreviewTrim" Classes="Basic" CornerRadius="6" Padding="8,4" ToolTip.Tip="Прослухати/переглянути лише вибраний відрізок" Click="BtnPreviewTrim_Click">
+									<StackPanel Orientation="Horizontal" Spacing="5">
+										<material:MaterialIcon Kind="Play" Width="16" Height="16" Foreground="#00B0FF"/>
+										<TextBlock Name="TxtPreviewTrim" Text="Прев'ю обрізки" FontSize="12" FontWeight="SemiBold"/>
+									</StackPanel>
+								</Button>
+
+								<Button Name="BtnCancelTrim" Classes="Basic" CornerRadius="6" Padding="8,4" ToolTip.Tip="Скинути межі обрізки" Click="BtnCancelTrim_Click">
+									<StackPanel Orientation="Horizontal" Spacing="5">
+										<material:MaterialIcon Kind="Close" Width="16" Height="16" Foreground="#FF5252"/>
+										<TextBlock Text="Скинути" FontSize="12" FontWeight="SemiBold" Foreground="#FF5252"/>
+									</StackPanel>
+								</Button>
+
+								<Button Name="BtnConfirmTrim" Classes="Primary" Background="#2563EB" Foreground="White" CornerRadius="6" Padding="10,4" ToolTip.Tip="Обрізати та зберегти відео" Click="BtnSave_Click">
+									<StackPanel Orientation="Horizontal" Spacing="5">
+										<material:MaterialIcon Name="IconConfirmTrim" Kind="Check" Width="16" Height="16" Foreground="White"/>
+										<TextBlock Name="TxtConfirmTrim" Text="Зберегти обрізку" FontSize="12" FontWeight="Bold" Foreground="White"/>
+									</StackPanel>
+								</Button>
+							</StackPanel>
+						</Grid>
+
+						<!-- Row 1: Real-Time Human-Readable Status Banner -->
+						<Border Grid.Row="1" Name="TrimStatusBanner" CornerRadius="6" Padding="8,4" Margin="0,2,0,2" Background="{DynamicResource SukiLightBackground}" BorderBrush="{DynamicResource SukiBorderBrush}" BorderThickness="1">
+							<Grid ColumnDefinitions="Auto,*">
+								<material:MaterialIcon Name="IconTrimStatusBanner" Kind="InformationOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+								<TextBlock Grid.Column="1" Name="TxtTrimStatusBanner" Text="Пояснення дії..." FontWeight="Medium" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap"/>
+							</Grid>
+						</Border>
+
+						<!-- Row 2: Start & End Slider Rows with fine-tuning -->
+						<Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="6">
+							<!-- Start Slider Row -->
+							<Grid Grid.Row="0" ColumnDefinitions="160,Auto,*,Auto,75" Margin="0,2">
+								<TextBlock Name="TxtTrimStartRowHeader" Text="Початок" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#00E676"/>
+								<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="4,0" VerticalAlignment="Center">
+									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="-0.5 сек" Click="BtnTrimStartMinus_Click">
+										<TextBlock Text="-0.5s" FontSize="11"/>
+									</Button>
+									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="-0.1 сек (покадрово)" Click="BtnTrimStartMinus100_Click">
+										<TextBlock Text="-0.1s" FontSize="11"/>
+									</Button>
+								</StackPanel>
+								<Slider Grid.Column="2" Name="TrimStartSlider" Minimum="0" Maximum="100" Value="0" Foreground="#00E676" VerticalAlignment="Center"/>
+								<StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" Margin="4,0" VerticalAlignment="Center">
+									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="+0.1 сек (покадрово)" Click="BtnTrimStartPlus100_Click">
+										<TextBlock Text="+0.1s" FontSize="11"/>
+									</Button>
+									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="+0.5 сек" Click="BtnTrimStartPlus_Click">
+										<TextBlock Text="+0.5s" FontSize="11"/>
+									</Button>
+								</StackPanel>
+								<TextBlock Grid.Column="4" Name="TxtTrimStartVal" Classes="MonoTime" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+							</Grid>
+
+							<!-- End Slider Row -->
+							<Grid Grid.Row="1" ColumnDefinitions="160,Auto,*,Auto,75" Margin="0,2">
+								<TextBlock Name="TxtTrimEndRowHeader" Text="Кінець" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#FF5252"/>
+								<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="4,0" VerticalAlignment="Center">
+									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="-0.5 сек" Click="BtnTrimEndMinus_Click">
+										<TextBlock Text="-0.5s" FontSize="11"/>
+									</Button>
+									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="-0.1 сек (покадрово)" Click="BtnTrimEndMinus100_Click">
+										<TextBlock Text="-0.1s" FontSize="11"/>
+									</Button>
+								</StackPanel>
+								<Slider Grid.Column="2" Name="TrimEndSlider" Minimum="0" Maximum="100" Value="100" Foreground="#FF5252" VerticalAlignment="Center"/>
+								<StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" Margin="4,0" VerticalAlignment="Center">
+									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="+0.1 сек (покадрово)" Click="BtnTrimEndPlus100_Click">
+										<TextBlock Text="+0.1s" FontSize="11"/>
+									</Button>
+									<Button Classes="Basic" Padding="6,2" ToolTip.Tip="+0.5 сек" Click="BtnTrimEndPlus_Click">
+										<TextBlock Text="+0.5s" FontSize="11"/>
+									</Button>
+								</StackPanel>
+								<TextBlock Grid.Column="4" Name="TxtTrimEndVal" Classes="MonoTime" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
+							</Grid>
+						</Grid>
+					</Grid>
+				</suki:GlassCard>
+
+				<!-- MAIN TIMELINE & CONTROLS CARD -->
+				<suki:GlassCard Padding="16,10" CornerRadius="16">
+					<StackPanel Spacing="8">
+						<!-- Timeline Row -->
+						<Grid ColumnDefinitions="70,*,70" VerticalAlignment="Center">
+							<TextBlock Name="TxtCurrentTime" Classes="MonoTime" Text="00:00.00" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SukiTextLow}"/>
+
+							<!-- Interactive Range Timeline container -->
+							<Grid Grid.Column="1" Margin="12,0" Height="30" VerticalAlignment="Center">
+								<!-- Background Track -->
+								<Border Name="TimelineTrackBorder" Height="8" CornerRadius="6" Background="{DynamicResource SukiLightBackground}" BorderBrush="{DynamicResource SukiBorderBrush}" BorderThickness="1" VerticalAlignment="Center" ClipToBounds="True">
+									<!-- Trim Mask Highlight Layer -->
+									<Grid Name="TrimHighlightGrid" Height="24" VerticalAlignment="Stretch" IsVisible="False">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="0*"/>
+											<ColumnDefinition Width="100*"/>
+											<ColumnDefinition Width="0*"/>
+										</Grid.ColumnDefinitions>
+										<Border Name="TrimMaskLeft" Grid.Column="0" ClipToBounds="True">
+											<TextBlock Name="TxtMaskLeft" Text="✂ ВИДАЛЯЄТЬСЯ" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+										</Border>
+										<Border Name="TrimMaskActive" Grid.Column="1" ClipToBounds="True">
+											<TextBlock Name="TxtMaskActive" Text="✓ ЗБЕРІГАЄТЬСЯ" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+										</Border>
+										<Border Name="TrimMaskRight" Grid.Column="2" ClipToBounds="True">
+											<TextBlock Name="TxtMaskRight" Text="✂ ВИДАЛЯЄТЬСЯ" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+										</Border>
+									</Grid>
+								</Border>
+
+								<!-- Main Slider with pointer scrub events -->
+								<Slider Name="VideoSlider" Minimum="0" Maximum="100" Value="0"
+								        VerticalAlignment="Center" Margin="0">
+									<Slider.Styles>
+										<Style Selector="Slider.NoTrack /template/ RepeatButton">
+											<Setter Property="Opacity" Value="0"/>
+										</Style>
+										<Style Selector="Slider.NoTrack /template/ Border#PART_TrackBackground">
+											<Setter Property="Opacity" Value="0"/>
+										</Style>
+									</Slider.Styles>
+								</Slider>
+							</Grid>
+
+							<TextBlock Grid.Column="2" Name="TxtTotalTime" Classes="MonoTime" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SukiTextLow}"/>
+						</Grid>
+
+						<!-- Playback Controls Row -->
+						<Grid ColumnDefinitions="*,Auto,*">
+							<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+								<!-- Rewind 5s -->
+								<Button Name="BtnRewind5" Classes="Basic" Width="38" Height="38" CornerRadius="19" Padding="0" ToolTip.Tip="Назад на 5 секунд" Click="BtnRewind5_Click">
+									<material:MaterialIcon Kind="Rewind" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+								</Button>
+
+								<!-- Play / Pause -->
+								<Button Name="BtnPlayPause" Classes="Primary" Width="52" Height="52" CornerRadius="26" Padding="0" Click="BtnPlayPause_Click">
+									<material:MaterialIcon Name="MainPlayIcon" Kind="Play" Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+								</Button>
+
+								<!-- Forward 5s -->
+								<Button Name="BtnForward5" Classes="Basic" Width="38" Height="38" CornerRadius="19" Padding="0" ToolTip.Tip="Вперед на 5 секунд" Click="BtnForward5_Click">
+									<material:MaterialIcon Kind="FastForward" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+								</Button>
+
+								<Separator Classes="Vertical" Height="24"/>
+
+								<!-- Trim Mode Toggle -->
+								<ToggleButton Name="BtnTrimMode" Classes="Basic" Height="38" CornerRadius="19" Padding="14,0" ToolTip.Tip="Увімкнути / вимкнути режим обрізки" IsCheckedChanged="BtnTrimMode_IsCheckedChanged" Cursor="Hand">
+									<StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" IsHitTestVisible="False">
+										<material:MaterialIcon Name="IconBtnTrimMode" Kind="ContentCut" Width="18" Height="18" Foreground="#FF9800"/>
+										<TextBlock Name="TxtBtnTrimMode" Text="Обрізка" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+									</StackPanel>
+								</ToggleButton>
+							</StackPanel>
+						</Grid>
+					</StackPanel>
+				</suki:GlassCard>
+			</StackPanel>
+
+			<!-- CENTER VIDEO PLAYER -->
+			<suki:GlassCard Margin="10,0,10,8" Padding="0" ClipToBounds="True">
+				<Grid Background="Black">
+					<vlc:VideoView Name="VideoPlayer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+					<TextBlock Name="TxtLoading" Text="Завантаження відео..." Foreground="White" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False"/>
+				</Grid>
+			</suki:GlassCard>
+
+		</DockPanel>
+
+		<!-- Toast Notification -->
+		<Border Name="ToastNotification" Background="#CC000000" CornerRadius="10" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,110" Padding="25,14" IsVisible="False" IsHitTestVisible="False">
+			<TextBlock Name="ToastText" Text="Збережено!" Foreground="White" FontSize="16" FontWeight="SemiBold"/>
+		</Border>
+	</Grid>
+</suki:SukiWindow>

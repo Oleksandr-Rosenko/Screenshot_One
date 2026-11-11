@@ -524,4 +524,3 @@ namespace ScreenShot_One_Avalonia
         }
     }
 }
-
