@@ -38,7 +38,17 @@ namespace ScreenShot_One_Avalonia
 
         IReadOnlyList<MonitorInfo> GetDisplays();
 
-        Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null);
+        Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null, bool recordMicrophone = false);
+
+        /// <summary>Запис на паузі (IsRecording при цьому лишається true).</summary>
+        bool IsPaused { get; }
+        event Action<bool>? OnPausedChanged;
+
+        /// <summary>Ставить запис на паузу. Повертає false, якщо не вдалося.</summary>
+        Task<bool> PauseAsync();
+
+        /// <summary>Продовжує запис після паузи.</summary>
+        Task<bool> ResumeAsync();
 
         /// <summary>
         /// Зупиняє запис і чекає, поки файл буде повністю дописаний і закритий.
@@ -91,8 +101,18 @@ namespace ScreenShot_One_Avalonia
 
         public static IReadOnlyList<MonitorInfo> GetDisplays() => Instance.GetDisplays();
 
-        public static Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null)
-            => Instance.StartRecordingAsync(showClicks, recordSystemAudio, monitorDeviceName, left, top, right, bottom);
+        public static Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null, bool recordMicrophone = false)
+            => Instance.StartRecordingAsync(showClicks, recordSystemAudio, monitorDeviceName, left, top, right, bottom, recordMicrophone);
+
+        public static bool IsPaused => Instance.IsPaused;
+        public static Task<bool> PauseAsync() => Instance.PauseAsync();
+        public static Task<bool> ResumeAsync() => Instance.ResumeAsync();
+
+        public static event Action<bool>? OnPausedChanged
+        {
+            add => Instance.OnPausedChanged += value;
+            remove => Instance.OnPausedChanged -= value;
+        }
 
         public static Task<string> StopRecordingAsync() => Instance.StopRecordingAsync();
 
@@ -126,6 +146,46 @@ namespace ScreenShot_One_Avalonia
         public event Action<bool>? OnStatusChanged;
         public event Action<string>? OnRecordingFailed;
 
+        private volatile bool _isPaused;
+        public bool IsPaused => _isPaused;
+        public event Action<bool>? OnPausedChanged;
+
+        public Task<bool> PauseAsync()
+        {
+            var recorder = _recorder;
+            if (!_isRecording || _isPaused || recorder == null) return Task.FromResult(false);
+            try
+            {
+                recorder.Pause();
+                _isPaused = true;
+                OnPausedChanged?.Invoke(true);
+                return Task.FromResult(true);
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "Пауза запису");
+                return Task.FromResult(false);
+            }
+        }
+
+        public Task<bool> ResumeAsync()
+        {
+            var recorder = _recorder;
+            if (!_isRecording || !_isPaused || recorder == null) return Task.FromResult(false);
+            try
+            {
+                recorder.Resume();
+                _isPaused = false;
+                OnPausedChanged?.Invoke(false);
+                return Task.FromResult(true);
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "Продовження запису");
+                return Task.FromResult(false);
+            }
+        }
+
         public IReadOnlyList<MonitorInfo> GetDisplays()
         {
             var monitorList = new List<MonitorInfo>();
@@ -150,9 +210,10 @@ namespace ScreenShot_One_Avalonia
             return monitorList;
         }
 
-        public Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null)
+        public Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null, bool recordMicrophone = false)
         {
             if (_isRecording) return Task.FromResult(RecordingStartResult.Fail("Запис уже йде."));
+            _isPaused = false;
 
             try
             {
@@ -181,9 +242,10 @@ namespace ScreenShot_One_Avalonia
                 {
                     Bitrate = AudioBitrate.bitrate_128kbps,
                     Channels = AudioChannels.Stereo,
-                    IsAudioEnabled = recordSystemAudio,
+                    // Системний звук і мікрофон незалежні; мікрофон — пристрій запису за замовчуванням
+                    IsAudioEnabled = recordSystemAudio || recordMicrophone,
                     IsOutputDeviceEnabled = recordSystemAudio,
-                    IsInputDeviceEnabled = false
+                    IsInputDeviceEnabled = recordMicrophone
                 }
             };
 
@@ -288,6 +350,7 @@ namespace ScreenShot_One_Avalonia
             _isRecording = false;
             _recorder = null;
             _completion = null;
+            if (_isPaused) { _isPaused = false; OnPausedChanged?.Invoke(false); }
             OnStatusChanged?.Invoke(false);
 
             string path = _currentVideoPath;
@@ -327,12 +390,22 @@ namespace ScreenShot_One_Avalonia
         public event Action<bool>? OnStatusChanged { add { } remove { } }
         public event Action<string>? OnRecordingFailed { add { } remove { } }
         public IReadOnlyList<MonitorInfo> GetDisplays() => new List<MonitorInfo>();
-        public Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null)
+        public Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null, bool recordMicrophone = false)
             => Task.FromResult(RecordingStartResult.Fail("Запис через ScreenRecorderLib доступний лише на Windows."));
         public Task<string> StopRecordingAsync() => Task.FromResult(string.Empty);
+        public bool IsPaused => false;
+        public event Action<bool>? OnPausedChanged { add { } remove { } }
+        public Task<bool> PauseAsync() => Task.FromResult(false);
+        public Task<bool> ResumeAsync() => Task.FromResult(false);
     }
 #endif
 
+    /// <summary>
+    /// macOS: запис через ffmpeg (avfoundation).
+    /// Пауза реалізована сегментами: на паузі поточний шматок штатно дописується (ffmpeg «q»),
+    /// після продовження пишеться новий, а при зупинці всі шматки склеюються без перекодування (concat, -c copy).
+    /// Мікрофон: аудіопристрій avfoundation «default» (якщо ffmpeg його не знає — індекс 0).
+    /// </summary>
     public class MacVideoRecorderService : IVideoRecorderService
     {
         // Скільки чекаємо після старту, щоб упевнитись, що ffmpeg не впав одразу
@@ -344,14 +417,20 @@ namespace ScreenShot_One_Avalonia
         private Process? _ffmpegProc;
         private volatile bool _isRecording = false;
         private volatile bool _isStarting = false;
-        private volatile bool _stopRequested = false;
+        private volatile bool _isPaused = false;
         private string _currentVideoPath = string.Empty;
+        private string? _ffmpegExe;
+        private string _argsTemplate = ""; // з плейсхолдером {OUTPUT}
+        private readonly List<string> _segments = new List<string>();
         private readonly Queue<string> _ffmpegLog = new Queue<string>();
         private readonly object _logLock = new object();
+        private readonly SemaphoreSlim _opLock = new SemaphoreSlim(1, 1);
 
         public bool IsRecording => _isRecording;
+        public bool IsPaused => _isPaused;
         public event Action<bool>? OnStatusChanged;
         public event Action<string>? OnRecordingFailed;
+        public event Action<bool>? OnPausedChanged;
 
         public IReadOnlyList<MonitorInfo> GetDisplays()
         {
@@ -392,12 +471,36 @@ namespace ScreenShot_One_Avalonia
             return null;
         }
 
-        public async Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null)
+        /// <summary>Аргументи ffmpeg (публічний для тестів). {OUTPUT} замінюється шляхом сегмента.</summary>
+        public static string BuildArguments(int screenIndex, string? audioDevice, int? left, int? top, int? right, int? bottom)
+        {
+            // У avfoundation під індексом 0 зазвичай камера (на MacBook), тому звертаємось до екрана за назвою.
+            string input = $"\"Capture screen {screenIndex}:{audioDevice ?? "none"}\"";
+
+            string filter = "";
+            if (left.HasValue && top.HasValue && right.HasValue && bottom.HasValue)
+            {
+                int w = right.Value - left.Value;
+                int h = bottom.Value - top.Value;
+                if (w % 2 != 0) w--;
+                if (h % 2 != 0) h--;
+                if (w > 0 && h > 0)
+                {
+                    filter = $"-filter:v \"crop={w}:{h}:{left.Value}:{top.Value}\"";
+                }
+            }
+
+            string audio = audioDevice != null ? "-c:a aac -b:a 128k" : "";
+            return $"-y -hide_banner -nostats -loglevel warning -f avfoundation -capture_cursor 1 -i {input} {filter} " +
+                   $"-c:v libx264 -preset ultrafast -pix_fmt yuv420p {audio} \"{{OUTPUT}}\"";
+        }
+
+        public async Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null, bool recordMicrophone = false)
         {
             if (_isRecording || _isStarting) return RecordingStartResult.Fail("Запис уже йде.");
 
-            string? ffmpegExe = FindFfmpeg();
-            if (ffmpegExe == null)
+            _ffmpegExe = FindFfmpeg();
+            if (_ffmpegExe == null)
             {
                 return RecordingStartResult.Fail(
                     "Для запису відео на Mac потрібен ffmpeg, а його не знайдено.\n\n" +
@@ -413,27 +516,47 @@ namespace ScreenShot_One_Avalonia
                 return RecordingStartResult.Fail($"Не вдалося створити папку для відео: {ex.Message}");
             }
 
-            // У avfoundation під індексом 0 зазвичай камера (на MacBook), тому звертаємось до екрана за назвою.
             int screenIndex = int.TryParse(monitorDeviceName, out int parsed) && parsed >= 0 ? parsed : 0;
-            string input = $"\"Capture screen {screenIndex}:none\"";
+            _segments.Clear();
+            _isPaused = false;
 
-            string filter = "";
-            if (left.HasValue && top.HasValue && right.HasValue && bottom.HasValue)
+            // Системний звук macOS без віртуального аудіопристрою (BlackHole тощо) не віддає — пишемо лише мікрофон
+            string?[] audioCandidates = recordMicrophone ? new string?[] { "default", "0" } : new string?[] { null };
+
+            string? lastError = null;
+            foreach (var audioDevice in audioCandidates)
             {
-                int w = right.Value - left.Value;
-                int h = bottom.Value - top.Value;
-                if (w % 2 != 0) w--;
-                if (h % 2 != 0) h--;
-                if (w > 0 && h > 0)
+                _argsTemplate = BuildArguments(screenIndex, audioDevice, left, top, right, bottom);
+                lastError = await StartSegmentAsync();
+                if (lastError == null)
                 {
-                    filter = $"-filter:v \"crop={w}:{h}:{left.Value}:{top.Value}\"";
+                    _isRecording = true;
+                    OnStatusChanged?.Invoke(true);
+                    return RecordingStartResult.Ok();
                 }
             }
 
+            string hint = recordMicrophone
+                ? "Перевірте дозволи «Запис екрана» і «Мікрофон» у Системних параметрах → Приватність і безпека."
+                : "Перевірте, що Screenshot One має дозвіл «Запис екрана» в Системних параметрах → Приватність і безпека.";
+            return RecordingStartResult.Fail("ffmpeg завершився одразу після старту. " + hint + "\n\n" + lastError);
+        }
+
+        private string NextSegmentPath()
+        {
+            string dir = Path.GetDirectoryName(_currentVideoPath) ?? Path.GetTempPath();
+            string name = Path.GetFileNameWithoutExtension(_currentVideoPath);
+            return Path.Combine(dir, $"{name}_part{_segments.Count + 1}.mp4");
+        }
+
+        /// <summary>Запускає ffmpeg у новий сегмент. Повертає null при успіху або текст помилки.</summary>
+        private async Task<string?> StartSegmentAsync()
+        {
+            string segmentPath = NextSegmentPath();
             var psi = new ProcessStartInfo
             {
-                FileName = ffmpegExe,
-                Arguments = $"-y -hide_banner -nostats -loglevel warning -f avfoundation -capture_cursor 1 -i {input} {filter} -c:v libx264 -preset ultrafast -pix_fmt yuv420p \"{_currentVideoPath}\"",
+                FileName = _ffmpegExe!,
+                Arguments = _argsTemplate.Replace("{OUTPUT}", segmentPath),
                 UseShellExecute = false,
                 RedirectStandardInput = true,
                 RedirectStandardError = true,
@@ -441,7 +564,6 @@ namespace ScreenShot_One_Avalonia
             };
 
             lock (_logLock) _ffmpegLog.Clear();
-            _stopRequested = false;
             _isStarting = true;
 
             Process proc;
@@ -458,40 +580,32 @@ namespace ScreenShot_One_Avalonia
             {
                 _isStarting = false;
                 AppLog.Write($"[MacVideoRecorder] Start error: {ex.Message}");
-                return RecordingStartResult.Fail($"Не вдалося запустити ffmpeg: {ex.Message}");
+                return $"Не вдалося запустити ffmpeg: {ex.Message}";
             }
 
             _ffmpegProc = proc;
-            _isRecording = true;
 
-            // Якщо ffmpeg одразу завершився (немає дозволу на запис екрана, не той пристрій тощо) — це помилка старту
+            // Якщо ffmpeg одразу завершився (немає дозволу, не той пристрій тощо) — це помилка старту
             await Task.Delay(StartupCheckDelay);
             _isStarting = false;
 
             if (proc.HasExited)
             {
-                _isRecording = false;
                 _ffmpegProc = null;
-                return RecordingStartResult.Fail(
-                    "ffmpeg завершився одразу після старту. Перевірте, що Screenshot One має дозвіл " +
-                    "«Запис екрана» в Системних параметрах → Приватність і безпека.\n\n" + GetLastLog());
+                try { if (File.Exists(segmentPath)) File.Delete(segmentPath); } catch (Exception logEx) { AppLog.Warn(logEx); }
+                return GetLastLog();
             }
 
-            OnStatusChanged?.Invoke(true);
-            return RecordingStartResult.Ok();
+            _segments.Add(segmentPath);
+            return null;
         }
 
-        public async Task<string> StopRecordingAsync()
+        /// <summary>Штатно зупиняє поточний сегмент і чекає, поки ffmpeg допише файл.</summary>
+        private async Task StopSegmentAsync()
         {
             var proc = _ffmpegProc;
-            if (!_isRecording || proc == null) return string.Empty;
-
-            _stopRequested = true;
-            _isRecording = false;
-            _ffmpegProc = null;
-            OnStatusChanged?.Invoke(false);
-
-            string path = _currentVideoPath;
+            _ffmpegProc = null; // до «q», щоб OnFfmpegExited не вважав це збоєм
+            if (proc == null) return;
 
             try
             {
@@ -511,16 +625,122 @@ namespace ScreenShot_One_Avalonia
             {
                 try { proc.Dispose(); } catch (Exception logEx) { AppLog.Warn(logEx); }
             }
+        }
 
-            return VideoRecorderManager.IsNonEmptyFile(path) ? path : string.Empty;
+        public async Task<bool> PauseAsync()
+        {
+            await _opLock.WaitAsync();
+            try
+            {
+                if (!_isRecording || _isPaused) return false;
+                await StopSegmentAsync();
+                _isPaused = true;
+                OnPausedChanged?.Invoke(true);
+                return true;
+            }
+            finally { _opLock.Release(); }
+        }
+
+        public async Task<bool> ResumeAsync()
+        {
+            await _opLock.WaitAsync();
+            try
+            {
+                if (!_isRecording || !_isPaused) return false;
+                string? error = await StartSegmentAsync();
+                if (error != null)
+                {
+                    AppLog.Write("[MacVideoRecorder] Resume failed: " + error);
+                    return false;
+                }
+                _isPaused = false;
+                OnPausedChanged?.Invoke(false);
+                return true;
+            }
+            finally { _opLock.Release(); }
+        }
+
+        public async Task<string> StopRecordingAsync()
+        {
+            await _opLock.WaitAsync();
+            try
+            {
+                if (!_isRecording) return string.Empty;
+
+                _isRecording = false;
+                bool wasPaused = _isPaused;
+                _isPaused = false;
+                if (wasPaused) OnPausedChanged?.Invoke(false);
+                OnStatusChanged?.Invoke(false);
+
+                if (!wasPaused) await StopSegmentAsync();
+
+                return await Task.Run(() => FinalizeSegments(_ffmpegExe!, _segments, _currentVideoPath));
+            }
+            finally { _opLock.Release(); }
+        }
+
+        /// <summary>Об'єднує сегменти в підсумковий файл (один сегмент — просто перейменування).</summary>
+        private static string FinalizeSegments(string ffmpegExe, List<string> segments, string finalPath)
+        {
+            var existing = segments.FindAll(VideoRecorderManager.IsNonEmptyFile);
+            if (existing.Count == 0) return string.Empty;
+
+            try
+            {
+                if (existing.Count == 1)
+                {
+                    File.Move(existing[0], finalPath, overwrite: true);
+                    return finalPath;
+                }
+
+                string listPath = Path.ChangeExtension(finalPath, ".concat.txt");
+                File.WriteAllLines(listPath, existing.ConvertAll(p => "file '" + p.Replace("'", "'\\''") + "'"));
+
+                var psi = new ProcessStartInfo
+                {
+                    FileName = ffmpegExe,
+                    Arguments = $"-y -hide_banner -loglevel error -f concat -safe 0 -i \"{listPath}\" -c copy \"{finalPath}\"",
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+                using (var proc = Process.Start(psi))
+                {
+                    string err = proc?.StandardError.ReadToEnd() ?? "";
+                    proc?.WaitForExit(60000);
+                    if (!string.IsNullOrWhiteSpace(err)) AppLog.Write("[MacVideoRecorder] concat: " + err);
+                }
+
+                try { File.Delete(listPath); } catch (Exception logEx) { AppLog.Warn(logEx); }
+
+                if (VideoRecorderManager.IsNonEmptyFile(finalPath))
+                {
+                    foreach (var seg in existing)
+                    {
+                        try { File.Delete(seg); } catch (Exception logEx) { AppLog.Warn(logEx); }
+                    }
+                    return finalPath;
+                }
+
+                // Склеїти не вдалося — віддаємо хоча б перший шматок, решту лишаємо поруч
+                AppLog.Write("[MacVideoRecorder] concat не створив файл, повертаю перший сегмент");
+                return existing[0];
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "Об'єднання сегментів відео");
+                return existing[0];
+            }
         }
 
         private void OnFfmpegExited(Process proc)
         {
             // Нас цікавить лише випадок, коли ffmpeg зупинився сам посеред запису
-            if (_isStarting || _stopRequested || !_isRecording || !ReferenceEquals(proc, _ffmpegProc)) return;
+            if (_isStarting || !_isRecording || !ReferenceEquals(proc, _ffmpegProc)) return;
 
             _isRecording = false;
+            _isPaused = false;
             _ffmpegProc = null;
             OnStatusChanged?.Invoke(false);
             OnRecordingFailed?.Invoke("Запис зупинився: ffmpeg несподівано завершив роботу.\n\n" + GetLastLog());
@@ -550,8 +770,12 @@ namespace ScreenShot_One_Avalonia
         public event Action<bool>? OnStatusChanged { add { } remove { } }
         public event Action<string>? OnRecordingFailed { add { } remove { } }
         public IReadOnlyList<MonitorInfo> GetDisplays() => new List<MonitorInfo>();
-        public Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null)
+        public Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null, bool recordMicrophone = false)
             => Task.FromResult(RecordingStartResult.Fail("Запис відео на цій платформі не підтримується."));
         public Task<string> StopRecordingAsync() => Task.FromResult(string.Empty);
+        public bool IsPaused => false;
+        public event Action<bool>? OnPausedChanged { add { } remove { } }
+        public Task<bool> PauseAsync() => Task.FromResult(false);
+        public Task<bool> ResumeAsync() => Task.FromResult(false);
     }
 }

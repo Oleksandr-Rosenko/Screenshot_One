@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ScreenShot_One_Avalonia"
         x:Class="ScreenShot_One_Avalonia.VideoControlWindow"
-        Title="Запис відео" Height="70" Width="780"
+        Title="Запис відео" Height="70" Width="930"
         WindowDecorations="None" Background="Transparent" TransparencyLevelHint="Transparent"
         Topmost="True" ShowInTaskbar="False">
 
@@ -11,6 +11,10 @@
 
 			<Button Name="BtnRecordToggle" Click="BtnRecordToggle_Click" Background="Transparent" Width="40" Height="40" CornerRadius="20" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="Старт/Стоп">
 				<Border Name="RecordIcon" Width="16" Height="16" Background="Red" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+			</Button>
+
+			<Button Name="BtnPause" Click="BtnPause_Click" IsVisible="False" Background="Transparent" Width="36" Height="36" CornerRadius="18" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="Пауза / Продовжити">
+				<TextBlock Name="TxtPauseIcon" Text="⏸" Foreground="White" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 			</Button>
 
 			<TextBlock Name="TxtTimer" Text="00:00" Foreground="White" FontSize="18" VerticalAlignment="Center" FontWeight="Bold" Width="60"/>
@@ -31,6 +35,8 @@
 			<CheckBox Name="ChkShowMouse" Content="Кліки" IsChecked="True" Foreground="White" VerticalAlignment="Center"/>
 
 			<CheckBox Name="ChkRecordAudio" Content="🔊 Звук" IsChecked="True" Foreground="White" VerticalAlignment="Center" ToolTip.Tip="Записувати звуки системи (музика, сповіщення)"/>
+
+			<CheckBox Name="ChkRecordMic" Content="🎙 Мікрофон" IsChecked="False" Foreground="White" VerticalAlignment="Center" ToolTip.Tip="Записувати голос з мікрофона"/>
 
 			<Separator Classes="Vertical" Height="30" Margin="5,0"/>
 

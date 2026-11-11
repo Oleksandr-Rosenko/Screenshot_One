@@ -26,6 +26,8 @@ namespace ScreenShot_One_Avalonia
 
         private DispatcherTimer _timer;
         private DateTime _startTime;
+        // Час, записаний до останньої паузи (таймер не рахує паузи)
+        private TimeSpan _elapsedBeforePause = TimeSpan.Zero;
         private VideoRegionWindow? _activeRegionWindow;
         private bool _isBusy; // йде старт або зупинка запису — повторні кліки ігноруємо
         private bool _ownsRecording; // запис запустило саме це вікно
@@ -39,6 +41,15 @@ namespace ScreenShot_One_Avalonia
             _timer.Tick += Timer_Tick;
 
             LoadMonitors();
+
+            ChkRecordMic.IsChecked = SettingsManager.Current.RecordMicrophone;
+
+            // На Mac системний звук без віртуального аудіопристрою недоступний — лишаємо лише мікрофон
+            if (OperatingSystem.IsMacOS())
+            {
+                ChkRecordAudio.IsChecked = false;
+                ChkRecordAudio.IsVisible = false;
+            }
 
             VideoRecorderManager.OnRecordingFailed += OnRecordingFailed;
         }
@@ -92,13 +103,61 @@ namespace ScreenShot_One_Avalonia
             {
                 int screenWidth = screen.Bounds.Width;
                 int screenHeight = screen.Bounds.Height;
-                this.Position = new PixelPoint((screenWidth - 760) / 2, screenHeight - 140);
+                int windowWidth = (int)(this.Width * screen.Scaling);
+                this.Position = new PixelPoint(screen.Bounds.X + (screenWidth - windowWidth) / 2, screen.Bounds.Y + screenHeight - (int)(140 * screen.Scaling));
             }
         }
 
         private void Timer_Tick(object? sender, EventArgs e)
         {
-            TxtTimer.Text = (DateTime.Now - _startTime).ToString(@"mm\:ss");
+            TxtTimer.Text = FormatElapsed(_elapsedBeforePause + (DateTime.Now - _startTime));
+        }
+
+        private static string FormatElapsed(TimeSpan t)
+            => t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss") : t.ToString(@"mm\:ss");
+
+        private async void BtnPause_Click(object? sender, RoutedEventArgs e)
+        {
+            if (_isBusy || !VideoRecorderManager.IsRecording) return;
+            _isBusy = true;
+            BtnPause.IsEnabled = false;
+            try
+            {
+                if (VideoRecorderManager.IsPaused)
+                {
+                    if (await VideoRecorderManager.ResumeAsync())
+                    {
+                        _startTime = DateTime.Now;
+                        _timer.Start();
+                        TxtPauseIcon.Text = "⏸";
+                        TxtTimer.Foreground = Brushes.White;
+                    }
+                    else
+                    {
+                        await ShowErrorAsync("Помилка", "Не вдалося продовжити запис.");
+                    }
+                }
+                else
+                {
+                    if (await VideoRecorderManager.PauseAsync())
+                    {
+                        _elapsedBeforePause += DateTime.Now - _startTime;
+                        _timer.Stop();
+                        TxtTimer.Text = FormatElapsed(_elapsedBeforePause);
+                        TxtPauseIcon.Text = "▶";
+                        TxtTimer.Foreground = Brushes.Orange;
+                    }
+                    else
+                    {
+                        await ShowErrorAsync("Помилка", "Не вдалося поставити запис на паузу.");
+                    }
+                }
+            }
+            finally
+            {
+                BtnPause.IsEnabled = true;
+                _isBusy = false;
+            }
         }
 
         private void LoadMonitors()
@@ -149,6 +208,7 @@ namespace ScreenShot_One_Avalonia
             {
                 bool showClicks = ChkShowMouse.IsChecked == true;
                 bool recordAudio = ChkRecordAudio.IsChecked == true;
+                bool recordMic = ChkRecordMic.IsChecked == true;
                 bool isRegion = ComboRecordArea.SelectedIndex == 1;
 
                 var selectedMonitor = ComboMonitor.SelectedItem as MonitorInfo;
@@ -159,7 +219,7 @@ namespace ScreenShot_One_Avalonia
                     _activeRegionWindow = new VideoRegionWindow(
                         async (left, top, right, bottom) =>
                         {
-                            await StartRecordingAsync(showClicks, recordAudio, deviceName, left, top, right, bottom);
+                            await StartRecordingAsync(showClicks, recordAudio, deviceName, left, top, right, bottom, recordMic);
                         },
                         () =>
                         {
@@ -176,7 +236,7 @@ namespace ScreenShot_One_Avalonia
                 }
                 else
                 {
-                    await StartRecordingAsync(showClicks, recordAudio, deviceName);
+                    await StartRecordingAsync(showClicks, recordAudio, deviceName, recordMic: recordMic);
                 }
             }
             catch (Exception ex)
@@ -187,13 +247,20 @@ namespace ScreenShot_One_Avalonia
         }
 
         private async Task StartRecordingAsync(bool showClicks, bool recordAudio, string deviceName,
-            int? left = null, int? top = null, int? right = null, int? bottom = null)
+            int? left = null, int? top = null, int? right = null, int? bottom = null, bool recordMic = false)
         {
             _isBusy = true;
             BtnRecordToggle.IsEnabled = false;
             try
             {
-                var result = await VideoRecorderManager.StartRecordingAsync(showClicks, recordAudio, deviceName, left, top, right, bottom);
+                // Запам'ятовуємо вибір мікрофона для наступних записів
+                if (SettingsManager.Current.RecordMicrophone != recordMic)
+                {
+                    SettingsManager.Current.RecordMicrophone = recordMic;
+                    try { SettingsManager.Save(); } catch (Exception ex) { AppLog.Warn(ex); }
+                }
+
+                var result = await VideoRecorderManager.StartRecordingAsync(showClicks, recordAudio, deviceName, left, top, right, bottom, recordMic);
 
                 if (!result.Success)
                 {
@@ -262,7 +329,10 @@ namespace ScreenShot_One_Avalonia
                 RecordIcon.Background = Brushes.White;
                 RecordIcon.CornerRadius = new CornerRadius(2);
                 RecordIcon.Width = 12; RecordIcon.Height = 12;
+                _elapsedBeforePause = TimeSpan.Zero;
                 _startTime = DateTime.Now; TxtTimer.Text = "00:00"; _timer.Start();
+                BtnPause.IsVisible = true; TxtPauseIcon.Text = "⏸"; TxtTimer.Foreground = Brushes.White;
+                ChkRecordMic.IsEnabled = false; ChkRecordAudio.IsEnabled = false;
             }
             else
             {
@@ -270,6 +340,8 @@ namespace ScreenShot_One_Avalonia
                 RecordIcon.CornerRadius = new CornerRadius(8);
                 RecordIcon.Width = 16; RecordIcon.Height = 16;
                 _timer.Stop(); TxtTimer.Text = "00:00";
+                BtnPause.IsVisible = false; TxtTimer.Foreground = Brushes.White;
+                ChkRecordMic.IsEnabled = true; ChkRecordAudio.IsEnabled = true;
             }
         }
 
