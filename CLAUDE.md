@@ -7,7 +7,7 @@
 
 Розв'язок `ScreenShot_One_Avalonia.slnx`: два проєкти.
 
-- `ScreenShot_One_Avalonia/` — програма (`AssemblyName` = `Screenshot_One`). Дві цілі: `net10.0-windows` і `net10.0` (macOS).
+- `ScreenShot_One_Avalonia/` — програма (`AssemblyName` = `Screenshot_One`). Дві цілі: `net10.0-windows10.0.19041.0` (Windows SDK — потрібен для `Windows.Media.Ocr`; запуск з Windows 10 1809) і `net10.0` (macOS). В умовах `.csproj` — `$(TargetFramework.StartsWith('net10.0-windows'))`.
   - `Program.cs` — точка входу, Velopack-хук, глобальні обробники помилок.
   - `App.axaml.cs` — трей-меню, гарячі клавіші, `ShowSingle<T>()` (показ вікна в одному екземплярі), фонова перевірка оновлень.
   - `MainWindow` — оверлей виділення зони для скріншота.
@@ -22,13 +22,19 @@
   - `MacPermissions` — перевірка дозволу «Запис екрана» (macOS). `MacUpdateChecker` — оновлення на Mac через GitHub API (Velopack на Mac не використовується).
   - `VlcShared` — один `LibVLC` на всю програму (прогрів у фоні); `VlcShared.ReplaceMedia` звільняє попередній `Media`.
   - `CrashReport` — `logs\last_crash.txt` при падінні + пропозиція відкрити журнал при наступному запуску.
+  - `CaptureRouter` — куди йде знімок: редактор або `QuickAccessWindow` (плаваюча мініатюра; налаштування `AfterCapture`).
+  - `ImageExport` — збереження PNG/JPG, папка (`SaveFolder`, за замовчуванням «Зображення/Screenshot One»), автозбереження, тимчасові файли для перетягування.
+  - `ClipboardHelper` — копіювання зображення (Windows — WinForms у STA-потоці) і тексту.
+  - `OcrService` + `OcrFlow` + `ToastWindow` — OCR: Windows `Windows.Media.Ocr`; Mac — Swift-утиліта `MacHelpers/ocr.swift` → `Contents/MacOS/ocr-helper` (збирає `Build-MacApp.ps1`, CI перевіряє `--selftest`). `MainWindow(ocrMode: true)` — оверлей виділення для OCR.
+  - Відео: `IVideoRecorderService` має `PauseAsync/ResumeAsync` і мікрофон. Mac — пауза сегментами + `ffmpeg concat`; системний звук на Mac не пишеться (потрібен віртуальний аудіопристрій).
+  - Редактор: інструменти `Ellipse`, `Line`, `Pixelate`, `Spotlight` (`SpotlightShape`), товщина `_strokeWidth`; `ShapeType` у JSON — числа, нові типи лише в кінець; `ShapeData.StrokeWidth` (0 — старі записи).
   - `HotkeyService` — глобальні клавіші. Windows: low-level hook в окремому потоці; macOS: Carbon `RegisterEventHotKey`.
   - `SettingsManager` / `AppSettings` — `settings.json`, міграції (`SettingsVersion`), тема, автозапуск.
   - `UpdateWindow` — оновлення через Velopack (`GithubSource`, без токена).
   - `GoogleDriveManager` (scope `DriveFile`, файли публічні за посиланням), `PublicCloudManager` (catbox.moe).
   - `UploadConsent` — одноразове попередження про публічні посилання.
   - `AppLog` — файловий лог.
-- `ScreenShot_One_Avalonia.Tests/` — xUnit, ціль `net10.0-windows`. `UnitTest1.cs` — переважно перевірки рядків у коді; `BehaviorTests.cs` — тести поведінки (headless Avalonia + Skia через `HeadlessAvalonia.EnsureInitialized()`; паралельний запуск вимкнено).
+- `ScreenShot_One_Avalonia.Tests/` — xUnit, ціль `net10.0-windows10.0.19041.0`. `FeatureTests260.cs` — тести 2.6.0 (зокрема справжній OCR на Windows). `UnitTest1.cs` — переважно перевірки рядків у коді; `BehaviorTests.cs` — тести поведінки (headless Avalonia + Skia через `HeadlessAvalonia.EnsureInitialized()`; паралельний запуск вимкнено).
 
 Дані користувача: `%LocalAppData%\Screenshot_One` (macOS: `~/Library/Application Support/Screenshot_One`). Там лежать `settings.json`, `Screenshots\`, `logs\app.log`, `token.json` (Google OAuth).
 
@@ -88,6 +94,8 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 - Нові поля в `AppSettings` мають безпечне значення за замовчуванням (старий `settings.json` без поля повинен читатися). Разові міграції робити через `SettingsManager.Migrate` + `CurrentSettingsVersion`.
 - Платформний код ховати за `IScreenCaptureService` / `IVideoRecorderService` / `#if WINDOWS` / `OperatingSystem.IsMacOS()`.
 - Без токенів і ключів у коді.
+- Гарячі клавіші редактора — через `PrimaryModifier` (Ctrl на Windows, Cmd на Mac).
+- Міграції налаштувань — покрокові (`if (SettingsVersion < N)`), щоб не скидати змінене користувачем.
 
 ## Робочий процес
 
@@ -103,7 +111,24 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 5. Mac: нативний знімок через `CGDisplayCreateImage` позначений Apple як застарілий (macOS 14+); на перспективу — ScreenCaptureKit. Зараз при збої автоматично працює `screencapture`.
 6. Mac: підпис і нотаризація `.app` (зараз користувач знімає карантин `xattr -cr`); вбудувати `ffmpeg` у бандл.
 
+## Наступні функції (порівняння з CleanShot X / Snagit, погоджено з автором)
+
+Зроблено в 2.6.0: «Зберегти як» + автозбереження, мікрофон і пауза, плаваюча мініатюра, нові фігури + товщина, OCR.
+Далі — по черзі:
+1. Знімок окремого вікна (клік по вікну; опційно тінь / прозорий фон).
+2. Експорт відео в GIF (ffmpeg уже є: palettegen/paletteuse).
+3. Закріпити скріншот поверх усіх вікон («стікер»).
+4. Красивий фон / рамка (відступи, градієнт, тінь, закруглені кути).
+5. Показ натиснутих клавіш під час запису.
+6. Пошук і теги в історії.
+7. Більше місць для завантаження: Dropbox, OneDrive, власний сервер.
+8. Ховати іконки робочого столу під час знімка.
+9. Прокручуваний знімок (довгі сторінки) — складно.
+10. Вебкамера поверх запису — складно.
+Мініатюра на Mac поки потрапляє в наступні знімки (на Windows виключена через `SetWindowDisplayAffinity`).
+
 ## Історія ключових змін
 
+- 2.6.0 — OCR (Windows/Mac), плаваюча мініатюра, «Зберегти як» і автозбереження, нові інструменти (еліпс, лінія, піксельне розмиття, прожектор, товщина), мікрофон і пауза у відео, Cmd-скорочення на Mac.
 - 2.5.5 — захоплення й обрізка в пам'яті (Win/Mac), нативний знімок CoreGraphics на Mac, DPI/Retina-виправлення, фонове збереження історії, звільнення пам'яті в редакторі, спільний LibVLC, Mac: дозвіл «Запис екрана», LaunchAgent-автозапуск, оновлення через GitHub, архіви в автодеплої; звіт про падіння; тести поведінки.
 - 2.5.4 — відновлено форматування (зайві порожні рядки); `AppLog`; унікальні ID історії; `ShowSingle`; `UploadConsent`; CI та автоматичний деплой через GitHub Actions; README.
