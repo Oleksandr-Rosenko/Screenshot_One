@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
 using Avalonia.Win32.Input;
 using System;
 // using System.Windows.Forms; (removed for cross-platform)
@@ -63,6 +64,42 @@ namespace ScreenShot_One_Avalonia
 
             // НОВЕ: Завантажуємо нову клавішу в текстове поле
             TxtAllScreensKey.Text = FormatHotkey(SettingsManager.Current.AllScreensModifier, SettingsManager.Current.AllScreensKey);
+            TxtOcrKey.Text = FormatHotkey(SettingsManager.Current.OcrModifier, SettingsManager.Current.OcrKey);
+
+            ComboAfterCapture.SelectedIndex = SettingsManager.Current.AfterCapture == "QuickAccess" ? 1 : 0;
+            ComboSaveFormat.SelectedIndex = ImageExport.PreferredExtension == "jpg" ? 1 : 0;
+            ChkAutoSave.IsChecked = SettingsManager.Current.AutoSaveToFolder;
+            _saveFolder = SettingsManager.Current.SaveFolder;
+            TxtSaveFolder.Text = ImageExport.SaveFolder;
+        }
+
+        // null — папка за замовчуванням
+        private string? _saveFolder;
+
+        private async void BtnChooseFolder_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var options = new Avalonia.Platform.Storage.FolderPickerOpenOptions
+                {
+                    Title = "Папка для збереження скріншотів",
+                    AllowMultiple = false
+                };
+                var start = await StorageProvider.TryGetFolderFromPathAsync(TxtSaveFolder.Text ?? ImageExport.DefaultFolder);
+                if (start != null) options.SuggestedStartLocation = start;
+
+                var folders = await StorageProvider.OpenFolderPickerAsync(options);
+                if (folders.Count == 0) return;
+
+                string? path = folders[0].TryGetLocalPath();
+                if (string.IsNullOrEmpty(path)) return;
+                _saveFolder = path;
+                TxtSaveFolder.Text = path;
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "Вибір папки");
+            }
         }
 
         private string FormatHotkey(int modifier, int vkCode)
@@ -164,6 +201,11 @@ namespace ScreenShot_One_Avalonia
                 SettingsManager.Current.AllScreensKey = vkCode;
                 SettingsManager.Current.AllScreensModifier = modCode;
             }
+            else if (textBox.Name == "TxtOcrKey")
+            {
+                SettingsManager.Current.OcrKey = vkCode;
+                SettingsManager.Current.OcrModifier = modCode;
+            }
 
             // Той самий формат, що й при відкритті вікна (раніше цифри показувались як «D7»)
             textBox.Text = FormatHotkey(modCode, vkCode);
@@ -227,6 +269,12 @@ namespace ScreenShot_One_Avalonia
             SettingsManager.Current.CopyToClipboardOnOpen = ChkCopyToClipboard.IsChecked == true;
             SettingsManager.Current.CopyLinkOnUpload = ChkCopyLink.IsChecked == true;
             SettingsManager.Current.Theme = ComboTheme.SelectedIndex == 1 ? "Light" : "Dark";
+            SettingsManager.Current.AfterCapture = ComboAfterCapture.SelectedIndex == 1 ? "QuickAccess" : "Editor";
+            SettingsManager.Current.SaveFormat = ComboSaveFormat.SelectedIndex == 1 ? "jpg" : "png";
+            SettingsManager.Current.AutoSaveToFolder = ChkAutoSave.IsChecked == true;
+            // Папку за замовчуванням не записуємо явно, щоб вона й далі йшла за системною «Зображення»
+            SettingsManager.Current.SaveFolder =
+                string.IsNullOrWhiteSpace(_saveFolder) || _saveFolder == ImageExport.DefaultFolder ? null : _saveFolder;
             _isSaved = true;
 
             SettingsManager.SaveAndRegister();

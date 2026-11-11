@@ -12,7 +12,8 @@ namespace ScreenShot_One_Avalonia
         Region = 1,
         FullScreen = 2,
         Video = 3,
-        AllScreens = 4
+        AllScreens = 4,
+        Ocr = 5
     }
 
     /// <summary>
@@ -95,6 +96,7 @@ namespace ScreenShot_One_Avalonia
             yield return (HotkeyAction.FullScreen, s.FullScreenKey, s.FullScreenModifier);
             yield return (HotkeyAction.Video, s.VideoKey, s.VideoModifier);
             yield return (HotkeyAction.AllScreens, s.AllScreensKey, s.AllScreensModifier);
+            yield return (HotkeyAction.Ocr, s.OcrKey, s.OcrModifier);
         }
 
         private static HotkeyAction? Match(int vkCode, int modifiers)

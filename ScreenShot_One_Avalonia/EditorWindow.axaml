@@ -118,6 +118,9 @@
 
 				<Separator Classes="Vertical" Height="30"/>
 
+				<Button Name="BtnSaveAs" Classes="Basic" ToolTip.Tip="Зберегти як файл (Ctrl+S)" Click="BtnSaveAs_Click">
+					<material:MaterialIcon Kind="ContentSaveOutline" Width="28" Height="28" Foreground="{DynamicResource ToolbarIconBrush}"/>
+				</Button>
 				<Button Name="BtnPublicUpload" Classes="Basic" ToolTip.Tip="Хмарне посилання" Click="BtnPublicUpload_Click">
 					<material:MaterialIcon Kind="CloudUpload" Width="28" Height="28" Foreground="{DynamicResource ToolbarIconBrush}"/>
 				</Button>

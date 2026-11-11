@@ -2,14 +2,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
         x:Class="ScreenShot_One_Avalonia.SettingsWindow"
-        Title="Налаштування" SizeToContent="Height" Width="550"
+        Title="Налаштування" SizeToContent="Height" Width="560" MaxHeight="900"
         WindowStartupLocation="CenterScreen"
         Icon="/Assets/icon.ico">
 
+	<ScrollViewer VerticalScrollBarVisibility="Auto">
 	<StackPanel Margin="20" Spacing="15">
 		<TextBlock Text="Загальні налаштування" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
 
-		<ToggleSwitch Name="ChkStartOnBoot" Content="Запускати програму разом з Windows" FontSize="16"/>
+		<ToggleSwitch Name="ChkStartOnBoot" Content="Запускати програму разом із системою" FontSize="16"/>
 		<ToggleSwitch Name="ChkCopyToClipboard" Content="Копіювати скріншот в буфер відразу після створення" FontSize="16"/>
 		<ToggleSwitch Name="ChkCopyLink" Content="Копіювати публічне посилання після завантаження в хмару" FontSize="16"/>
 
@@ -23,9 +24,39 @@
 
 		<Border Height="1" Background="{DynamicResource SukiBorderBrush}" Margin="0,10"/>
 
+		<TextBlock Text="Знімки та файли" FontSize="18" FontWeight="Bold"/>
+
+		<Grid ColumnDefinitions="*, Auto" Margin="0,5">
+			<TextBlock Text="Після знімка:" FontSize="16" VerticalAlignment="Center"/>
+			<ComboBox Name="ComboAfterCapture" Grid.Column="1" Width="260">
+				<ComboBoxItem Content="Відкривати редактор"/>
+				<ComboBoxItem Content="Показувати мініатюру"/>
+			</ComboBox>
+		</Grid>
+
+		<StackPanel Spacing="6">
+			<TextBlock Text="Папка для збереження:" FontSize="16"/>
+			<Grid ColumnDefinitions="*, Auto">
+				<TextBox Name="TxtSaveFolder" IsReadOnly="True" FontSize="13"/>
+				<Button Name="BtnChooseFolder" Grid.Column="1" Content="Обрати…" Margin="8,0,0,0" Click="BtnChooseFolder_Click"/>
+			</Grid>
+		</StackPanel>
+
+		<Grid ColumnDefinitions="*, Auto" Margin="0,5">
+			<TextBlock Text="Формат файлу:" FontSize="16" VerticalAlignment="Center"/>
+			<ComboBox Name="ComboSaveFormat" Grid.Column="1" Width="260">
+				<ComboBoxItem Content="PNG (без втрат)"/>
+				<ComboBoxItem Content="JPG (менший розмір)"/>
+			</ComboBox>
+		</Grid>
+
+		<ToggleSwitch Name="ChkAutoSave" Content="Автоматично зберігати кожен скріншот у цю папку" FontSize="16"/>
+
+		<Border Height="1" Background="{DynamicResource SukiBorderBrush}" Margin="0,10"/>
+
 		<TextBlock Text="Гарячі клавіші (Клікніть у поле та натисніть кнопку)" FontSize="18" FontWeight="Bold"/>
 
-		<Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*, Auto" Margin="0,10">
+		<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*, Auto" Margin="0,10">
 			<TextBlock Grid.Row="0" Text="Скріншот зони:" FontSize="16" VerticalAlignment="Center"/>
 			<TextBox Grid.Row="0" Grid.Column="1" Name="TxtRegionKey" Width="220" IsReadOnly="True" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="Region" Margin="0,5"/>
 
@@ -37,6 +68,9 @@
 
 			<TextBlock Grid.Row="3" Text="Скріншот усіх екранів:" FontSize="16" VerticalAlignment="Center"/>
 			<TextBox Grid.Row="3" Grid.Column="1" Name="TxtAllScreensKey" Width="220" IsReadOnly="True" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="AllScreens" Margin="0,5"/>
+
+			<TextBlock Grid.Row="4" Text="Розпізнати текст (OCR):" FontSize="16" VerticalAlignment="Center"/>
+			<TextBox Grid.Row="4" Grid.Column="1" Name="TxtOcrKey" Width="220" IsReadOnly="True" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="Ocr" Margin="0,5"/>
 		</Grid>
 
 		<Border Height="1" Background="{DynamicResource SukiBorderBrush}" Margin="0,10"/>
@@ -49,4 +83,5 @@
            Opacity="0.5"
            FontSize="13"/>
 	</StackPanel>
+	</ScrollViewer>
 </suki:SukiWindow>

@@ -37,6 +37,30 @@ namespace ScreenShot_One_Avalonia
         // Користувач підтвердив, що розуміє: завантажені файли доступні за посиланням усім (див. UploadConsent)
         public bool PublicUploadWarningAccepted { get; set; } = false;
 
+        // ---- 2.6.0 ----
+
+        // Розпізнавання тексту (OCR) у вибраній зоні. Windows: Ctrl + Alt + PrintScreen (Mac — див. Migrate)
+        public int OcrKey { get; set; } = 0x2C;
+        public int OcrModifier { get; set; } = HotkeyModifiers.Ctrl | HotkeyModifiers.Alt;
+
+        // Що робити після знімка: "Editor" — відкрити редактор (як раніше), "QuickAccess" — плаваюча мініатюра
+        public string AfterCapture { get; set; } = "Editor";
+
+        // Через скільки секунд мініатюра ховається сама (0 — не ховати)
+        public int QuickAccessAutoCloseSeconds { get; set; } = 15;
+
+        // Папка для «Зберегти» / автозбереження (null — «Зображення/Screenshot One»)
+        public string? SaveFolder { get; set; }
+
+        // Формат файлів: "png" або "jpg"
+        public string SaveFormat { get; set; } = "png";
+
+        // Автоматично зберігати кожен скріншот у файл (при «Копіювати та закрити» і з мініатюри)
+        public bool AutoSaveToFolder { get; set; } = false;
+
+        // Запам'ятований вибір «записувати мікрофон» у панелі запису відео
+        public bool RecordMicrophone { get; set; } = false;
+
         // Версія схеми налаштувань — для разових міграцій (див. SettingsManager.Migrate)
         public int SettingsVersion { get; set; } = 0;
     }
@@ -52,8 +76,9 @@ namespace ScreenShot_One_Avalonia
         public static event Action? OnFullScreenCapture;
         public static event Action? OnVideoRecord;
         public static event Action? OnAllScreensCapture;
+        public static event Action? OnOcrCapture;
 
-        private const int CurrentSettingsVersion = 2;
+        private const int CurrentSettingsVersion = 3;
 
         private static bool _isSuspended;
 
@@ -123,17 +148,32 @@ namespace ScreenShot_One_Avalonia
         {
             if (settings.SettingsVersion >= CurrentSettingsVersion) return false;
 
-            if (OperatingSystem.IsMacOS())
+            // Міграції покрокові: кожен крок виконується рівно один раз, тож налаштування,
+            // які користувач змінив після попередньої міграції, не перезаписуються.
+            if (settings.SettingsVersion < 2)
             {
-                // На Mac гарячі клавіші раніше не працювали взагалі, а віндові дефолти з PrintScreen
-                // на ноутбуках Apple натиснути неможливо — ставимо маківські дефолти.
-                ApplyMacDefaultHotkeys(settings);
+                if (OperatingSystem.IsMacOS())
+                {
+                    // На Mac гарячі клавіші раніше не працювали взагалі, а віндові дефолти з PrintScreen
+                    // на ноутбуках Apple натиснути неможливо — ставимо маківські дефолти.
+                    ApplyMacDefaultHotkeys(settings);
+                }
+                else if (settings.VideoKey == 0x52 && settings.VideoModifier == 6)
+                {
+                    // Старий дефолт Ctrl + Shift + R → Ctrl + Shift + PrintScreen
+                    settings.VideoKey = 0x2C;
+                    settings.VideoModifier = 6;
+                }
             }
-            else if (settings.VideoKey == 0x52 && settings.VideoModifier == 6)
+
+            if (settings.SettingsVersion < 3)
             {
-                // Старий дефолт Ctrl + Shift + R → Ctrl + Shift + PrintScreen
-                settings.VideoKey = 0x2C;
-                settings.VideoModifier = 6;
+                // 2.6.0: нова гаряча клавіша «Розпізнати текст». На Mac PrintScreen немає — Cmd + Shift + 2
+                if (OperatingSystem.IsMacOS())
+                {
+                    settings.OcrKey = 0x32;
+                    settings.OcrModifier = HotkeyModifiers.Meta | HotkeyModifiers.Shift;
+                }
             }
 
             settings.SettingsVersion = CurrentSettingsVersion;
@@ -148,6 +188,7 @@ namespace ScreenShot_One_Avalonia
             settings.FullScreenKey = 0x38; settings.FullScreenModifier = cmdShift;
             settings.AllScreensKey = 0x39; settings.AllScreensModifier = cmdShift;
             settings.VideoKey = 0x30; settings.VideoModifier = cmdShift;
+            settings.OcrKey = 0x32; settings.OcrModifier = cmdShift;
         }
 
         private static void OnHotkeyPressed(HotkeyAction action)
@@ -161,6 +202,7 @@ namespace ScreenShot_One_Avalonia
                     case HotkeyAction.FullScreen: OnFullScreenCapture?.Invoke(); break;
                     case HotkeyAction.Video: OnVideoRecord?.Invoke(); break;
                     case HotkeyAction.AllScreens: OnAllScreensCapture?.Invoke(); break;
+                    case HotkeyAction.Ocr: OnOcrCapture?.Invoke(); break;
                 }
             });
         }

@@ -1549,8 +1549,18 @@ namespace ScreenShot_One_Avalonia
             if (_activeTool != DrawingTool.None) btn.Background = new SolidColorBrush(Color.FromArgb(100, 255, 165, 0));
         }
 
+        // Ctrl на Windows, Cmd на Mac (раніше Cmd+Z / Cmd+V на Mac не працювали — перевірявся лише Ctrl)
+        private static KeyModifiers PrimaryModifier => OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+
         private void Window_KeyDown(object? sender, KeyEventArgs e)
         {
+            if (e.Key == Key.S && e.KeyModifiers == PrimaryModifier)
+            {
+                SaveAsFileAsync().FireAndForget("Зберегти як файл");
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.Escape && _activeTool == DrawingTool.Crop) { ExitCropMode(); e.Handled = true; return; }
 
             if (e.Key == Key.Space && !_isSpaceDown && (FocusManager?.GetFocusedElement() is not TextBox))
@@ -1566,7 +1576,7 @@ namespace ScreenShot_One_Avalonia
 
             }
 
-            if (e.Key == Key.V && e.KeyModifiers == KeyModifiers.Control)
+            if (e.Key == Key.V && e.KeyModifiers == PrimaryModifier)
             {
                 if (_isSplitMode)
                 {
@@ -1590,7 +1600,7 @@ namespace ScreenShot_One_Avalonia
                 return;
             }
 
-            if (e.Key == Key.Z && e.KeyModifiers == KeyModifiers.Control)
+            if (e.Key == Key.Z && e.KeyModifiers == PrimaryModifier)
 
             {
 
@@ -1602,8 +1612,8 @@ namespace ScreenShot_One_Avalonia
 
             }
 
-            if ((e.Key == Key.Y && e.KeyModifiers == KeyModifiers.Control) ||
-                (e.Key == Key.Z && (e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift))))
+            if ((e.Key == Key.Y && e.KeyModifiers == PrimaryModifier) ||
+                (e.Key == Key.Z && (e.KeyModifiers == (PrimaryModifier | KeyModifiers.Shift))))
             {
                 Redo();
                 e.Handled = true;
@@ -1886,6 +1896,59 @@ namespace ScreenShot_One_Avalonia
             }
         }
 
+        private void BtnSaveAs_Click(object? sender, RoutedEventArgs e)
+        {
+            SaveAsFileAsync().FireAndForget("Зберегти як файл");
+        }
+
+        /// <summary>«Зберегти як…»: діалог вибору файлу (PNG / JPG), стартова папка — з налаштувань.</summary>
+        private async Task SaveAsFileAsync()
+        {
+            try
+            {
+                string ext = ImageExport.PreferredExtension;
+                var png = new FilePickerFileType("PNG") { Patterns = new[] { "*.png" }, MimeTypes = new[] { "image/png" } };
+                var jpg = new FilePickerFileType("JPEG") { Patterns = new[] { "*.jpg", "*.jpeg" }, MimeTypes = new[] { "image/jpeg" } };
+
+                var options = new FilePickerSaveOptions
+                {
+                    Title = "Зберегти скріншот",
+                    SuggestedFileName = ImageExport.BuildFileName(DateTime.Now, ext),
+                    DefaultExtension = ext,
+                    FileTypeChoices = ext == "jpg" ? new[] { jpg, png } : new[] { png, jpg },
+                    ShowOverwritePrompt = true
+                };
+                try
+                {
+                    System.IO.Directory.CreateDirectory(ImageExport.SaveFolder);
+                    var start = await StorageProvider.TryGetFolderFromPathAsync(ImageExport.SaveFolder);
+                    if (start != null) options.SuggestedStartLocation = start;
+                }
+                catch (Exception ex) { AppLog.Warn(ex); }
+
+                var file = await StorageProvider.SaveFilePickerAsync(options);
+                if (file == null) return;
+                string? path = file.TryGetLocalPath();
+                if (string.IsNullOrEmpty(path)) return;
+
+                using (var rtb = CreateRenderedBitmap())
+                {
+                    if (!_isSavedToHistory) SaveToHistoryDatabase(rtb);
+                    ImageExport.Save(rtb, path);
+                }
+
+                ToastText.Text = $"Збережено: {System.IO.Path.GetFileName(path)}";
+                ToastNotification.IsVisible = true;
+                await Task.Delay(1500);
+                ToastNotification.IsVisible = false;
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "Зберегти як файл");
+                await MessageBoxManager.GetMessageBoxStandard("Помилка", $"Не вдалося зберегти файл: {ex.Message}").ShowWindowDialogAsync(this);
+            }
+        }
+
         private async void BtnSave_Click(object? sender, RoutedEventArgs e)
         {
             BtnSave.IsEnabled = false;
@@ -1899,6 +1962,13 @@ namespace ScreenShot_One_Avalonia
 
                 // Викликаємо відремонтований буфер
                 await CopyImageToClipboardDirectly(rtb);
+
+                // Автозбереження у файл (налаштування «Автоматично зберігати кожен скріншот»)
+                if (SettingsManager.Current.AutoSaveToFolder)
+                {
+                    try { ImageExport.SaveToFolder(rtb); }
+                    catch (Exception ex) { AppLog.Error(ex, "Автозбереження у файл"); }
+                }
                 rtb.Dispose();
 
                 ToastText.Text = "Картинку скопійовано в буфер!";
