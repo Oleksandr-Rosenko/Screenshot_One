@@ -10,6 +10,7 @@ jobs:
   windows:
     name: Build & test (Windows)
     runs-on: windows-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -31,11 +32,13 @@ jobs:
         run: dotnet build ScreenShot_One_Avalonia.slnx -c Release -p:Platform=x64
 
       - name: Test
-        run: dotnet test ScreenShot_One_Avalonia.Tests -c Release -p:Platform=x64 --no-build --logger "console;verbosity=normal"
+        # --blame-hang: завислий тест зупиняється через 3 хв і називається в журналі
+        run: dotnet test ScreenShot_One_Avalonia.Tests -c Release -p:Platform=x64 --no-build --logger "console;verbosity=normal" --blame-hang-timeout 3m --blame-hang-dump-type none
 
   macos:
     name: Build (macOS)
     runs-on: macos-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 

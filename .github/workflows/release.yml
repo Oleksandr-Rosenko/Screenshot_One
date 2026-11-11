@@ -83,7 +83,7 @@ jobs:
       - name: Test
         if: steps.ver.outputs.exists == 'false'
         working-directory: .
-        run: dotnet test ScreenShot_One_Avalonia.Tests -c Release -p:Platform=x64
+        run: dotnet test ScreenShot_One_Avalonia.Tests -c Release -p:Platform=x64 --blame-hang-timeout 3m --blame-hang-dump-type none
 
       - name: Publish
         if: steps.ver.outputs.exists == 'false'

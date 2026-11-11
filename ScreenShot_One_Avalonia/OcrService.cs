@@ -103,7 +103,8 @@ namespace ScreenShot_One_Avalonia
                     Windows.Graphics.Imaging.BitmapPixelFormat.Bgra8, pw, ph, Windows.Graphics.Imaging.BitmapAlphaMode.Premultiplied);
                 soft.CopyFromBuffer(System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions.AsBuffer(pixels));
 
-                var result = await engine.RecognizeAsync(soft);
+                // Тайм-аут: системний OCR не повинен підвісити програму назавжди
+                var result = await engine.RecognizeAsync(soft).AsTask().WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(false);
                 return CleanUp(string.Join("\n", result.Lines.Select(l => l.Text)));
             }
             finally
@@ -149,12 +150,12 @@ namespace ScreenShot_One_Avalonia
                 var stdout = proc.StandardOutput.ReadToEndAsync();
                 var stderr = proc.StandardError.ReadToEndAsync();
                 using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(30));
-                await proc.WaitForExitAsync(cts.Token);
+                await proc.WaitForExitAsync(cts.Token).ConfigureAwait(false);
 
                 if (proc.ExitCode != 0)
-                    throw new InvalidOperationException($"ocr-helper завершився з кодом {proc.ExitCode}: {await stderr}");
+                    throw new InvalidOperationException($"ocr-helper завершився з кодом {proc.ExitCode}: {await stderr.ConfigureAwait(false)}");
 
-                return CleanUp(await stdout);
+                return CleanUp(await stdout.ConfigureAwait(false));
             }
             finally
             {
