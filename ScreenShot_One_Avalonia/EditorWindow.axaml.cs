@@ -1684,7 +1684,8 @@ namespace ScreenShot_One_Avalonia
             if (cropped == null) return;
 
             const int block = 12;
-            var small = cropped.CreateScaledBitmap(new PixelSize(Math.Max(1, iw / block), Math.Max(1, ih / block)), BitmapInterpolationMode.MediumQuality);
+            // Bitmap.CreateScaledBitmap не працює з WriteableBitmap/RenderTargetBitmap — масштабуємо через BitmapPixels
+            var small = BitmapPixels.Scale(cropped, new PixelSize(Math.Max(1, iw / block), Math.Max(1, ih / block)), BitmapInterpolationMode.MediumQuality);
             cropped.Dispose();
 
             var img = new Image { Source = small, Width = iw, Height = ih, Stretch = Stretch.Fill };

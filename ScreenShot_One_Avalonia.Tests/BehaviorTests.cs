@@ -110,6 +110,31 @@ namespace ScreenShot_One_Avalonia.Tests
         }
 
         [Fact]
+        public void BitmapPixels_Scale_WorksForRenderTargetAndWriteableBitmaps()
+        {
+            // Регрес 2.6.0: вбудований CreateScaledBitmap кидав «Invalid source bitmap type» для цих типів
+            HeadlessAvalonia.EnsureInitialized();
+            using var rtb = new RenderTargetBitmap(new PixelSize(40, 20), BitmapPixels.Dpi96);
+            using (var dc = rtb.CreateDrawingContext())
+            {
+                dc.FillRectangle(Avalonia.Media.Brushes.Red, new Rect(0, 0, 20, 20));
+                dc.FillRectangle(Avalonia.Media.Brushes.Blue, new Rect(20, 0, 20, 20));
+            }
+            using var writeable = BitmapPixels.Crop(rtb, new PixelRect(0, 0, 40, 20))!;
+
+            foreach (Bitmap source in new Bitmap[] { rtb, writeable })
+            {
+                using var up = BitmapPixels.Scale(source, new PixelSize(80, 40));
+                Assert.Equal(new PixelSize(80, 40), up.PixelSize);
+
+                using var down = BitmapPixels.Scale(source, new PixelSize(4, 2), Avalonia.Media.Imaging.BitmapInterpolationMode.None);
+                var px = ReadPixels(down);
+                Assert.Equal(255, px[2]);              // лівий піксель червоний
+                Assert.Equal(255, px[3 * 4]);          // правий піксель синій (B)
+            }
+        }
+
+        [Fact]
         public void MacUpdateChecker_ParseRelease_PicksArchiveForArchitecture()
         {
             string json = @"{

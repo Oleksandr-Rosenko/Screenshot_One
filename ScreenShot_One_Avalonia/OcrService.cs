@@ -86,13 +86,13 @@ namespace ScreenShot_One_Avalonia
             bool scaled = false;
             if (w * 2 <= max && h * 2 <= max && (long)w * h < 1_500_000)
             {
-                input = bitmap.CreateScaledBitmap(new PixelSize(w * 2, h * 2), BitmapInterpolationMode.HighQuality);
+                input = BitmapPixels.Scale(bitmap, new PixelSize(w * 2, h * 2), BitmapInterpolationMode.HighQuality);
                 scaled = true;
             }
             else if (w > max || h > max)
             {
                 double k = Math.Min(max / (double)w, max / (double)h);
-                input = bitmap.CreateScaledBitmap(new PixelSize(Math.Max(1, (int)(w * k)), Math.Max(1, (int)(h * k))), BitmapInterpolationMode.HighQuality);
+                input = BitmapPixels.Scale(bitmap, new PixelSize(Math.Max(1, (int)(w * k)), Math.Max(1, (int)(h * k))), BitmapInterpolationMode.HighQuality);
                 scaled = true;
             }
 

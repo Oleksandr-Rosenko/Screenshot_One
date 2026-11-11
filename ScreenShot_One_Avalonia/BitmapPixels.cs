@@ -31,6 +31,24 @@ namespace ScreenShot_One_Avalonia
             => new Bitmap(PixelFormat.Bgra8888, alpha, data, new PixelSize(width, height), DpiForScaling(scaling), stride);
 
         /// <summary>
+        /// Масштабує бітмап будь-якого типу. Вбудований Bitmap.CreateScaledBitmap у Avalonia працює лише
+        /// з бітмапами, прочитаними з файлу (для RenderTargetBitmap і WriteableBitmap кидає
+        /// «Invalid source bitmap type»), тому малюємо через рендер і повертаємо копію у звичайній пам'яті.
+        /// </summary>
+        public static Bitmap Scale(Bitmap source, PixelSize size, BitmapInterpolationMode mode = BitmapInterpolationMode.HighQuality)
+        {
+            var w = Math.Max(1, size.Width);
+            var h = Math.Max(1, size.Height);
+            using var rtb = new RenderTargetBitmap(new PixelSize(w, h), Dpi96);
+            using (var ctx = rtb.CreateDrawingContext())
+            using (ctx.PushRenderOptions(new RenderOptions { BitmapInterpolationMode = mode }))
+            {
+                ctx.DrawImage(source, new Rect(source.Size), new Rect(0, 0, w, h));
+            }
+            return Crop(rtb, new PixelRect(0, 0, w, h)) ?? throw new InvalidOperationException("Не вдалося масштабувати зображення");
+        }
+
+        /// <summary>
         /// Ті самі пікселі з іншим DPI (копія в пам'яті). Якщо DPI вже такий — повертає джерело без копіювання.
         /// Потрібно, бо PNG, збережений Avalonia, не містить DPI і при читанні завжди має 96:
         /// редактор працює з 96 DPI, щоб щойно знятий скріншот і відкритий з історії виглядали однаково.
