@@ -17,8 +17,14 @@ namespace ScreenShot_One_Avalonia
         private Avalonia.Media.Imaging.Bitmap? _avaloniaBackground;
         private PixelRect _currentScreenBounds;
 
-        public MainWindow()
+        // true — режим «Розпізнати текст»: виділена зона йде в OCR, а не в редактор
+        private readonly bool _ocrMode;
+
+        public MainWindow() : this(ocrMode: false) { }
+
+        public MainWindow(bool ocrMode)
         {
+            _ocrMode = ocrMode;
             FreezeScreen();
 
             InitializeComponent();
@@ -212,7 +218,8 @@ namespace ScreenShot_One_Avalonia
                         var cropped = ScreenCaptureService.Instance.CropBitmap(_avaloniaBackground, new PixelRect(cropX, cropY, realWidth, realHeight));
                         if (cropped != null)
                         {
-                            CaptureRouter.Deliver(cropped);
+                            if (_ocrMode) OcrFlow.RecognizeAndCopyAsync(cropped).FireAndForget("OCR зони");
+                            else CaptureRouter.Deliver(cropped);
                         }
                     }
                 }

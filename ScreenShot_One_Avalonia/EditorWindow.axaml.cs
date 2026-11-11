@@ -2014,6 +2014,44 @@ namespace ScreenShot_One_Avalonia
             }
         }
 
+        private async void BtnOcr_Click(object? sender, RoutedEventArgs e)
+        {
+            BtnOcr.IsEnabled = false;
+            try
+            {
+                ToastText.Text = "Розпізнаю текст…";
+                ToastNotification.IsVisible = true;
+
+                string text;
+                using (var rtb = CreateRenderedBitmap())
+                {
+                    text = await OcrService.RecognizeAsync(rtb);
+                }
+
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    ToastText.Text = "Текст не знайдено";
+                }
+                else
+                {
+                    await ClipboardHelper.CopyTextAsync(text, TopLevel.GetTopLevel(this));
+                    ToastText.Text = $"Текст скопійовано ({text.Length} симв.)";
+                }
+                await Task.Delay(1800);
+                ToastNotification.IsVisible = false;
+            }
+            catch (Exception ex)
+            {
+                ToastNotification.IsVisible = false;
+                if (ex is not OcrUnavailableException) AppLog.Error(ex, "OCR у редакторі");
+                await MessageBoxManager.GetMessageBoxStandard("Розпізнавання тексту", ex.Message).ShowWindowDialogAsync(this);
+            }
+            finally
+            {
+                BtnOcr.IsEnabled = true;
+            }
+        }
+
         private void BtnSaveAs_Click(object? sender, RoutedEventArgs e)
         {
             SaveAsFileAsync().FireAndForget("Зберегти як файл");

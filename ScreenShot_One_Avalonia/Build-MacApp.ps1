@@ -41,6 +41,18 @@ foreach ($targetArch in $Architectures) {
     # Copy published files into Contents/MacOS
     Copy-Item -Path "$publishOut/*" -Destination $macOSDir -Recurse -Force
 
+    # OCR-утиліта (Vision) — потрібен swiftc (Xcode / Command Line Tools)
+    $swiftSrc = Join-Path $ScriptDir "MacHelpers/ocr.swift"
+    $swiftc = Get-Command swiftc -ErrorAction SilentlyContinue
+    if ($swiftc -and (Test-Path $swiftSrc)) {
+        $swiftTarget = if ($targetArch -eq "arm64") { "arm64-apple-macos11" } else { "x86_64-apple-macos11" }
+        Write-Host "=== [macOS $targetArch] Building ocr-helper ($swiftTarget) ===" -ForegroundColor Cyan
+        swiftc -O -target $swiftTarget -o (Join-Path $macOSDir "ocr-helper") $swiftSrc
+        if ($LASTEXITCODE -ne 0) { throw "ocr-helper build failed" }
+    } else {
+        Write-Warning "swiftc not found: OCR on macOS will be unavailable in this build"
+    }
+
     # Copy Info.plist
     $plistSrc = Join-Path $ScriptDir "Info.plist"
     if (Test-Path $plistSrc) {

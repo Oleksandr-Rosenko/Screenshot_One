@@ -22,13 +22,13 @@ if (-not $Token) {
 
 Write-Host "=== 1. Publish project ===" -ForegroundColor Cyan
 
-dotnet publish -f net10.0-windows -c Release -r win-x64 -p:Platform=x64 --self-contained true
+dotnet publish -f net10.0-windows10.0.19041.0 -c Release -r win-x64 -p:Platform=x64 --self-contained true
 
 if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
 
 Write-Host "=== 2. Create Velopack package ===" -ForegroundColor Cyan
 
-vpk pack -u ScreenShotOne -v $Version -p "bin\x64\Release\net10.0-windows\win-x64\publish" -e Screenshot_One.exe
+vpk pack -u ScreenShotOne -v $Version -p "bin\x64\Release\net10.0-windows10.0.19041.0\win-x64\publish" -e Screenshot_One.exe
 
 if ($LASTEXITCODE -ne 0) { throw "Pack failed" }
 

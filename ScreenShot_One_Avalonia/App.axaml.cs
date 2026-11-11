@@ -40,6 +40,9 @@ namespace ScreenShot_One_Avalonia
 
                 SettingsManager.OnAllScreensCapture += () => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => CaptureAllScreensSimultaneously());
 
+                // Розпізнати текст: виділення зони → текст у буфері обміну
+                SettingsManager.OnOcrCapture += () => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => ShowSingle(() => new MainWindow(ocrMode: true)));
+
                 // macOS: одразу пояснюємо, якщо немає дозволу «Запис екрана» (інакше скріншоти «порожні»)
                 Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
                 {
@@ -184,6 +187,10 @@ namespace ScreenShot_One_Avalonia
             var allScreensItem = new NativeMenuItem("Скріншот усіх екранів одночасно");
             allScreensItem.Click += (s, e) => CaptureAllScreensSimultaneously();
             menu.Add(allScreensItem);
+
+            var ocrItem = new NativeMenuItem("Розпізнати текст (OCR)");
+            ocrItem.Click += (s, e) => ShowSingle(() => new MainWindow(ocrMode: true));
+            menu.Add(ocrItem);
 
             var videoPanelItem = new NativeMenuItem("Записати відео");
             videoPanelItem.Click += (s, e) => ShowSingle(() => new VideoControlWindow());

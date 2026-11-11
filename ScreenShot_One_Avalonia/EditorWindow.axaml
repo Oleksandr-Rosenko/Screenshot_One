@@ -137,6 +137,9 @@
 
 				<Separator Classes="Vertical" Height="30"/>
 
+				<Button Name="BtnOcr" Classes="Basic" ToolTip.Tip="Розпізнати текст із зображення (копіюється в буфер)" Click="BtnOcr_Click">
+					<material:MaterialIcon Kind="TextRecognition" Width="28" Height="28" Foreground="{DynamicResource ToolbarIconBrush}"/>
+				</Button>
 				<Button Name="BtnSaveAs" Classes="Basic" ToolTip.Tip="Зберегти як файл (Ctrl+S)" Click="BtnSaveAs_Click">
 					<material:MaterialIcon Kind="ContentSaveOutline" Width="28" Height="28" Foreground="{DynamicResource ToolbarIconBrush}"/>
 				</Button>

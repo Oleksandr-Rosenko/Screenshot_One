@@ -45,3 +45,16 @@ jobs:
 
       - name: Build
         run: dotnet build ScreenShot_One_Avalonia/ScreenShot_One_Avalonia.csproj -f net10.0 -c Release -p:EnableWindowsTargeting=true
+
+      # OCR-утиліта для Mac: компілюємо під обидві архітектури, щоб помилки в Swift ловились до релізу
+      - name: Build ocr-helper (Swift)
+        run: |
+          swiftc -O -target arm64-apple-macos11 -o "$RUNNER_TEMP/ocr-helper-arm64" ScreenShot_One_Avalonia/MacHelpers/ocr.swift
+          swiftc -O -target x86_64-apple-macos11 -o "$RUNNER_TEMP/ocr-helper-x64" ScreenShot_One_Avalonia/MacHelpers/ocr.swift
+
+      # Справжня перевірка Vision: утиліта малює «Screenshot One 2026» і має його розпізнати
+      - name: OCR self-test
+        run: |
+          out=$("$RUNNER_TEMP/ocr-helper-$(uname -m | sed 's/x86_64/x64/')" --selftest)
+          echo "Recognized: $out"
+          echo "$out" | grep -qi "screenshot"
