@@ -38,8 +38,8 @@ namespace ScreenShot_One_Avalonia
         private UpdateWindowState _state = UpdateWindowState.Checking;
         private UpdateManager? _updateManager;
         private UpdateInfo? _updateInfo;
-        private string _currentVersion = "2.8.4";
-        private string _newVersion = "2.8.4";
+        private string _currentVersion = "2.8.5";
+        private string _newVersion = "2.8.5";
         private bool _isDownloading = false;
         private bool _isReadyToRestart = false;
 
@@ -258,6 +258,26 @@ namespace ScreenShot_One_Avalonia
             IconAction.Kind = MaterialIconKind.Refresh;
         }
 
+        /// <summary>
+        /// Опис змін мовою програми: розділ між &lt;!-- lang:xx --&gt; і &lt;!-- /lang --&gt; (publish_notes.py).
+        /// Немає такої мови — українська; старі релізи без розділів — увесь текст. Публічний для тестів.
+        /// </summary>
+        public static string ExtractNotes(string body, string lang)
+        {
+            string Section(string code)
+            {
+                var m = System.Text.RegularExpressions.Regex.Match(body,
+                    @"<!--\s*lang:" + code + @"\s*-->(.*?)<!--\s*/lang\s*-->", System.Text.RegularExpressions.RegexOptions.Singleline);
+                return m.Success ? m.Groups[1].Value.Trim() : "";
+            }
+            string text = Section(lang);
+            if (text.Length == 0) text = Section("uk");
+            if (text.Length == 0)
+                text = System.Text.RegularExpressions.Regex.Replace(body, @"</?details>|<summary>.*?</summary>|<!--.*?-->", "",
+                    System.Text.RegularExpressions.RegexOptions.Singleline);
+            return text.Trim();
+        }
+
         private async Task LoadReleaseNotesAsync(string? version)
         {
             string notes = "";
@@ -293,7 +313,7 @@ namespace ScreenShot_One_Avalonia
             {
                 if (!string.IsNullOrWhiteSpace(notes))
                 {
-                    string cleanNotes = notes.Trim();
+                    string cleanNotes = ExtractNotes(notes, Loc.Current);
                     if (cleanNotes.StartsWith("###", StringComparison.OrdinalIgnoreCase))
                     {
                         var firstLineEnd = cleanNotes.IndexOf('\n');
@@ -304,7 +324,7 @@ namespace ScreenShot_One_Avalonia
                 }
                 else
                 {
-                    TxtChangelog.Text = "• Панель інструментів редактора: базові іконки отримали адаптивний контрастний колір теми.\n• Маркер: покращено видимість жовтого маркера на білому фоні.\n• Світла тема: повноцінна підтримка світлого оформлення з Live Preview.\n• Оновлення дизайну: лаконічні номери версій та автоматичний список змін.";
+                    TxtChangelog.Text = Loc.T("Update_NotesUnavailable");
                 }
             });
         }
@@ -445,7 +465,7 @@ namespace ScreenShot_One_Avalonia
                 return $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
             }
 
-            return "2.8.4";
+            return "2.8.5";
         }
 
         public static async Task CheckAndShowAsync(bool isManual = true)

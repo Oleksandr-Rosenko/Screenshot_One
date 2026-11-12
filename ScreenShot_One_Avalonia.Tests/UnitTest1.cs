@@ -577,9 +577,8 @@ namespace ScreenShot_One_Avalonia.Tests
 
             Assert.Contains("cleanVersion", code);
 
-            Assert.Contains("Світла тема", code);
-
-            Assert.Contains("Live Preview", code);
+            // Опис змін — мовою програми (2.8.5); старий жорстко прописаний текст замінено рядком Update_NotesUnavailable
+            Assert.Contains("ExtractNotes(notes, Loc.Current)", code);
 
             Assert.Contains("SetCheckingState", code);
             Assert.Contains("SetErrorState", code);

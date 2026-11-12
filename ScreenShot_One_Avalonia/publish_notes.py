@@ -3,6 +3,22 @@ import os
 import urllib.request
 import json
 
+def read(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+
+def build_body(script_dir, uk_file):
+    """Тіло релізу трьома мовами. Програма бере розділ між <!-- lang:xx --> і <!-- /lang -->
+    (UpdateWindow.ExtractNotes); на GitHub українська видна одразу, англійська й російська — у згорнутих блоках."""
+    body = "<!-- lang:uk -->\n" + read(uk_file) + "\n<!-- /lang -->\n"
+    for lang, title in (("en", "English"), ("ru", "Русский")):
+        path = os.path.join(script_dir, f"ReleaseNotes.{lang}.md")
+        if os.path.exists(path):
+            body += f"\n<details><summary>{title}</summary>\n\n<!-- lang:{lang} -->\n" + read(path) + "\n<!-- /lang -->\n\n</details>\n"
+    return body
+
+
 def main():
     if len(sys.argv) < 3:
         print("Usage: python publish_notes.py <token> <version>")
@@ -17,8 +33,7 @@ def main():
         print(f"Notes file not found at {notes_file}")
         return
 
-    with open(notes_file, "r", encoding="utf-8") as f:
-        notes = f.read()
+    notes = build_body(script_dir, notes_file)
 
     headers = {
         'User-Agent': 'Screenshot_One_Deploy',

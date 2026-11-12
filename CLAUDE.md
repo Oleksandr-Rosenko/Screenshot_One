@@ -9,7 +9,8 @@
 - XAML: `Text="{DynamicResource Settings_Theme}"` (відкриті вікна міняють мову одразу). Код: `Loc.T("Ключ")`, з аргументами — `Loc.F("Ключ", x)` і `{0}` у рядку.
 - `Loc.Apply(AppSettings.Language)` — "auto" (мова ОС: uk → українська, ru → російська, інше → англійська; на Mac — `defaults read -g AppleLanguages`) або "uk"/"en"/"ru". Меню трею перебудовується за подією `Loc.LanguageChanged`.
 - Новий рядок — у всіх трьох мовах з однаковими `{N}`; `LocTests` перевіряє повноту й те, що кожен ключ з XAML/коду існує.
-- Журнал (`AppLog`) і технічні винятки — українською, не перекладаються. Нотатки до релізу (`ReleaseNotes.md`) — українською.
+- Журнал (`AppLog`) і технічні винятки — українською, не перекладаються.
+- Нотатки до релізу — у трьох файлах: `ReleaseNotes.md` (uk), `ReleaseNotes.en.md`, `ReleaseNotes.ru.md` з однаковою кількістю пунктів (`LocTests` перевіряє). `publish_notes.py` складає тіло релізу з розділами `<!-- lang:xx -->…<!-- /lang -->` (en/ru — у `<details>`), вікно оновлення показує розділ мовою програми (`UpdateWindow.ExtractNotes`, запасна — українська).
 
 ## Структура
 
@@ -41,9 +42,9 @@
   - Редактор: інструменти `Ellipse`, `Line`, `Spotlight` (`SpotlightShape`), товщина `_strokeWidth`; `ShapeType` у JSON — числа, нові типи лише в кінець; `ShapeData.StrokeWidth` (0 — старі записи). `Pixelate` прибрано з панелі як дубль «Розмиття» (2.7.0), але його завантаження зі старих записів лишилось.
   - Панель редактора (2.7.0): групи з `Flyout` (`BtnShapesGroup`, `BtnLinesGroup`, `BtnDrawGroup`, `BtnHideGroup`, `BtnImageGroup`, `BtnShareGroup`), підсвітка — клас `active` (стиль у `App.axaml`), іконка групи = останній інструмент (`UpdateToolHighlight`). Колір/товщина/розмір тексту — у `ColorPalettePopup`. Однолітерні гарячі клавіші — `HandleToolShortcut`. **Без ScrollViewer у панелі.** З 2.7.2 при достатній ширині групи розгортаються в окремі кнопки (`BuildInlineToolButtons` / `UpdateToolbarMode`), вміст меню — у `Border.menucard` (шаблон SukiUI малює `FlyoutPresenter` без фону). Кнопки обрізки — у шарі `CropControlsLayer` поза масштабованим полотном (`PositionCropControls`).
   - `TrayPanelWindow` (2.8.2, на обох ОС з 2.8.4) — панель трею: плитки дій, останні 3 знімки, налаштування/оновлення/вихід. Дії — `App.RunTrayAction(TrayAction)`, спільні з меню. Перші 700 мс після показу втрата фокуса ігнорується (інакше після кліку по треєві Windows одразу закривав панель).
-    Windows: лівий клік (`TrayIcon.Clicked`; Avalonia: WM_LBUTTONUP → OnClicked), правий — `NativeMenu`.
+    Windows: лівий клік (`TrayIcon.Clicked`; Avalonia: WM_LBUTTONUP → OnClicked). Правий клік Avalonia не повідомляє, а показує власне вікно `AvaloniaTrayPopupRoot_…` з `NativeMenu` — з 2.8.5 `App.InterceptTrayMenu` (клас-обробник `Window.WindowOpenedEvent`) ховає його й відкриває панель; меню лишається запасним.
     macOS: `TrayIcon` з Avalonia **не дає події кліку** (Avalonia.Native не викликає OnClicked), тому значок — власний `MacStatusItem` (NSStatusItem через ObjC runtime: клас `SOStatusItemTarget`, action `soClick:` → `[UnmanagedCallersOnly]` C#). Лівий і правий клік — панель. Якщо створити не вдалось — запасний `TrayIcon` з меню.
-    Самоперевірка: `SO_SELFTEST_TRAY=1` — через 6 с програма сама «клікає» значок (Mac — `performClick:`), у журнал пише «[SelfTest] панель трею відкрита через 2,5 с: True»; CI перевіряє це на Windows і macOS.
+    Самоперевірка: `SO_SELFTEST_TRAY=1` — через 6 с програма сама «клікає» значок (Mac — `performClick:`), у журнал пише «[SelfTest] панель трею відкрита через 2,5 с: True»; CI перевіряє це на Windows і macOS; на Windows ще й правий клік («[SelfTest] правий клік → панель: True»). Реліз (`release.yml`) викладає Mac-файли лише після такої ж самоперевірки.
   - **Меню трею не підміняти** (`_trayIcon.Menu = ...` лише один раз): на macOS Avalonia падає «The menu being updated does not match». Зміна мови — `UpdateTrayMenuTexts` (лише `Header`). Так падала Mac-версія 2.8.0–2.8.1.
   - `HotkeyService` — глобальні клавіші. Windows: low-level hook в окремому потоці; macOS: Carbon `RegisterEventHotKey`.
   - `SettingsManager` / `AppSettings` — `settings.json`, міграції (`SettingsVersion`), тема, автозапуск.
@@ -99,7 +100,7 @@ dotnet test ScreenShot_One_Avalonia.Tests -p:Platform=x64
    - `ScreenShot_One_Avalonia/Build-MacApp.ps1` → `$Version`;
    - `ScreenShot_One_Avalonia/Info.plist` → два рядки `<string>X.Y.Z</string>`;
    - `ScreenShot_One_Avalonia/UpdateWindow.axaml.cs` → запасні рядки `"X.Y.Z"`.
-2. Оновити `ScreenShot_One_Avalonia/ReleaseNotes.md`: нові пункти зверху (`• ...`), старі під «Зміни попередніх версій:».
+2. Оновити нотатки в **трьох** файлах: `ReleaseNotes.md`, `ReleaseNotes.en.md`, `ReleaseNotes.ru.md` — нові пункти зверху (`• ...`), старі під «Зміни попередніх версій:» / «Changes in previous versions:» / «Изменения прошлых версий:».
 3. Влити в `main`. Зміна `.csproj` у `main` запускає Release: тести → `dotnet publish` → `vpk pack/upload` → нотатки. Якщо реліз із такою версією вже є, workflow нічого не робить. Запустити вручну: Actions → Release → Run workflow (або `gh api -X POST repos/Oleksandr-Rosenko/Screenshot_One/actions/workflows/release.yml/dispatches -f ref=main`).
 4. Теги релізів — версія без `v` (`2.5.4`). Velopack-id пакета `ScreenShotOne`.
 
@@ -161,6 +162,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 
 ## Історія ключових змін
 
+- 2.8.5 — правий клік по треєві теж відкриває панель (Windows); нотатки до релізу трьома мовами, вікно оновлення показує їх мовою програми.
 - 2.8.4 — панель трею на Mac (власний NSStatusItem) і виправлення миттєвого закриття на Windows; самоперевірка панелі в CI на обох ОС.
 - 2.8.3 — знімок екрана на macOS 14+ через ScreenCaptureKit (`capture-helper`), CoreGraphics і screencapture — запасні.
 - 2.8.2 — виправлено падіння Mac на старті (підміна меню трею при зміні мови); панель трею з плитками на Windows; запуск програми в CI на macOS.

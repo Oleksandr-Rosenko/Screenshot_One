@@ -321,6 +321,7 @@ namespace ScreenShot_One_Avalonia
             ["Update_RestartNow"] = new[] { "Перезапустити зараз", "Restart now", "Перезапустить сейчас" },
             ["Update_DownloadFailed"] = new[] { "Помилка завантаження: {0}", "Download error: {0}", "Ошибка загрузки: {0}" },
             ["Update_InProgress"] = new[] { "Завантаження триває, зачекайте завершення...", "Downloading, please wait until it finishes...", "Загрузка идёт, дождитесь завершения..." },
+            ["Update_NotesUnavailable"] = new[] { "Не вдалося завантажити опис змін. Його можна переглянути на сторінці релізу на GitHub.", "Could not load the release notes. You can read them on the GitHub release page.", "Не удалось загрузить описание изменений. Его можно посмотреть на странице релиза на GitHub." },
             ["Update_Title"] = new[] { "Оновлення", "Update", "Обновление" },
             ["Update_MacLatest"] = new[] { "У вас найновіша версія ({0}).", "You have the latest version ({0}).", "У вас самая новая версия ({0})." },
             ["Update_MacAvailableTitle"] = new[] { "Доступне оновлення", "Update available", "Доступно обновление" },

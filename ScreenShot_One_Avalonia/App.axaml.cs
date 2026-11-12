@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Layout;
 using System;
+using System.Linq;
 using System.IO;
 using System.Threading.Tasks;
 using Velopack;
@@ -148,8 +149,11 @@ namespace ScreenShot_One_Avalonia
 
             };
 
-            // Windows: лівий клік — панель з плитками (TrayPanelWindow), правий — звичайне меню
+            // Windows: лівий клік — панель з плитками (TrayPanelWindow)
             _trayIcon.Clicked += (_, _) => TrayPanelWindow.Toggle(ScreenService.GetCursorPosition());
+            // Правий клік: Avalonia не дає події, а одразу показує власне вікно-меню «AvaloniaTrayPopupRoot_…».
+            // Перехоплюємо його появу — ховаємо меню й відкриваємо ту саму панель. Не спрацює — лишиться меню.
+            Window.WindowOpenedEvent.AddClassHandler<Window>((w, _) => InterceptTrayMenu(w));
 
             // Червона крапка на іконці трею, поки йде запис відео
             VideoRecorderManager.OnStatusChanged += isRecording =>
@@ -179,6 +183,21 @@ namespace ScreenShot_One_Avalonia
             if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) desktop.Shutdown();
         }
 
+        public static bool IsTrayMenuWindow(Window w) => w.Name?.StartsWith("AvaloniaTrayPopupRoot_", StringComparison.Ordinal) == true;
+
+        private static void InterceptTrayMenu(Window w)
+        {
+            if (!IsTrayMenuWindow(w)) return;
+            try
+            {
+                w.Opacity = 0;
+                Avalonia.Threading.Dispatcher.UIThread.Post(w.Close);
+                AppLog.Write("[TrayPanel] правий клік — замість меню відкриваємо панель");
+                TrayPanelWindow.Toggle(ScreenService.GetCursorPosition());
+            }
+            catch (Exception ex) { AppLog.Error(ex, "Правий клік по треєві"); }
+        }
+
         private static async System.Threading.Tasks.Task RunTraySelfTestAsync()
         {
             await System.Threading.Tasks.Task.Delay(6000);
@@ -190,6 +209,20 @@ namespace ScreenShot_One_Avalonia
             await System.Threading.Tasks.Task.Delay(2500);
             bool open = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => TrayPanelWindow.IsOpen);
             AppLog.Write($"[SelfTest] панель трею відкрита через 2,5 с: {open}");
+
+            if (OperatingSystem.IsWindows())
+            {
+                // Правий клік: імітуємо вікно-меню, яке показує Avalonia, — замість нього має відкритись панель
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { if (TrayPanelWindow.IsOpen) TrayPanelWindow.Toggle(null); });
+                await System.Threading.Tasks.Task.Delay(1000);
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    new Window { Name = "AvaloniaTrayPopupRoot_Screenshot One", Width = 10, Height = 10, ShowInTaskbar = false }.Show());
+                await System.Threading.Tasks.Task.Delay(2500);
+                bool openRight = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => TrayPanelWindow.IsOpen);
+                bool menuGone = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    !(Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime d && d.Windows.Any(IsTrayMenuWindow)));
+                AppLog.Write($"[SelfTest] правий клік → панель: {openRight && menuGone}");
+            }
         }
 
         /// <summary>Дії трею — спільні для меню й панелі <see cref="TrayPanelWindow"/>.</summary>

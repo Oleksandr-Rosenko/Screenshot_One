@@ -64,6 +64,25 @@ namespace ScreenShot_One_Avalonia.Tests
         }
 
         [Fact]
+        public void ReleaseNotes_PickAppLanguage_WithFallbacks()
+        {
+            string body = "<!-- lang:uk -->\n• укр\n<!-- /lang -->\n\n<details><summary>English</summary>\n\n<!-- lang:en -->\n• eng\n<!-- /lang -->\n\n</details>\n";
+            Assert.Equal("• eng", UpdateWindow.ExtractNotes(body, "en"));
+            Assert.Equal("• укр", UpdateWindow.ExtractNotes(body, "uk"));
+            Assert.Equal("• укр", UpdateWindow.ExtractNotes(body, "ru"));   // немає російської — українська
+            Assert.Equal("• old", UpdateWindow.ExtractNotes("• old", "en")); // старі релізи без розділів
+        }
+
+        [Fact]
+        public void ReleaseNotes_ExistInAllLanguages_WithSameNumberOfItems()
+        {
+            int Count(string file) => File.ReadAllLines(Path.Combine(SourceDir, file)).Count(l => l.TrimStart().StartsWith("•"));
+            int uk = Count("ReleaseNotes.md");
+            Assert.Equal(uk, Count("ReleaseNotes.en.md"));
+            Assert.Equal(uk, Count("ReleaseNotes.ru.md"));
+        }
+
+        [Fact]
         public void HistoryDates_AreLocalized()
         {
             var now = new DateTime(2026, 11, 11, 15, 0, 0);

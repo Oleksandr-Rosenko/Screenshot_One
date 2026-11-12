@@ -44,14 +44,15 @@ jobs:
           Write-Host "Exe: $($exe.FullName)"
           $env:SO_SELFTEST_TRAY = "1"
           $p = Start-Process $exe.FullName -PassThru
-          Start-Sleep -Seconds 20
+          Start-Sleep -Seconds 25
           $alive = -not $p.HasExited
           if ($alive) { Stop-Process -Id $p.Id -Force }
           $log = Join-Path $env:LOCALAPPDATA "Screenshot_One/logs/app.log"
           Write-Host "----- app.log -----"
           if (Test-Path $log) { Get-Content $log -Tail 60 }
           if (-not $alive) { throw "App exited early (code $($p.ExitCode))" }
-          if (-not (Select-String -Path $log -Pattern 'SelfTest.*True' -Quiet)) { throw "Tray panel self-test failed" }
+          if (-not (Select-String -Path $log -Pattern 'SelfTest\].*2,5.*True' -Quiet)) { throw "Tray panel self-test (left click) failed" }
+          if (-not (Select-String -Path $log -Pattern 'SelfTest\].*→.*True' -Quiet)) { throw "Tray panel self-test (right click) failed" }
 
   macos:
     name: Build (macOS)

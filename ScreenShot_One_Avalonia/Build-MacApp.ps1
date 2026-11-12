@@ -1,7 +1,7 @@
 param(
     [ValidateSet("arm64", "x64", "all")]
     [string]$Arch = "arm64",
-    [string]$Version = "2.8.4",
+    [string]$Version = "2.8.5",
     [string]$Configuration = "Release",
     # Ідентичність підпису: "-" — ad-hoc; у CI — власний сертифікат (стабільний підпис → macOS пам'ятає
     # дозвіл «Запис екрана» між оновленнями). Береться з MAC_SIGN_IDENTITY, якщо не задано.
