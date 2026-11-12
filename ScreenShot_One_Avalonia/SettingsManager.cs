@@ -63,6 +63,9 @@ namespace ScreenShot_One_Avalonia
 
         // Версія схеми налаштувань — для разових міграцій (див. SettingsManager.Migrate)
         public int SettingsVersion { get; set; } = 0;
+
+        // Windows: для якої версії вже оновлено ярлики й кеш іконок (null — ще ні)
+        public string? LastShellRefreshVersion { get; set; }
     }
 
     public static class SettingsManager

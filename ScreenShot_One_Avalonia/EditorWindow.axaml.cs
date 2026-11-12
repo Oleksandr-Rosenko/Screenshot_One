@@ -101,6 +101,10 @@ namespace ScreenShot_One_Avalonia
         public EditorWindow(Bitmap capturedImage, string? jsonPath = null, HistoryWindow? historyOwner = null, HistoryItem? sourceItem = null)
         {
             InitializeComponent();
+            BuildInlineToolButtons();
+            // Кнопки обрізки живуть поза полотном — переставляємо їх при прокрутці й зміні розміру вікна
+            MainScrollViewer.ScrollChanged += (_, _) => PositionCropControls();
+            CropControlsLayer.SizeChanged += (_, _) => PositionCropControls();
             _historyOwner = historyOwner;
             _sourceHistoryItem = sourceItem;
 
@@ -207,6 +211,7 @@ namespace ScreenShot_One_Avalonia
                 scaleTransform.ScaleX = _currentScale;
                 scaleTransform.ScaleY = _currentScale;
             }
+            Avalonia.Threading.Dispatcher.UIThread.Post(PositionCropControls, Avalonia.Threading.DispatcherPriority.Loaded);
         }
 
         private void BtnSplit_Click(object? sender, RoutedEventArgs e)
@@ -1389,16 +1394,42 @@ namespace ScreenShot_One_Avalonia
 
         }
 
+        // Зона обрізки в координатах полотна — щоб переставляти кнопки при прокрутці й масштабуванні
+        private Rect? _cropControlsRect;
+
         private void ShowCropControls(double x, double y, double w, double h)
         {
+            _cropControlsRect = new Rect(x, y, w, h);
             CropControlsPanel.IsVisible = true;
-            double btnX = x + w - CropControlsPanel.Bounds.Width;
-            double btnY = y + h + 10;
-            if (btnY + CropControlsPanel.Bounds.Height > DrawingCanvas.Height) btnY = y + h - CropControlsPanel.Bounds.Height - 10;
-            if (btnX < 0) btnX = 10;
+            PositionCropControls();
+        }
 
-            Canvas.SetLeft(CropControlsPanel, btnX);
-            Canvas.SetTop(CropControlsPanel, btnY);
+        /// <summary>
+        /// Ставить кнопки ✓/✗ під правим нижнім кутом зони обрізки (або всередині, якщо внизу немає місця)
+        /// і завжди тримає їх у видимій частині редактора. Раніше кнопки були частиною масштабованого полотна:
+        /// на великому знімку вони зменшувались разом із ним, а біля краю виїжджали за межі вікна.
+        /// </summary>
+        private void PositionCropControls()
+        {
+            if (_cropControlsRect is not Rect r || !CropControlsPanel.IsVisible) return;
+            var topLeft = DrawingCanvas.TranslatePoint(r.TopLeft, CropControlsLayer);
+            var bottomRight = DrawingCanvas.TranslatePoint(r.BottomRight, CropControlsLayer);
+            if (topLeft == null || bottomRight == null) return;
+
+            CropControlsPanel.Measure(Size.Infinity);
+            double pw = CropControlsPanel.DesiredSize.Width, ph = CropControlsPanel.DesiredSize.Height;
+            double layerW = CropControlsLayer.Bounds.Width, layerH = CropControlsLayer.Bounds.Height;
+            const double gap = 8;
+
+            double left = bottomRight.Value.X - pw;
+            double top = bottomRight.Value.Y + gap;
+            if (top + ph > layerH - gap) top = bottomRight.Value.Y - ph - gap;   // під зоною немає місця — всередину
+            if (top < topLeft.Value.Y + gap && topLeft.Value.Y - ph - gap >= gap) top = topLeft.Value.Y - ph - gap; // зона низька — над нею
+
+            left = Math.Clamp(left, gap, Math.Max(gap, layerW - pw - gap));
+            top = Math.Clamp(top, gap, Math.Max(gap, layerH - ph - gap));
+            Canvas.SetLeft(CropControlsPanel, left);
+            Canvas.SetTop(CropControlsPanel, top);
         }
 
         private void ResetCropUI()
@@ -1408,6 +1439,7 @@ namespace ScreenShot_One_Avalonia
             CropSelectionRect.IsVisible = false;
 
             CropControlsPanel.IsVisible = false;
+            _cropControlsRect = null;
 
             CropDarkOverlay.Data = null;
 
@@ -1786,7 +1818,10 @@ namespace ScreenShot_One_Avalonia
         private void UpdateToolHighlight(Button btn)
         {
             foreach (var b in AllToolButtons) b.Classes.Set("active", false);
+            foreach (var b in _inlineButtons.Values) b.Classes.Set("active", false);
+            if (_inlineButtons.TryGetValue(_activeTool, out var inlineBtn)) inlineBtn.Classes.Set("active", true);
             if (_isSplitMode) BtnImageGroup.Classes.Set("active", true);
+            _inlineSplitButton?.Classes.Set("active", _isSplitMode);
 
             foreach (var more in new[] { BtnShapesGroupMore, BtnLinesGroupMore, BtnDrawGroupMore, BtnHideGroupMore })
                 more.Flyout?.Hide();
@@ -1810,6 +1845,119 @@ namespace ScreenShot_One_Avalonia
             else
             {
                 btn.Classes.Set("active", true);
+            }
+        }
+
+        // ---- Розгорнута панель (2.7.2): коли є місце, інструменти груп показуються окремими кнопками ----
+
+        // Пара «згорнутий вигляд (група зі стрілкою / кнопка з меню) — окремі кнопки»
+        private readonly List<(Control Collapsed, StackPanel Inline)> _toolGroups = new();
+        private readonly Dictionary<DrawingTool, Button> _inlineButtons = new();
+        private Button? _inlineSplitButton;
+        private double _inlineExtraWidth = -1;
+        private bool _toolbarExpanded;
+
+        private static string ToolTipFor(DrawingTool tool) => tool switch
+        {
+            DrawingTool.Rectangle => "Прямокутник (R)",
+            DrawingTool.Ellipse => "Еліпс (E)",
+            DrawingTool.Arrow => "Стрілка (A)",
+            DrawingTool.Line => "Пряма лінія (L, Shift — під 45°)",
+            DrawingTool.Connector => "Зв'язок (лінія з точками)",
+            DrawingTool.Pencil => "Олівець (P)",
+            DrawingTool.Highlighter => "Маркер (H)",
+            DrawingTool.Blur => "Розмиття — для паролів і особистих даних (B)",
+            DrawingTool.Spotlight => "Прожектор: затемнити все, крім області (S)",
+            _ => ""
+        };
+
+        private static Button MakeInlineButton(Material.Icons.MaterialIconKind kind, string tip, Action onClick, IBrush? iconBrush = null)
+        {
+            var icon = new Material.Icons.Avalonia.MaterialIcon { Kind = kind };
+            if (iconBrush != null) icon.Foreground = iconBrush;
+            var b = new Button { Content = icon };
+            b.Classes.Add("Basic");
+            b.Classes.Add("tool");
+            ToolTip.SetTip(b, tip);
+            b.Click += (_, _) => onClick();
+            return b;
+        }
+
+        private void AddInlineGroup(Control collapsed, params Button[] buttons)
+        {
+            if (collapsed.Parent is not Panel host) return;
+            var inline = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 2, IsVisible = false };
+            foreach (var b in buttons) inline.Children.Add(b);
+            host.Children.Insert(host.Children.IndexOf(collapsed) + 1, inline);
+            _toolGroups.Add((collapsed, inline));
+        }
+
+        /// <summary>Створює окремі кнопки для вмісту кожної групи й меню (сховані, поки місця не вистачає).</summary>
+        private void BuildInlineToolButtons()
+        {
+            Button Tool(DrawingTool t)
+            {
+                var b = MakeInlineButton(IconFor(t), ToolTipFor(t), () => SetTool(t, ButtonFor(t)));
+                _inlineButtons[t] = b;
+                return b;
+            }
+
+            _inlineSplitButton = MakeInlineButton(Material.Icons.MaterialIconKind.ViewSplitVertical, "Додати зображення поруч (колаж)",
+                () => BtnSplit_Click(this, new RoutedEventArgs()));
+            AddInlineGroup(BtnImageGroup,
+                MakeInlineButton(Material.Icons.MaterialIconKind.ImageAdd, "Вставити картинку поверх (Ctrl+V)", () => BtnPasteImage_Click(this, new RoutedEventArgs())),
+                _inlineSplitButton);
+            if (BtnShapesGroup.Parent is Control shapes) AddInlineGroup(shapes, Tool(DrawingTool.Rectangle), Tool(DrawingTool.Ellipse));
+            if (BtnLinesGroup.Parent is Control lines) AddInlineGroup(lines, Tool(DrawingTool.Arrow), Tool(DrawingTool.Line), Tool(DrawingTool.Connector));
+            if (BtnDrawGroup.Parent is Control draw) AddInlineGroup(draw, Tool(DrawingTool.Pencil), Tool(DrawingTool.Highlighter));
+            if (BtnHideGroup.Parent is Control hide) AddInlineGroup(hide, Tool(DrawingTool.Blur), Tool(DrawingTool.Spotlight));
+            AddInlineGroup(BtnShareGroup,
+                MakeInlineButton(Material.Icons.MaterialIconKind.CloudUploadOutline, "Публічне посилання (catbox.moe)", () => BtnPublicUpload_Click(this, new RoutedEventArgs())),
+                MakeInlineButton(Material.Icons.MaterialIconKind.GoogleDrive, "Завантажити в мій Google Drive", () => BtnDriveUpload_Click(this, new RoutedEventArgs()),
+                    new SolidColorBrush(Color.Parse("#4688F4")))); // бренд Google Drive
+
+            if (BtnSelect.Parent is Control left && left.Parent is Control grid)
+            {
+                left.SizeChanged += (_, _) => UpdateToolbarMode();
+                grid.SizeChanged += (_, _) => UpdateToolbarMode();
+            }
+        }
+
+        private static double RowWidth(Panel row) // ширина видимих кнопок рядка з урахуванням проміжків
+        {
+            var visible = row.Children.Where(c => c.IsVisible).ToList();
+            double spacing = row is StackPanel sp ? sp.Spacing : 0;
+            return visible.Sum(c => c.DesiredSize.Width) + spacing * Math.Max(0, visible.Count - 1);
+        }
+
+        /// <summary>
+        /// Вирішує, чи показувати вміст груп окремими кнопками: так, якщо розгорнута панель уміщується в ширину
+        /// вікна. Інакше — групи зі стрілкою й меню (як у 2.7.0, без прокрутки).
+        /// </summary>
+        private void UpdateToolbarMode()
+        {
+            if (_toolGroups.Count == 0 || BtnSelect.Parent is not StackPanel left || left.Parent is not Grid grid) return;
+            var right = grid.Children.OfType<StackPanel>().FirstOrDefault(c => Grid.GetColumn(c) == 1);
+            if (right == null || grid.Bounds.Width <= 0) return;
+
+            if (_inlineExtraWidth < 0)
+            {
+                if (_toolbarExpanded) return;
+                double toolW = BtnText.DesiredSize.Width;
+                if (toolW <= 0) return;
+                _inlineExtraWidth = _toolGroups.Sum(g => g.Inline.Children.Count * toolW + 2 * (g.Inline.Children.Count - 1) - g.Collapsed.DesiredSize.Width);
+            }
+
+            double current = RowWidth(left) + RowWidth(right);
+            double needExpanded = current + (_toolbarExpanded ? 0 : _inlineExtraWidth);
+            bool expand = needExpanded <= grid.Bounds.Width - 16;
+            if (expand == _toolbarExpanded) return;
+
+            _toolbarExpanded = expand;
+            foreach (var (collapsed, inline) in _toolGroups)
+            {
+                collapsed.IsVisible = !expand;
+                inline.IsVisible = expand;
             }
         }
 
@@ -1846,7 +1994,7 @@ namespace ScreenShot_One_Avalonia
 
         // Ctrl на Windows, Cmd на Mac (раніше Cmd+Z / Cmd+V на Mac не працювали — перевірявся лише Ctrl)
         // Акцент палітри для службових рамок (редагування тексту, виділення вставленої картинки)
-        private IBrush AccentBrush => (this.FindResource("AccentBrush") as IBrush) ?? Brushes.SeaGreen;
+        private IBrush AccentBrush => AppTheme.Brush(this, "AccentBrush", Brushes.SeaGreen);
 
         private static KeyModifiers PrimaryModifier => OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
 
@@ -1867,6 +2015,7 @@ namespace ScreenShot_One_Avalonia
             }
 
             if (e.Key == Key.Escape && _activeTool == DrawingTool.Crop) { ExitCropMode(); e.Handled = true; return; }
+            if (e.Key == Key.Enter && _activeTool == DrawingTool.Crop && CropControlsPanel.IsVisible) { PerformCrop(); e.Handled = true; return; }
 
             if (e.Key == Key.Space && !_isSpaceDown && (FocusManager?.GetFocusedElement() is not TextBox))
             {

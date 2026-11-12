@@ -24,7 +24,7 @@ namespace ScreenShot_One_Avalonia
     public partial class VideoEditorWindow : SukiWindow
     {
         // Кольори з палітри «Хвоя і м'ята» (App.axaml)
-        private IBrush ThemeBrush(string key) => (this.FindResource(key) as IBrush) ?? Brushes.Gray;
+        private IBrush ThemeBrush(string key) => AppTheme.Brush(this, key, Brushes.Gray);
 
         private LibVLC? _libVLC;
         private LibVLCSharp.Shared.MediaPlayer? _mediaPlayer;
@@ -478,17 +478,9 @@ namespace ScreenShot_One_Avalonia
             try
             {
                 bool isDark = this.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark;
-                if (BtnUpload != null)
-                {
-                    BtnUpload.Background = ThemeBrush("PanelBrush");
-                    BtnUpload.BorderBrush = ThemeBrush("MutedTextBrush");
-                    BtnUpload.BorderThickness = new Thickness(1.5);
-                }
-                if (TxtBtnUpload != null)
-                {
-                    TxtBtnUpload.Foreground = ThemeBrush("ToolbarIconBrush");
-                    TxtBtnUpload.FontWeight = FontWeight.Bold;
-                }
+                // Кольори кнопки Google Диска задані в XAML через DynamicResource — вони самі міняються з темою.
+                // (Раніше тут ставились локальні кольори, і до показу вікна вони виходили сірими.)
+                if (BtnUpload != null) BtnUpload.BorderThickness = new Thickness(1.5);
             }
             catch (Exception logEx) { AppLog.Warn(logEx); }
         }

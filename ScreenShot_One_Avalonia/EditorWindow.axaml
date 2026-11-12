@@ -30,6 +30,7 @@
 					<material:MaterialIcon Kind="ImagePlusOutline"/>
 					<Button.Flyout>
 						<Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Transient">
+							<Border Classes="menucard">
 							<StackPanel Spacing="2" MinWidth="290">
 							<Button Name="BtnPasteImage" Classes="Basic menuitem" Click="BtnPasteImage_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
@@ -45,6 +46,7 @@
 								</Grid>
 							</Button>
 							</StackPanel>
+						</Border>
 						</Flyout>
 					</Button.Flyout>
 				</Button>
@@ -62,6 +64,7 @@
 						<material:MaterialIcon Kind="ChevronDown"/>
 						<Button.Flyout>
 							<Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Transient">
+								<Border Classes="menucard">
 								<StackPanel Spacing="2" MinWidth="230">
 							<Button Name="BtnRectangle" Classes="Basic menuitem" Click="BtnRectangle_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
@@ -78,6 +81,7 @@
 								</Grid>
 							</Button>
 								</StackPanel>
+							</Border>
 							</Flyout>
 						</Button.Flyout>
 					</Button>
@@ -90,6 +94,7 @@
 						<material:MaterialIcon Kind="ChevronDown"/>
 						<Button.Flyout>
 							<Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Transient">
+								<Border Classes="menucard">
 								<StackPanel Spacing="2" MinWidth="230">
 							<Button Name="BtnArrow" Classes="Basic menuitem" Click="BtnArrow_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
@@ -112,6 +117,7 @@
 								</Grid>
 							</Button>
 								</StackPanel>
+							</Border>
 							</Flyout>
 						</Button.Flyout>
 					</Button>
@@ -124,6 +130,7 @@
 						<material:MaterialIcon Kind="ChevronDown"/>
 						<Button.Flyout>
 							<Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Transient">
+								<Border Classes="menucard">
 								<StackPanel Spacing="2" MinWidth="230">
 							<Button Name="BtnPencil" Classes="Basic menuitem" Click="BtnPencil_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
@@ -140,6 +147,7 @@
 								</Grid>
 							</Button>
 								</StackPanel>
+							</Border>
 							</Flyout>
 						</Button.Flyout>
 					</Button>
@@ -155,6 +163,7 @@
 						<material:MaterialIcon Kind="ChevronDown"/>
 						<Button.Flyout>
 							<Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Transient">
+								<Border Classes="menucard">
 								<StackPanel Spacing="2" MinWidth="230">
 							<Button Name="BtnBlur" Classes="Basic menuitem" Click="BtnBlur_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
@@ -171,6 +180,7 @@
 								</Grid>
 							</Button>
 								</StackPanel>
+							</Border>
 							</Flyout>
 						</Button.Flyout>
 					</Button>
@@ -237,6 +247,7 @@
 					<material:MaterialIcon Kind="ShareVariantOutline"/>
 					<Button.Flyout>
 						<Flyout Placement="BottomEdgeAlignedRight" ShowMode="Transient">
+							<Border Classes="menucard">
 							<StackPanel Spacing="2" MinWidth="270">
 							<Button Name="BtnPublicUpload" Classes="Basic menuitem" Click="BtnPublicUpload_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
@@ -251,6 +262,7 @@
 								</Grid>
 							</Button>
 							</StackPanel>
+						</Border>
 						</Flyout>
 					</Button.Flyout>
 				</Button>
@@ -290,23 +302,24 @@
 							<Rectangle Name="CropSelectionRect" Stroke="White" StrokeThickness="2" StrokeDashArray="4,2" StrokeJoin="Round" IsVisible="False"/>
 						</Canvas>
 
-						<Canvas>
-							<Border Name="CropControlsPanel" Background="#FA151515" CornerRadius="8" Padding="5" IsVisible="False" BoxShadow="0 2 10 0 #80000000">
-								<StackPanel Orientation="Horizontal">
-									<Button Name="BtnConfirmCrop" Classes="Basic" Width="40" Height="40" CornerRadius="20" Click="BtnConfirmCrop_Click" ToolTip.Tip="Застосувати обрізку" Foreground="LimeGreen">
-										<material:MaterialIcon Kind="Check" Width="24" Height="24"/>
-									</Button>
-									<Button Name="BtnCancelCrop" Classes="Basic" Width="40" Height="40" CornerRadius="20" Click="BtnCancelCrop_Click" ToolTip.Tip="Скасувати" Foreground="Red" Margin="5,0,0,0">
-										<material:MaterialIcon Kind="Close" Width="24" Height="24"/>
-									</Button>
-								</StackPanel>
-							</Border>
-						</Canvas>
 					</Grid>
 				</Grid>
 			</LayoutTransformControl>
 		</ScrollViewer>
 
+		<!-- Кнопки обрізки: окремий шар над полотном — не масштабуються разом зі знімком і не виїжджають за межі вікна -->
+		<Canvas Grid.Row="1" Name="CropControlsLayer" ClipToBounds="True">
+			<Border Name="CropControlsPanel" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="4" IsVisible="False" BoxShadow="0 4 14 0 #66000000">
+				<StackPanel Orientation="Horizontal">
+					<Button Name="BtnConfirmCrop" Classes="Basic" Width="40" Height="40" CornerRadius="20" Click="BtnConfirmCrop_Click" ToolTip.Tip="Застосувати обрізку (Enter)" Foreground="{DynamicResource AccentBrush}">
+						<material:MaterialIcon Kind="Check" Width="24" Height="24"/>
+					</Button>
+					<Button Name="BtnCancelCrop" Classes="Basic" Width="40" Height="40" CornerRadius="20" Click="BtnCancelCrop_Click" ToolTip.Tip="Скасувати (Esc)" Foreground="{DynamicResource DangerBrush}" Margin="5,0,0,0">
+						<material:MaterialIcon Kind="Close" Width="24" Height="24"/>
+					</Button>
+				</StackPanel>
+			</Border>
+		</Canvas>
 		<Border Name="ToastNotification" Grid.Row="1" Background="{DynamicResource ToastBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="10" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,30" Padding="25,15" IsVisible="False" IsHitTestVisible="False">
 			<TextBlock Name="ToastText" Text="Скопійовано в буфер!" Foreground="{DynamicResource SukiText}" FontSize="18" FontWeight="SemiBold"/>
 		</Border>

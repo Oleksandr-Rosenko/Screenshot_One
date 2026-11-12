@@ -79,7 +79,7 @@
 			<ListBox Name="ScreenshotsListBox" Classes="gallery" Background="Transparent" DoubleTapped="ListBox_DoubleTapped">
 				<ListBox.ItemsPanel>
 					<ItemsPanelTemplate>
-						<WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
+						<WrapPanel Orientation="Horizontal"/>
 					</ItemsPanelTemplate>
 				</ListBox.ItemsPanel>
 				<ListBox.ItemTemplate>
@@ -120,7 +120,7 @@
 			<ListBox Name="VideosListBox" IsVisible="False" Classes="gallery" Background="Transparent" DoubleTapped="ListBox_DoubleTapped">
 				<ListBox.ItemsPanel>
 					<ItemsPanelTemplate>
-						<WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
+						<WrapPanel Orientation="Horizontal"/>
 					</ItemsPanelTemplate>
 				</ListBox.ItemsPanel>
 				<ListBox.ItemTemplate>

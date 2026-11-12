@@ -29,17 +29,17 @@ namespace ScreenShot_One_Avalonia
     public partial class UpdateWindow : SukiWindow
     {
         // Кольори з палітри «Хвоя і м'ята» (App.axaml) замість жорстко прописаного синього
-        private IBrush Accent => (this.FindResource("AccentBrush") as IBrush) ?? Brushes.SeaGreen;
-        private IBrush AccentSoft => (this.FindResource("ActiveToolBrush") as IBrush) ?? Brushes.Transparent;
-        private IBrush Danger => (this.FindResource("DangerBrush") as IBrush) ?? Brushes.IndianRed;
+        private IBrush Accent => AppTheme.Brush(this, "AccentBrush", Brushes.SeaGreen);
+        private IBrush AccentSoft => AppTheme.Brush(this, "ActiveToolBrush", Brushes.Transparent);
+        private IBrush Danger => AppTheme.Brush(this, "DangerBrush", Brushes.IndianRed);
 
         private static UpdateWindow? _activeWindow;
 
         private UpdateWindowState _state = UpdateWindowState.Checking;
         private UpdateManager? _updateManager;
         private UpdateInfo? _updateInfo;
-        private string _currentVersion = "2.7.1";
-        private string _newVersion = "2.7.1";
+        private string _currentVersion = "2.7.2";
+        private string _newVersion = "2.7.2";
         private bool _isDownloading = false;
         private bool _isReadyToRestart = false;
 
@@ -133,23 +133,7 @@ namespace ScreenShot_One_Avalonia
         /// <summary>
         /// Повертає пензель для ресурсу теми, незалежно від того, чи це Color, чи Brush.
         /// </summary>
-        private IBrush GetThemeBrush(string resourceKey, IBrush fallback)
-        {
-            try
-            {
-                var resource = this.FindResource(resourceKey);
-                return resource switch
-                {
-                    IBrush brush => brush,
-                    Color color => new SolidColorBrush(color),
-                    _ => fallback
-                };
-            }
-            catch
-            {
-                return fallback;
-            }
-        }
+        private IBrush GetThemeBrush(string resourceKey, IBrush fallback) => AppTheme.Brush(this, resourceKey, fallback);
 
         private void SetUpdateAvailableState()
         {
@@ -461,7 +445,7 @@ namespace ScreenShot_One_Avalonia
                 return $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
             }
 
-            return "2.7.1";
+            return "2.7.2";
         }
 
         public static async Task CheckAndShowAsync(bool isManual = true)

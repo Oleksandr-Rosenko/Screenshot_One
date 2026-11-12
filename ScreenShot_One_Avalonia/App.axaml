@@ -144,6 +144,22 @@
 			<Setter Property="Padding" Value="10,7" />
 			<Setter Property="CornerRadius" Value="6" />
 			<Setter Property="Background" Value="Transparent" />
+			<Setter Property="Foreground" Value="{DynamicResource ToolbarIconBrush}" />
+		</Style>
+		<!-- Випадаючі меню: власна суцільна картка (шаблон SukiUI малював меню без фону — пункти лягали поверх інших вікон) -->
+		<Style Selector="FlyoutPresenter">
+			<Setter Property="Background" Value="Transparent" />
+			<Setter Property="BorderThickness" Value="0" />
+			<Setter Property="Padding" Value="0" />
+		</Style>
+		<Style Selector="Border.menucard">
+			<Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+			<Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
+			<Setter Property="BorderThickness" Value="1" />
+			<Setter Property="CornerRadius" Value="10" />
+			<Setter Property="Padding" Value="6" />
+			<Setter Property="BoxShadow" Value="0 6 18 0 #40000000" />
+			<Setter Property="Margin" Value="4" />
 		</Style>
 		<Style Selector="Button.menuitem materialIcons|MaterialIcon">
 			<Setter Property="Foreground" Value="{DynamicResource ToolbarIconBrush}" />

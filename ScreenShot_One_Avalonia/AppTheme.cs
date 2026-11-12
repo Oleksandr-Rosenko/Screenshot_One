@@ -1,4 +1,5 @@
 using System;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
 using SukiUI;
@@ -20,6 +21,35 @@ namespace ScreenShot_One_Avalonia
         private static readonly SukiColorTheme MintDark = new SukiColorTheme("MintDark", AccentDark, AccentDark);
         private static readonly SukiColorTheme MintLight = new SukiColorTheme("MintLight", AccentLight, AccentLight);
         private static bool _registered;
+
+        /// <summary>
+        /// Колір-токен з App.axaml для поточної теми. Звичайний FindResource до показу вікна не знає теми
+        /// й не бачить ThemeDictionaries (у 2.7.0 через це кнопка Google Диска у відеоредакторі ставала сірою
+        /// з невидимим текстом), тому тема береться явно: вікна, а якщо її ще немає — програми.
+        /// </summary>
+        public static IBrush Brush(Avalonia.StyledElement element, string key, IBrush fallback)
+        {
+            try
+            {
+                var app = Avalonia.Application.Current;
+                ThemeVariant? variant = element.ActualThemeVariant;
+                if (variant == null || variant == ThemeVariant.Default) variant = app?.ActualThemeVariant;
+                object? value = null;
+                if (!element.TryFindResource(key, variant, out value) && app != null)
+                    app.TryFindResource(key, variant ?? app.ActualThemeVariant, out value);
+                return value switch
+                {
+                    IBrush brush => brush,
+                    Color color => new SolidColorBrush(color),
+                    _ => fallback
+                };
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn(ex);
+                return fallback;
+            }
+        }
 
         public static void ApplyAccent(ThemeVariant variant)
         {

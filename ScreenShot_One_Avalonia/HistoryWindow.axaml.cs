@@ -189,6 +189,13 @@ namespace ScreenShot_One_Avalonia
 
             // Сітка карток по центру: ширина підганяється під ціле число колонок
             SizeChanged += (_, _) => UpdateGalleryLayout();
+            // Видима область змінюється й тоді, коли з'являється смуга прокрутки — теж перераховуємо
+            LayoutUpdated += (_, _) =>
+            {
+                var lb = VideosListBox.IsVisible ? VideosListBox : ScreenshotsListBox;
+                double w = lb.ItemsPanelRoot is Panel p ? GallerySpace(p) : 0;
+                if (Math.Abs(w - _lastViewportWidth) > 0.5) { _lastViewportWidth = w; UpdateGalleryLayout(); }
+            };
 
             ScreenshotsListBox.ItemsSource = _shownScreens;
             VideosListBox.ItemsSource = _shownVideos;
@@ -200,36 +207,60 @@ namespace ScreenShot_One_Avalonia
 
         }
 
-        // Ширина «слота» однієї картки: 236 px картки + по 6 px відступу з кожного боку
+        // Ширина «слота» однієї картки: 236 px картки + по 6 px відступу з кожного боку (запасне значення,
+        // справжню ширину беремо з першої картки — на Windows вона може бути трохи більшою через шрифти/DPI)
         private const double CardSlotWidth = 248;
-        // Поля сітки (Margin 12 з кожного боку) + запас під смугу прокрутки
-        private const double GalleryChrome = 24 + 18;
-
-        /// <summary>Скільки колонок вміщується і яка ширина сітки (публічне для тестів).</summary>
-        public static (int Columns, double Width) ComputeGalleryLayout(double windowWidth)
-        {
-            int cols = Math.Max(1, (int)((windowWidth - GalleryChrome) / CardSlotWidth));
-            return (cols, cols * CardSlotWidth);
-        }
+        private double _lastViewportWidth;
 
         /// <summary>
-        /// Центрує сітку: панель отримує ширину рівно під N колонок (тоді неповний останній рядок
-        /// вирівнюється по лівому краю сітки, а не «плаває»), шапка — ту саму ширину, щоб кнопка
-        /// очищення стояла над правим краєм карток.
+        /// Скільки колонок вміщується у видиму область і який відступ зліва/справа потрібен, щоб сітка
+        /// стала по центру (публічне для тестів). Відступ округлюється вниз — тоді колонки гарантовано
+        /// вміщаються й WrapPanel не переносить останню на новий рядок.
+        /// </summary>
+        public static (int Columns, double SideMargin) ComputeGalleryLayout(double viewportWidth, double slotWidth = CardSlotWidth)
+        {
+            if (slotWidth <= 0) slotWidth = CardSlotWidth;
+            int cols = Math.Max(1, (int)Math.Floor(viewportWidth / slotWidth));
+            double margin = Math.Max(0, Math.Floor((viewportWidth - cols * slotWidth) / 2) - 1);
+            return (cols, margin);
+        }
+
+        private static double GallerySpace(Panel panel) => panel.Bounds.Width + panel.Margin.Left + panel.Margin.Right;
+
+        /// <summary>
+        /// Центрує сітку: панель карток отримує однакові відступи зліва й справа (неповний останній рядок
+        /// вирівнюється по лівому краю сітки), а шапка — такі самі межі, щоб кнопка очищення стояла над
+        /// правим краєм карток. Раніше панелі задавалась фіксована ширина під 248 px на картку; на Windows
+        /// картка виходила ширшою, остання колонка переносилась, і сітка «липла» ліворуч.
         /// </summary>
         private void UpdateGalleryLayout()
         {
-            if (Bounds.Width <= 0) return;
-            var (_, width) = ComputeGalleryLayout(Bounds.Width);
+            var lb = VideosListBox?.IsVisible == true ? VideosListBox : ScreenshotsListBox;
+            if (lb?.ItemsPanelRoot is not Panel panel) return;
+            // Місце, яке список реально дає панелі (видима ширина мінус внутрішні відступи шаблону SukiUI)
+            double space = GallerySpace(panel);
+            if (space <= 0) return;
 
-            if (HeaderRow != null)
+            double slot = panel.Children.Count > 0 ? panel.Children[0].DesiredSize.Width : CardSlotWidth;
+            var (cols, margin) = ComputeGalleryLayout(space, slot);
+
+            foreach (var l in new[] { ScreenshotsListBox, VideosListBox })
             {
-                HeaderRow.Width = width - 12; // вирівнювання по краях самих карток (без їхніх зовнішніх відступів)
-                HeaderRow.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center;
+                if (l?.ItemsPanelRoot is Panel p && Math.Abs(p.Margin.Left - margin) > 0.5)
+                    p.Margin = new Thickness(margin, 0, margin, 0);
             }
-            foreach (var lb in new[] { ScreenshotsListBox, VideosListBox })
+
+            if (HeaderRow?.Parent is Visual headerParent)
             {
-                if (lb?.ItemsPanelRoot is Panel panel) panel.Width = width;
+                // Лівий край місця під панель = позиція панелі мінус її поточний відступ
+                var panelOrigin = panel.TranslatePoint(new Point(0, 0), headerParent);
+                if (panelOrigin == null) return;
+                double spaceLeft = panelOrigin.Value.X - panel.Margin.Left;
+                double left = spaceLeft + margin + 6;                    // 6 — зовнішній відступ картки
+                double right = headerParent.Bounds.Width - (spaceLeft + margin + cols * slot - 6);
+                HeaderRow.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+                HeaderRow.Width = double.NaN;
+                HeaderRow.Margin = new Thickness(Math.Max(0, left), 14, Math.Max(0, right), 6);
             }
         }
 

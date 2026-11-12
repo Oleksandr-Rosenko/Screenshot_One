@@ -35,7 +35,7 @@
 
 					<!-- Right: Actions (Google Drive, Save) -->
 					<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-						<Button Name="BtnUpload" Classes="Basic" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1.5" CornerRadius="8" Padding="12,6" ToolTip.Tip="Вивантажити на Google Диск" Click="BtnUpload_Click">
+						<Button Name="BtnUpload" Classes="Basic" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1.5" CornerRadius="8" Padding="12,6" ToolTip.Tip="Вивантажити на Google Диск" Click="BtnUpload_Click">
 							<StackPanel Orientation="Horizontal" Spacing="6">
 								<material:MaterialIcon Kind="GoogleDrive" Width="20" Height="20" Foreground="#4285F4"/>
 								<TextBlock Name="TxtBtnUpload" Text="Google Диск" VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource SukiText}"/>

@@ -13,6 +13,7 @@
   - `MainWindow` — оверлей виділення зони для скріншота.
   - `EditorWindow` — редактор скріншотів (~1900 рядків code-behind): фігури (`ShapeType`), undo/redo, обрізка, вставка, копіювання, завантаження.
   - `HistoryWindow` + `HistoryManager` — історія. Файли `{id}_original.png`, `{id}_flattened.png`, `{id}_meta.json`; ліміт 500; ID `yyyyMMdd_HHmmss_fff`.
+    Центрування галереї — відступами панелі від реального місця, яке дає шаблон списку (`GallerySpace`), а не від фіксованої ширини.
     Вікно історії показує сторінки по 40 (`PageSize`, `AppendPage` при прокрутці), мініатюри декодуються паралельно (`Bitmap.DecodeToWidth`).
     Редактор зберігає через `HistoryManager.ReserveId` + `SaveScreenshotInBackground` (фонова черга; `_flattened.png` пишеться останнім і атомарно). Перед виходом/оновленням — `HistoryManager.WaitForPendingSaves`.
   - `VideoControlWindow`, `VideoRegionWindow`, `VideoRecorderManager` — запис відео. На Windows ScreenRecorderLib, на macOS ffmpeg. Інтерфейс `IVideoRecorderService`.
@@ -29,7 +30,7 @@
   - `OcrService` + `OcrFlow` + `ToastWindow` — OCR: Windows `Windows.Media.Ocr`; Mac — Swift-утиліта `MacHelpers/ocr.swift` → `Contents/MacOS/ocr-helper` (збирає `Build-MacApp.ps1`, CI перевіряє `--selftest`). `MainWindow(ocrMode: true)` — оверлей виділення для OCR.
   - Відео: `IVideoRecorderService` має `PauseAsync/ResumeAsync` і мікрофон. Mac — пауза сегментами + `ffmpeg concat`; системний звук на Mac не пишеться (потрібен віртуальний аудіопристрій).
   - Редактор: інструменти `Ellipse`, `Line`, `Spotlight` (`SpotlightShape`), товщина `_strokeWidth`; `ShapeType` у JSON — числа, нові типи лише в кінець; `ShapeData.StrokeWidth` (0 — старі записи). `Pixelate` прибрано з панелі як дубль «Розмиття» (2.7.0), але його завантаження зі старих записів лишилось.
-  - Панель редактора (2.7.0): групи з `Flyout` (`BtnShapesGroup`, `BtnLinesGroup`, `BtnDrawGroup`, `BtnHideGroup`, `BtnImageGroup`, `BtnShareGroup`), підсвітка — клас `active` (стиль у `App.axaml`), іконка групи = останній інструмент (`UpdateToolHighlight`). Колір/товщина/розмір тексту — у `ColorPalettePopup`. Однолітерні гарячі клавіші — `HandleToolShortcut`. **Без ScrollViewer у панелі.**
+  - Панель редактора (2.7.0): групи з `Flyout` (`BtnShapesGroup`, `BtnLinesGroup`, `BtnDrawGroup`, `BtnHideGroup`, `BtnImageGroup`, `BtnShareGroup`), підсвітка — клас `active` (стиль у `App.axaml`), іконка групи = останній інструмент (`UpdateToolHighlight`). Колір/товщина/розмір тексту — у `ColorPalettePopup`. Однолітерні гарячі клавіші — `HandleToolShortcut`. **Без ScrollViewer у панелі.** З 2.7.2 при достатній ширині групи розгортаються в окремі кнопки (`BuildInlineToolButtons` / `UpdateToolbarMode`), вміст меню — у `Border.menucard` (шаблон SukiUI малює `FlyoutPresenter` без фону). Кнопки обрізки — у шарі `CropControlsLayer` поза масштабованим полотном (`PositionCropControls`).
   - `HotkeyService` — глобальні клавіші. Windows: low-level hook в окремому потоці; macOS: Carbon `RegisterEventHotKey`.
   - `SettingsManager` / `AppSettings` — `settings.json`, міграції (`SettingsVersion`), тема, автозапуск.
   - `UpdateWindow` — оновлення через Velopack (`GithubSource`, без токена).
@@ -44,6 +45,7 @@
 
 - Усі кольори — токени в `App.axaml` (ThemeDictionaries Dark/Light): `AppBackgroundBrush`, `PanelBrush`, `PanelBorderBrush`, `CanvasBackdropBrush`, `ToolbarIconBrush`, `MutedTextBrush`, `AccentBrush`, `OnAccentBrush`, `ActiveToolBrush`, `DangerBrush`, `ToastBrush` + перевизначені `Suki*` кольори. Акцент SukiUI — `AppTheme.ApplyAccent` (м'ятний окремо для темної/світлої).
 - **Ніяких кольорів Tailwind** (zinc/slate/emerald/blue-600 тощо — автор проти) і жорстко прописаних hex у вікнах: беріть токени (`{DynamicResource ...}` або `FindResource`). Винятки: кольори малювання, бренд Google Drive, завжди темна панель запису відео.
+- Кольори-токени з коду — лише через `AppTheme.Brush(this, "Key", fallback)`: звичайний `FindResource` до показу вікна не бачить ThemeDictionaries і повертає null (так кнопка Google Диска у 2.7.1 була сірою).
 - Глобальні стилі: `SukiBackground` прихований, `PART_Root` вікна — суцільний `AppBackgroundBrush`, `GlassCard` непрозорий (без «скла»). Акцентна кнопка — клас `Flat`; кнопки інструментів — `Basic tool`.
 - Перевіряти вигляд: headless-рендер вікон через `AppBuilder.Configure<App>().UseSkia().UseHeadless(...)` і `window.CaptureRenderedFrame()` (так робились скріншоти «було/стало»); показувати автору перед релізом.
 - Іконки: **фірмовий знак автора — чорний квадрат з білим «SO»** (`Assets/tray.png`, `tray-recording.png` з червоною точкою, `icon.ico` 16–256, `icon.icns`). Однаковий на Windows і Mac. Не замінювати на інші знаки (у 2.7.0 спроба «видошукача» автору не сподобалась).
@@ -140,6 +142,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 
 ## Історія ключових змін
 
+- 2.7.2 — розгорнута панель редактора, суцільні меню, кнопки обрізки поверх полотна, справжнє центрування історії, кнопка Google Диска, перейменування ярлика Windows (`WindowsShell`).
 - 2.7.1 — повернуто іконку «SO», назва «Screenshot One», вікно налаштувань у межах екрана, швидке відкриття й центрування історії.
 - 2.7.0 — редизайн «Хвоя і м'ята»: палітра-токени, суцільні вікна, згрупована панель редактора без прокрутки + гарячі клавіші, історія-галерея, нові налаштування, нові іконки (у т.ч. icon.icns для Mac), прибрано дубль піксельного розмиття.
 - 2.6.0 — OCR (Windows/Mac), плаваюча мініатюра, «Зберегти як» і автозбереження, нові інструменти (еліпс, лінія, піксельне розмиття, прожектор, товщина), мікрофон і пауза у відео, Cmd-скорочення на Mac.

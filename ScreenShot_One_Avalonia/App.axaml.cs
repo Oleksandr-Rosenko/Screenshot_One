@@ -59,6 +59,8 @@ namespace ScreenShot_One_Avalonia
                 {
                     await System.Threading.Tasks.Task.Delay(3000);
                     VlcShared.Prewarm();
+                    // Windows: після оновлення — нова назва ярлика й свіжа іконка в «Пуску»
+                    WindowsShell.RefreshAfterUpdate();
                 });
 
                 // Автоматична фонова перевірка оновлень через 6 секунд після запуску
