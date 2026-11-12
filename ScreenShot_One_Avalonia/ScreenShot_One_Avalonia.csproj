@@ -9,7 +9,7 @@
     <AssemblyName>Screenshot_One</AssemblyName>
     <Product>Screenshot One</Product>
     <AssemblyTitle>Screenshot One</AssemblyTitle>
-    <Version>2.8.2</Version>
+    <Version>2.8.3</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(TargetFramework.StartsWith('net10.0-windows'))">
