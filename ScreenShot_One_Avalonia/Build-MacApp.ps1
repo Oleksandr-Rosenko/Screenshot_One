@@ -52,11 +52,14 @@ function Sign-Bundle([string]$bundleDir, [string]$identity) {
     # Службові атрибути (карантин, Finder info) codesign не пропускає
     xattr -cr $bundleDir
     $mainExe = Join-Path $bundleDir "Contents/MacOS/Screenshot_One"
-    $macho = Get-ChildItem -Path $bundleDir -Recurse -File | Where-Object {
-        $_.FullName -ne $mainExe -and ((& file -b $_.FullName) -match 'Mach-O')
+    $macOSDir = Join-Path $bundleDir "Contents/MacOS"
+    # macOS вважає кодом усе в Contents/MacOS, а .NET кладе туди й .dll/.json — тож підписуємо кожен файл
+    # (рецепт Avalonia для macOS); поза MacOS — лише Mach-O
+    $files = Get-ChildItem -Path $bundleDir -Recurse -File | Where-Object {
+        $_.FullName -ne $mainExe -and ($_.FullName.StartsWith($macOSDir) -or ((& file -b $_.FullName) -match 'Mach-O'))
     }
-    Write-Host "Signing $($macho.Count) nested Mach-O files"
-    foreach ($f in $macho) {
+    Write-Host "Signing $($files.Count) nested files"
+    foreach ($f in $files) {
         $out = codesign --force --timestamp=none --sign $identity $f.FullName 2>&1
         if ($LASTEXITCODE -ne 0) { throw "codesign failed for $($f.FullName): $out" }
     }
@@ -173,10 +176,18 @@ if ($OnMac -and $Arch -eq "all") {
         if ($LASTEXITCODE -ne 0) { throw "pkgbuild --analyze failed" }
         # Не «переносимий»: інакше Installer може оновити стару копію деінде (наприклад, у «Завантаженнях»)
         plutil -replace "0.BundleIsRelocatable" -bool NO $plist
+        $pkgOut = Join-Path $pkgWork "$targetArch.pkg"
+        # --preserve-xattr: підписи не-Mach-O файлів зберігаються в розширених атрибутах
         pkgbuild --root $root --component-plist $plist --install-location /Applications `
             --identifier "com.screenshotone.app.$targetArch" --version $Version `
-            --scripts $scripts (Join-Path $pkgWork "$targetArch.pkg")
-        if ($LASTEXITCODE -ne 0) { throw "pkgbuild failed for $targetArch" }
+            --scripts $scripts --preserve-xattr $pkgOut
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "pkgbuild --preserve-xattr failed, retrying without it"
+            pkgbuild --root $root --component-plist $plist --install-location /Applications `
+                --identifier "com.screenshotone.app.$targetArch" --version $Version `
+                --scripts $scripts $pkgOut
+            if ($LASTEXITCODE -ne 0) { throw "pkgbuild failed for $targetArch" }
+        }
     }
 
     $pkgPath = Join-Path $DistDir "Screenshot_One-v$Version-macOS.pkg"
