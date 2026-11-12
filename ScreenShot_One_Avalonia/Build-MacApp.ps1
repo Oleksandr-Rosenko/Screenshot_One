@@ -49,17 +49,23 @@ function Get-Ffmpeg([string]$targetArch, [string]$destDir) {
 # Підпис: кожен Mach-O файл окремо, потім сам бандл. Без «hardened runtime» (йому потрібні
 # entitlements для JIT .NET). Якщо власний сертифікат не спрацював — ad-hoc, щоб збірка не падала.
 function Sign-Bundle([string]$bundleDir, [string]$identity) {
+    # Службові атрибути (карантин, Finder info) codesign не пропускає
+    xattr -cr $bundleDir
+    $mainExe = Join-Path $bundleDir "Contents/MacOS/Screenshot_One"
     $macho = Get-ChildItem -Path $bundleDir -Recurse -File | Where-Object {
-        (& file -b $_.FullName) -match 'Mach-O'
+        $_.FullName -ne $mainExe -and ((& file -b $_.FullName) -match 'Mach-O')
     }
+    Write-Host "Signing $($macho.Count) nested Mach-O files"
     foreach ($f in $macho) {
-        codesign --force --timestamp=none --sign $identity $f.FullName 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "codesign failed: $($f.FullName)" }
+        $out = codesign --force --timestamp=none --sign $identity $f.FullName 2>&1
+        if ($LASTEXITCODE -ne 0) { throw "codesign failed for $($f.FullName): $out" }
     }
-    codesign --force --timestamp=none --sign $identity $bundleDir
-    if ($LASTEXITCODE -ne 0) { throw "codesign failed: $bundleDir" }
-    codesign --verify --strict $bundleDir
-    if ($LASTEXITCODE -ne 0) { throw "codesign verify failed: $bundleDir" }
+    # Головний виконуваний файл підписується разом із бандлом
+    $out = codesign --force --timestamp=none --sign $identity $bundleDir 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "codesign failed for bundle: $out" }
+    $out = codesign --verify --strict --verbose=2 $bundleDir 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "codesign verify failed: $out" }
+    Write-Host $out
 }
 
 $Architectures = if ($Arch -eq "all") { @("arm64", "x64") } else { @($Arch) }
