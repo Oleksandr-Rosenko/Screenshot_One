@@ -58,6 +58,11 @@ namespace ScreenShot_One_Avalonia
                     await CrashReport.OfferLogIfCrashedAsync();
                 });
 
+                // Самоперевірка панелі трею для CI (SO_SELFTEST_TRAY=1): «натискаємо» значок і пишемо в журнал,
+                // чи панель відкрилась і не закрилась одразу
+                if (Environment.GetEnvironmentVariable("SO_SELFTEST_TRAY") == "1")
+                    RunTraySelfTestAsync().FireAndForget("Самоперевірка панелі трею");
+
                 // Прогріваємо VLC у фоні, щоб перше відкриття відеоредактора не підвисало
                 _ = System.Threading.Tasks.Task.Run(async () =>
                 {
@@ -105,9 +110,33 @@ namespace ScreenShot_One_Avalonia
             return window;
         }
 
+        private static byte[] ReadAsset(string name)
+        {
+            using var stream = Avalonia.Platform.AssetLoader.Open(new Uri($"avares://Screenshot_One/Assets/{name}"));
+            using var ms = new System.IO.MemoryStream();
+            stream.CopyTo(ms);
+            return ms.ToArray();
+        }
+
         private void InitializeTrayIcon(IClassicDesktopStyleApplicationLifetime desktop)
 
         {
+
+            // macOS: власний значок у рядку меню — клік відкриває панель, як на Windows
+            // (TrayIcon з Avalonia на Mac події кліку не дає). Якщо не вдалося — звичайний TrayIcon з меню.
+            if (OperatingSystem.IsMacOS())
+            {
+                try
+                {
+                    MacStatusItem.Clicked += () => TrayPanelWindow.Toggle(ScreenService.GetCursorPosition());
+                    MacStatusItem.Create(ReadAsset("tray.png"), "Screenshot One");
+                    VideoRecorderManager.OnStatusChanged += isRecording =>
+                        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                            MacStatusItem.SetImage(ReadAsset(isRecording ? "tray-recording.png" : "tray.png")));
+                    return;
+                }
+                catch (Exception ex) { AppLog.Error(ex, "Mac: значок у рядку меню — повертаємось до TrayIcon"); }
+            }
 
             _trayIcon = new TrayIcon
 
@@ -119,10 +148,8 @@ namespace ScreenShot_One_Avalonia
 
             };
 
-            // Windows: лівий клік — панель з плитками (TrayPanelWindow), правий — звичайне меню.
-            // macOS поки лишає меню: клік по значку в рядку меню відкриває саме його.
-            if (OperatingSystem.IsWindows())
-                _trayIcon.Clicked += (_, _) => TrayPanelWindow.Toggle(ScreenService.GetCursorPosition());
+            // Windows: лівий клік — панель з плитками (TrayPanelWindow), правий — звичайне меню
+            _trayIcon.Clicked += (_, _) => TrayPanelWindow.Toggle(ScreenService.GetCursorPosition());
 
             // Червона крапка на іконці трею, поки йде запис відео
             VideoRecorderManager.OnStatusChanged += isRecording =>
@@ -150,6 +177,19 @@ namespace ScreenShot_One_Avalonia
             SettingsManager.UnregisterAll();
             HistoryManager.WaitForPendingSaves(TimeSpan.FromSeconds(5));
             if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) desktop.Shutdown();
+        }
+
+        private static async System.Threading.Tasks.Task RunTraySelfTestAsync()
+        {
+            await System.Threading.Tasks.Task.Delay(6000);
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (OperatingSystem.IsMacOS() && MacStatusItem.IsCreated) MacStatusItem.PerformClick();
+                else TrayPanelWindow.Toggle(null);
+            });
+            await System.Threading.Tasks.Task.Delay(2500);
+            bool open = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => TrayPanelWindow.IsOpen);
+            AppLog.Write($"[SelfTest] панель трею відкрита через 2,5 с: {open}");
         }
 
         /// <summary>Дії трею — спільні для меню й панелі <see cref="TrayPanelWindow"/>.</summary>

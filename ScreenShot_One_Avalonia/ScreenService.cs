@@ -178,6 +178,23 @@ namespace ScreenShot_One_Avalonia
                 catch (Exception logEx) { AppLog.Warn(logEx); }
             }
 
+            // macOS: позиція курсора з CoreGraphics (точки, початок — лівий верхній кут головного екрана)
+            if (OperatingSystem.IsMacOS())
+            {
+                try
+                {
+                    IntPtr ev = MacCursor.CGEventCreate(IntPtr.Zero);
+                    if (ev != IntPtr.Zero)
+                    {
+                        var p = MacCursor.CGEventGetLocation(ev);
+                        MacCursor.CFRelease(ev);
+                        double scale = GetPrimaryScreen()?.Scaling ?? 1.0;
+                        return new PixelPoint((int)(p.X * scale), (int)(p.Y * scale));
+                    }
+                }
+                catch (Exception logEx) { AppLog.Warn(logEx); }
+            }
+
             // Cross-platform fallback: center of primary screen
             var primary = GetPrimaryScreen();
             if (primary != null)
@@ -186,5 +203,17 @@ namespace ScreenShot_One_Avalonia
             }
             return new PixelPoint(0, 0);
         }
+    }
+
+    internal static class MacCursor
+    {
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        public struct CGPoint { public double X, Y; }
+        [System.Runtime.InteropServices.DllImport("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")]
+        public static extern IntPtr CGEventCreate(IntPtr source);
+        [System.Runtime.InteropServices.DllImport("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")]
+        public static extern CGPoint CGEventGetLocation(IntPtr ev);
+        [System.Runtime.InteropServices.DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
+        public static extern void CFRelease(IntPtr obj);
     }
 }

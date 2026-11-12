@@ -20,7 +20,11 @@ namespace ScreenShot_One_Avalonia
     public partial class TrayPanelWindow : Window
     {
         private static TrayPanelWindow? _current;
+        private static DateTime _lastClosedUtc;
         private bool _closing;
+        // Після кліку по треєві Windows повертає фокус панелі задач — перші миті втрату фокуса ігноруємо,
+        // інакше панель закривалась одразу після появи (2.8.2–2.8.3: користувач бачив лише старе меню)
+        private DateTime _shownUtc = DateTime.MaxValue;
 
         public TrayPanelWindow()
         {
@@ -35,25 +39,43 @@ namespace ScreenShot_One_Avalonia
             KeysOcr.Text = ShortKeys(s.OcrModifier, s.OcrKey);
             KeysVideo.Text = ShortKeys(s.VideoModifier, s.VideoKey);
 
-            Deactivated += (_, _) => SafeClose();
+            Deactivated += (_, _) =>
+            {
+                if ((DateTime.UtcNow - _shownUtc).TotalMilliseconds < 700)
+                {
+                    AppLog.Write("[TrayPanel] втрата фокуса одразу після показу — ігноруємо");
+                    Dispatcher.UIThread.Post(Activate, DispatcherPriority.Background);
+                    return;
+                }
+                SafeClose();
+            };
             KeyDown += (_, e) => { if (e.Key == Key.Escape) SafeClose(); };
             LoadRecentAsync().FireAndForget("Панель трею: останні знімки");
         }
 
+        public static bool IsOpen => _current != null;
+
         /// <summary>Показує панель біля точки кліку (повторний клік — ховає).</summary>
         public static void Toggle(PixelPoint? anchor)
         {
+            AppLog.Write($"[TrayPanel] клік по значку, панель {(_current != null ? "відкрита — ховаємо" : "закрита — показуємо")}");
             if (_current != null) { _current.SafeClose(); return; }
-            var w = new TrayPanelWindow();
+            // Клік по значку, коли панель щойно закрилась через втрату фокуса (тим самим кліком) — не відкриваємо знову
+            if ((DateTime.UtcNow - _lastClosedUtc).TotalMilliseconds < 300) return;
+            TrayPanelWindow w;
+            try { w = new TrayPanelWindow(); }
+            catch (Exception ex) { AppLog.Error(ex, "Панель трею: створення"); return; }
             _current = w;
-            w.Closed += (_, _) => { if (_current == w) _current = null; };
+            w.Closed += (_, _) => { if (_current == w) _current = null; _lastClosedUtc = DateTime.UtcNow; AppLog.Write("[TrayPanel] закрито"); };
             w.Opacity = 0; // показуємо після розміщення, щоб не блимало в куті екрана
             w.Show();
             Dispatcher.UIThread.Post(() =>
             {
                 w.PlaceNear(anchor ?? ScreenService.GetCursorPosition());
                 w.Opacity = 1;
+                w._shownUtc = DateTime.UtcNow;
                 w.Activate();
+                AppLog.Write($"[TrayPanel] показано в {w.Position}, розмір {w.Bounds.Width:0}×{w.Bounds.Height:0}");
             }, DispatcherPriority.Loaded);
         }
 

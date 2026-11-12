@@ -40,7 +40,10 @@
   - Відео: `IVideoRecorderService` має `PauseAsync/ResumeAsync` і мікрофон. Mac — пауза сегментами + `ffmpeg concat`; системний звук на Mac не пишеться (потрібен віртуальний аудіопристрій).
   - Редактор: інструменти `Ellipse`, `Line`, `Spotlight` (`SpotlightShape`), товщина `_strokeWidth`; `ShapeType` у JSON — числа, нові типи лише в кінець; `ShapeData.StrokeWidth` (0 — старі записи). `Pixelate` прибрано з панелі як дубль «Розмиття» (2.7.0), але його завантаження зі старих записів лишилось.
   - Панель редактора (2.7.0): групи з `Flyout` (`BtnShapesGroup`, `BtnLinesGroup`, `BtnDrawGroup`, `BtnHideGroup`, `BtnImageGroup`, `BtnShareGroup`), підсвітка — клас `active` (стиль у `App.axaml`), іконка групи = останній інструмент (`UpdateToolHighlight`). Колір/товщина/розмір тексту — у `ColorPalettePopup`. Однолітерні гарячі клавіші — `HandleToolShortcut`. **Без ScrollViewer у панелі.** З 2.7.2 при достатній ширині групи розгортаються в окремі кнопки (`BuildInlineToolButtons` / `UpdateToolbarMode`), вміст меню — у `Border.menucard` (шаблон SukiUI малює `FlyoutPresenter` без фону). Кнопки обрізки — у шарі `CropControlsLayer` поза масштабованим полотном (`PositionCropControls`).
-  - `TrayPanelWindow` (2.8.2) — панель трею: плитки дій, останні 3 знімки, налаштування/оновлення/вихід. Windows: лівий клік по значку (`TrayIcon.Clicked`), правий — `NativeMenu`. macOS поки лише меню. Дії — `App.RunTrayAction(TrayAction)`, спільні з меню.
+  - `TrayPanelWindow` (2.8.2, на обох ОС з 2.8.4) — панель трею: плитки дій, останні 3 знімки, налаштування/оновлення/вихід. Дії — `App.RunTrayAction(TrayAction)`, спільні з меню. Перші 700 мс після показу втрата фокуса ігнорується (інакше після кліку по треєві Windows одразу закривав панель).
+    Windows: лівий клік (`TrayIcon.Clicked`; Avalonia: WM_LBUTTONUP → OnClicked), правий — `NativeMenu`.
+    macOS: `TrayIcon` з Avalonia **не дає події кліку** (Avalonia.Native не викликає OnClicked), тому значок — власний `MacStatusItem` (NSStatusItem через ObjC runtime: клас `SOStatusItemTarget`, action `soClick:` → `[UnmanagedCallersOnly]` C#). Лівий і правий клік — панель. Якщо створити не вдалось — запасний `TrayIcon` з меню.
+    Самоперевірка: `SO_SELFTEST_TRAY=1` — через 6 с програма сама «клікає» значок (Mac — `performClick:`), у журнал пише «[SelfTest] панель трею відкрита через 2,5 с: True»; CI перевіряє це на Windows і macOS.
   - **Меню трею не підміняти** (`_trayIcon.Menu = ...` лише один раз): на macOS Avalonia падає «The menu being updated does not match». Зміна мови — `UpdateTrayMenuTexts` (лише `Header`). Так падала Mac-версія 2.8.0–2.8.1.
   - `HotkeyService` — глобальні клавіші. Windows: low-level hook в окремому потоці; macOS: Carbon `RegisterEventHotKey`.
   - `SettingsManager` / `AppSettings` — `settings.json`, міграції (`SettingsVersion`), тема, автозапуск.
@@ -158,6 +161,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 
 ## Історія ключових змін
 
+- 2.8.4 — панель трею на Mac (власний NSStatusItem) і виправлення миттєвого закриття на Windows; самоперевірка панелі в CI на обох ОС.
 - 2.8.3 — знімок екрана на macOS 14+ через ScreenCaptureKit (`capture-helper`), CoreGraphics і screencapture — запасні.
 - 2.8.2 — виправлено падіння Mac на старті (підміна меню трею при зміні мови); панель трею з плитками на Windows; запуск програми в CI на macOS.
 - 2.8.1 — macOS: універсальний інсталятор .pkg, вбудований ffmpeg, самооновлення без пароля, стабільний підпис (якщо є секрети).
