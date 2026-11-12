@@ -114,12 +114,56 @@ namespace ScreenShot_One_Avalonia
 #endif
 
     /// <summary>
-    /// macOS: спершу нативний CoreGraphics (швидко, у пам'яті, коректно для Retina і кількох моніторів),
-    /// а якщо він не спрацював — старий перевірений шлях через /usr/sbin/screencapture.
+    /// macOS, по черзі:
+    /// 1) macOS 14+ — ScreenCaptureKit через утиліту capture-helper (MacScreenCaptureKit);
+    /// 2) CoreGraphics CGDisplayCreateImage (у пам'яті; Apple позначила застарілим з macOS 14);
+    /// 3) старий перевірений шлях через /usr/sbin/screencapture.
     /// </summary>
     public class MacScreenCaptureService : IScreenCaptureService
     {
         private bool _nativeBroken;
+
+        // Після кількох збоїв поспіль (тайм-аут, падіння) ScreenCaptureKit у цій сесії більше не пробуємо
+        private const int MaxScreenCaptureKitFailures = 2;
+        private int _sckFailures;
+        private bool _sckLogged;
+        private static readonly bool SckSupportedOs = OperatingSystem.IsMacOSVersionAtLeast(14);
+
+        private Bitmap? TryScreenCaptureKit(Func<(Bitmap? Bitmap, MacScreenCaptureKit.HelperExit Exit)> capture)
+        {
+            if (!SckSupportedOs || _sckFailures >= MaxScreenCaptureKitFailures) return null;
+            try
+            {
+                var (bitmap, exit) = capture();
+                switch (exit)
+                {
+                    case MacScreenCaptureKit.HelperExit.Ok when bitmap != null:
+                        _sckFailures = 0;
+                        if (!_sckLogged)
+                        {
+                            _sckLogged = true;
+                            AppLog.Write("macOS: знімки через ScreenCaptureKit (capture-helper)");
+                        }
+                        return bitmap;
+                    case MacScreenCaptureKit.HelperExit.Missing:
+                        _sckFailures = MaxScreenCaptureKitFailures;
+                        AppLog.Write("macOS: capture-helper не знайдено — знімки через CoreGraphics");
+                        return null;
+                    case MacScreenCaptureKit.HelperExit.NoPermission:
+                        // Без дозволу «Запис екрана» запасний шлях дасть хоча б шпалери; MacPermissions попереджає користувача
+                        return null;
+                    default:
+                        _sckFailures++;
+                        return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _sckFailures++;
+                AppLog.Error(ex, "Знімок через ScreenCaptureKit не вдався, використовуємо CoreGraphics");
+                return null;
+            }
+        }
 
         private Bitmap? TryNative(Func<Bitmap?> capture)
         {
@@ -140,7 +184,9 @@ namespace ScreenShot_One_Avalonia
         public Bitmap? CaptureRect(PixelRect rect, double scaling = 1.0)
         {
             if (rect.Width <= 0 || rect.Height <= 0) return null;
-            return TryNative(() => MacCoreGraphics.CaptureRect(rect)) ?? CaptureRectViaTool(rect, scaling);
+            return TryScreenCaptureKit(() => MacScreenCaptureKit.CaptureRect(rect, scaling))
+                ?? TryNative(() => MacCoreGraphics.CaptureRect(rect))
+                ?? CaptureRectViaTool(rect, scaling);
         }
 
         public Bitmap? CaptureScreen(Screen screen)
@@ -150,7 +196,9 @@ namespace ScreenShot_One_Avalonia
 
         public Bitmap? CaptureAllScreens()
         {
-            return TryNative(MacCoreGraphics.CaptureAllDisplays) ?? CaptureAllScreensViaTool();
+            return TryScreenCaptureKit(MacScreenCaptureKit.CaptureAllDisplays)
+                ?? TryNative(MacCoreGraphics.CaptureAllDisplays)
+                ?? CaptureAllScreensViaTool();
         }
 
         public Bitmap? CropBitmap(Bitmap source, PixelRect cropRect)

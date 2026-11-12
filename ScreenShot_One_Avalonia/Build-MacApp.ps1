@@ -98,16 +98,26 @@ foreach ($targetArch in $Architectures) {
     # Copy published files into Contents/MacOS
     Copy-Item -Path "$publishOut/*" -Destination $macOSDir -Recurse -Force
 
-    # OCR-утиліта (Vision) — потрібен swiftc (Xcode / Command Line Tools)
-    $swiftSrc = Join-Path $ScriptDir "MacHelpers/ocr.swift"
+    # Swift-утиліти в Contents/MacOS — потрібен swiftc (Xcode / Command Line Tools):
+    #   ocr-helper     — OCR (Vision), macOS 11+;
+    #   capture-helper — знімок екрана через ScreenCaptureKit, macOS 14+ (на старіших програма її не запускає,
+    #                    мінімальна версія самої програми лишається 10.15)
+    $swiftHelpers = @(
+        @{ Name = "ocr-helper";     Source = "MacHelpers/ocr.swift";     MinOS = "11" },
+        @{ Name = "capture-helper"; Source = "MacHelpers/capture.swift"; MinOS = "14" }
+    )
     $swiftc = Get-Command swiftc -ErrorAction SilentlyContinue
-    if ($swiftc -and (Test-Path $swiftSrc)) {
-        $swiftTarget = if ($targetArch -eq "arm64") { "arm64-apple-macos11" } else { "x86_64-apple-macos11" }
-        Write-Host "=== [macOS $targetArch] Building ocr-helper ($swiftTarget) ===" -ForegroundColor Cyan
-        swiftc -O -target $swiftTarget -o (Join-Path $macOSDir "ocr-helper") $swiftSrc
-        if ($LASTEXITCODE -ne 0) { throw "ocr-helper build failed" }
-    } else {
-        Write-Warning "swiftc not found: OCR on macOS will be unavailable in this build"
+    $swiftArch = if ($targetArch -eq "arm64") { "arm64" } else { "x86_64" }
+    foreach ($h in $swiftHelpers) {
+        $swiftSrc = Join-Path $ScriptDir $h.Source
+        if ($swiftc -and (Test-Path $swiftSrc)) {
+            $swiftTarget = "$swiftArch-apple-macos$($h.MinOS)"
+            Write-Host "=== [macOS $targetArch] Building $($h.Name) ($swiftTarget) ===" -ForegroundColor Cyan
+            swiftc -O -target $swiftTarget -o (Join-Path $macOSDir $h.Name) $swiftSrc
+            if ($LASTEXITCODE -ne 0) { throw "$($h.Name) build failed" }
+        } else {
+            Write-Warning "swiftc not found: $($h.Name) will be missing in this build (OCR unavailable / capture falls back to CoreGraphics)"
+        }
     }
 
     # ffmpeg усередині програми (запис і обрізка відео без Homebrew)

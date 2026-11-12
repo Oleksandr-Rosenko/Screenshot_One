@@ -266,6 +266,82 @@ namespace ScreenShot_One_Avalonia.Tests
             Assert.Contains(doc.Descendants("key"), k => k.Value == "RunAtLoad");
         }
 
+        // Вивід capture-helper --raw: "SOC1", ширина, висота, stride (UInt32 LE), масштаб (Float64 LE), пікселі BGRA
+        private static byte[] MakeRawCapture(int w, int h, int stride, double scale)
+        {
+            var data = new byte[24 + stride * h];
+            "SOC1"u8.CopyTo(data);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(4), (uint)w);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(8), (uint)h);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(12), (uint)stride);
+            System.Buffers.Binary.BinaryPrimitives.WriteDoubleLittleEndian(data.AsSpan(16), scale);
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    int i = 24 + y * stride + x * 4;
+                    data[i] = (byte)x; data[i + 1] = (byte)y; data[i + 2] = 9; data[i + 3] = 255;
+                }
+            return data;
+        }
+
+        [Fact]
+        public void MacScreenCaptureKit_ParseRaw_ReadsPixelsStrideAndDpi()
+        {
+            HeadlessAvalonia.Run(() =>
+            {
+                // stride більший за ширину × 4 (CoreGraphics вирівнює рядки)
+                var data = MakeRawCapture(5, 3, 32, 2.0);
+                using var bmp = MacScreenCaptureKit.ParseRaw(data, data.Length);
+                Assert.NotNull(bmp);
+                Assert.Equal(new PixelSize(5, 3), bmp!.PixelSize);
+                Assert.Equal(192, bmp.Dpi.X, 3); // DPI = 96 × масштаб із заголовка
+
+                var px = ReadPixels(bmp);
+                Assert.Equal(4, px[px.Length - 4]);   // останній піксель = (4, 2)
+                Assert.Equal(2, px[px.Length - 3]);
+                Assert.Equal(9, px[2]);
+
+                // Явний масштаб екрана важливіший за масштаб із заголовка
+                using var scaled = MacScreenCaptureKit.ParseRaw(data, data.Length, 1.5);
+                Assert.Equal(144, scaled!.Dpi.X, 3);
+            });
+        }
+
+        [Fact]
+        public void MacScreenCaptureKit_ParseRaw_RejectsDamagedData()
+        {
+            HeadlessAvalonia.Run(() =>
+            {
+                var good = MakeRawCapture(4, 4, 16, 1.0);
+                Assert.Null(MacScreenCaptureKit.ParseRaw(good, good.Length - 1)); // неповні пікселі
+                Assert.Null(MacScreenCaptureKit.ParseRaw(good, 10));              // неповний заголовок
+
+                var badMagic = (byte[])good.Clone();
+                badMagic[0] = (byte)'X';
+                Assert.Null(MacScreenCaptureKit.ParseRaw(badMagic, badMagic.Length));
+
+                var badStride = MakeRawCapture(4, 4, 16, 1.0);
+                System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(badStride.AsSpan(12), 8u); // stride < ширина × 4
+                Assert.Null(MacScreenCaptureKit.ParseRaw(badStride, badStride.Length));
+
+                var empty = MakeRawCapture(0, 4, 16, 1.0);
+                Assert.Null(MacScreenCaptureKit.ParseRaw(empty, empty.Length));
+            });
+        }
+
+        [Fact]
+        public void MacScreenCaptureKit_RectArguments_ConvertPixelsToPoints()
+        {
+            // Retina: другий монітор праворуч, прямокутник Avalonia в пікселях → точки, результат у пікселях екрана
+            var args = MacScreenCaptureKit.RectArguments(new PixelRect(2880, 100, 300, 201), 2.0);
+            Assert.Equal(new[] { "--rect", "1440,50,150,100.5", "--scale", "2", "--raw" }, args);
+
+            // Неправильний масштаб → 1, від'ємні координати (монітор ліворуч) зберігаються
+            var plain = MacScreenCaptureKit.RectArguments(new PixelRect(-1920, 0, 1920, 1080), 0);
+            Assert.Equal("-1920,0,1920,1080", plain[1]);
+            Assert.Equal("1", plain[3]);
+        }
+
         [Fact]
         public void CrashReport_RecordAndTake_RoundTrips_AndClearsMarker()
         {

@@ -62,6 +62,37 @@ jobs:
           echo "Recognized: $out"
           echo "$out" | grep -qi "screenshot"
 
+      # Утиліта знімка екрана (ScreenCaptureKit, macOS 14+) — теж під обидві архітектури
+      - name: Build capture-helper (Swift)
+        run: |
+          swiftc -O -target arm64-apple-macos14 -o "$RUNNER_TEMP/capture-helper-arm64" ScreenShot_One_Avalonia/MacHelpers/capture.swift
+          swiftc -O -target x86_64-apple-macos14 -o "$RUNNER_TEMP/capture-helper-x64" ScreenShot_One_Avalonia/MacHelpers/capture.swift
+          file "$RUNNER_TEMP/capture-helper-arm64" | grep -q arm64
+          file "$RUNNER_TEMP/capture-helper-x64" | grep -q x86_64
+
+      # Справжній знімок головного дисплея. У раннера GitHub може не бути дозволу «Запис екрана» —
+      # тоді утиліта повертає код 4, і це пропуск, а не помилка. Неправильні аргументи — код 1.
+      - name: Capture self-test
+        run: |
+          helper="$RUNNER_TEMP/capture-helper-$(uname -m | sed 's/x86_64/x64/')"
+          set +e
+          "$helper" --bogus > /dev/null 2>&1; code=$?
+          set -e
+          test "$code" = "1" || { echo "expected exit code 1 for bad arguments, got $code"; exit 1; }
+          set +e
+          out=$("$helper" --selftest --timeout 60 --out "$RUNNER_TEMP/capture-selftest.png" 2>&1); code=$?
+          set -e
+          echo "$out"
+          if [ "$code" = "4" ]; then
+            echo "::notice title=capture-helper::No Screen Recording permission on this runner, self-test skipped"
+          elif [ "$code" = "0" ]; then
+            echo "$out" | grep -q '^OK:'
+            file "$RUNNER_TEMP/capture-selftest.png" | grep -q 'PNG image data'
+            "$helper" --list
+          else
+            echo "capture-helper self-test failed with exit code $code"; exit 1
+          fi
+
       # Повна збірка для Mac, як у релізі: .app для обох архітектур, ffmpeg усередині, підпис, інсталятор .pkg
       - name: Build macOS bundles and installer
         shell: pwsh
@@ -81,6 +112,9 @@ jobs:
           for a in arm64 x64; do codesign --verify --strict --verbose=2 "$a/Screenshot_One.app"; done
           file arm64/Screenshot_One.app/Contents/MacOS/ffmpeg | grep -q arm64
           file x64/Screenshot_One.app/Contents/MacOS/ffmpeg | grep -q x86_64
+          file arm64/Screenshot_One.app/Contents/MacOS/capture-helper | grep -q arm64
+          file x64/Screenshot_One.app/Contents/MacOS/capture-helper | grep -q x86_64
+          file arm64/Screenshot_One.app/Contents/MacOS/ocr-helper | grep -q arm64
           arm64/Screenshot_One.app/Contents/MacOS/ffmpeg -hide_banner -version | head -1
           pkgutil --expand Screenshot_One-v0.0.0-macOS.pkg "$RUNNER_TEMP/pkg-expanded"
           ls "$RUNNER_TEMP/pkg-expanded"
@@ -94,6 +128,8 @@ jobs:
           sudo installer -pkg Screenshot_One-v0.0.0-macOS.pkg -target / -verboseR
           ls -la /Applications/Screenshot_One.app/Contents/MacOS | head -5
           codesign --verify --strict --verbose=2 /Applications/Screenshot_One.app
+          # Довідково: утиліта знімка з установленого бандла (код 4 — немає дозволу «Запис екрана»)
+          /Applications/Screenshot_One.app/Contents/MacOS/capture-helper --list --timeout 30; echo "capture-helper --list exit code: $?"
           pkill -x Screenshot_One; sleep 2
           /Applications/Screenshot_One.app/Contents/MacOS/Screenshot_One > "$RUNNER_TEMP/app.out" 2>&1 &
           PID=$!

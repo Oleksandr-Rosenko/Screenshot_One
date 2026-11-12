@@ -27,7 +27,8 @@
   - `VideoControlWindow`, `VideoRegionWindow`, `VideoRecorderManager` — запис відео. На Windows ScreenRecorderLib, на macOS ffmpeg. Інтерфейс `IVideoRecorderService`.
   - `VideoEditorWindow` — відеоплеєр (LibVLCSharp) і обрізка (ffmpeg).
   - `ScreenCaptureService` (`IScreenCaptureService`: Windows/Mac/Linux), `ScreenService`, `PlatformHelper` — платформна логіка.
-    Windows: GDI `CopyFromScreen` + пряме копіювання пікселів (`LockBits`). Mac: `MacCoreGraphics` (CoreGraphics `CGDisplayCreateImage`), запасний шлях — `/usr/sbin/screencapture`.
+    Windows: GDI `CopyFromScreen` + пряме копіювання пікселів (`LockBits`). Mac (з 2.8.2), по черзі: macOS 14+ — ScreenCaptureKit через Swift-утиліту `MacHelpers/capture.swift` → `Contents/MacOS/capture-helper` (`MacScreenCaptureKit`); далі `MacCoreGraphics` (CoreGraphics `CGDisplayCreateImage`, застарілий з macOS 14); далі `/usr/sbin/screencapture`.
+    `capture-helper`: `--display N` / `--all` / `--rect X,Y,W,H` (ТОЧКИ, глобальні координати) / `--list` / `--selftest`; вихід `--out файл.png` або `-`, а програма бере `--raw` — сирі BGRA у stdout (заголовок `SOC1`, `MacScreenCaptureKit.ParseRaw`), без PNG. Прямокутник Avalonia (пікселі) ділиться на `Screen.Scaling`, `--scale` дає рівно стільки ж пікселів — розмір і DPI (96 × масштаб) як у CoreGraphics. Коди виходу: 1 — аргументи, 2 — знімок, 3 — запис, 4 — немає дозволу «Запис екрана», 5 — тайм-аут. Після 2 збоїв поспіль (крім коду 4) утиліта в сесії більше не запускається. Збирається з ціллю macOS 14 (сама програма — 10.15+); CI компілює під arm64 і x64 і запускає `--selftest` (код 4 на раннері — пропуск).
   - `BitmapPixels` — обрізка / копіювання / зміна DPI бітмапів у пам'яті (без PNG). DPI знімка = 96 × `Screen.Scaling`; редактор нормалізує вхід до 96 DPI (PNG з історії завжди читається з 96).
   - `MacPermissions` — перевірка дозволу «Запис екрана» (macOS). `MacUpdateChecker` — оновлення на Mac через GitHub API (Velopack на Mac не використовується).
   - `VlcShared` — один `LibVLC` на всю програму (прогрів у фоні); `VlcShared.ReplaceMedia` звільняє попередній `Media`.
@@ -136,7 +137,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 2. Замінити решту тестів «код містить рядок» у `UnitTest1.cs` на тести поведінки (`BehaviorTests.cs`).
 3. Історія займає багато місця: два PNG на скріншот + Base64 вставок у JSON. Варіанти: зберігати оригінал і фігури, а підсумкову картинку рендерити за потреби; вставки тримати окремими файлами.
 4. Відеоредактор: ~20 «магічних» `Task.Delay` маскують гонки VLC — замінити на події `MediaPlayer` (Playing, LengthChanged, EndReached). Робити обережно, з ручною перевіркою.
-5. Mac: нативний знімок через `CGDisplayCreateImage` позначений Apple як застарілий (macOS 14+); на перспективу — ScreenCaptureKit. Зараз при збої автоматично працює `screencapture`.
+5. Mac: ScreenCaptureKit уже працює через `capture-helper` (2.8.2), `CGDisplayCreateImage` і `screencapture` лишились запасними. Далі: виключати власні вікна програми зі знімка (`SCContentFilter` з `excludingApplications` / `exceptingWindows`) — прибере мініатюру з наступних знімків на Mac; знімок окремого вікна (`SCContentFilter(desktopIndependentWindow:)`); коли macOS 14 стане мінімальною — прибрати `MacCoreGraphics`.
 6. Mac: підпис і нотаризація сертифікатом Apple Developer (прибере крок «Усе одно відкрити» і дасть Velopack на Mac).
 
 ## Наступні функції (порівняння з CleanShot X / Snagit, погоджено з автором)
@@ -157,7 +158,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 
 ## Історія ключових змін
 
-- 2.8.2 — виправлено падіння Mac на старті (підміна меню трею при зміні мови); панель трею з плитками на Windows; запуск програми в CI на macOS.
+- 2.8.2 — виправлено падіння Mac на старті (підміна меню трею при зміні мови); панель трею з плитками на Windows; запуск програми в CI на macOS; знімок екрана на macOS 14+ через ScreenCaptureKit (`capture-helper`), CoreGraphics і screencapture — запасні.
 - 2.8.1 — macOS: універсальний інсталятор .pkg, вбудований ffmpeg, самооновлення без пароля, стабільний підпис (якщо є секрети).
 - 2.8.0 — локалізація: українська, англійська, російська; автовибір за мовою ОС, вибір у налаштуваннях.
 - 2.7.3 — нова іконка «SO» (варіант B, обрав автор).
