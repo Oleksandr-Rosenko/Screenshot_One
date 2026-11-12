@@ -132,7 +132,7 @@ jobs:
         run: |
           $version = "${{ needs.release.outputs.version }}"
           $names = gh release view $version --repo $env:GITHUB_REPOSITORY --json assets -q '.assets[].name' 2>$null
-          if ($names -match 'macOS-arm64\.zip' -and $names -match 'macOS-x64\.zip') {
+          if ($names -match 'macOS-arm64\.zip' -and $names -match 'macOS-x64\.zip' -and $names -match 'macOS\.pkg') {
             Write-Host "macOS archives for $version already uploaded."
             "skip=true" >> $env:GITHUB_OUTPUT
           } else {
@@ -158,13 +158,37 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Build macOS bundles
+      # Власний сертифікат підпису (не Apple): стабільний підпис → macOS пам'ятає дозвіл «Запис екрана»
+      # між оновленнями. Без секретів збірка підписується ad-hoc і теж працює.
+      - name: Import signing certificate
+        if: steps.assets.outputs.skip == 'false'
+        env:
+          MAC_SIGN_P12_BASE64: ${{ secrets.MAC_SIGN_P12_BASE64 }}
+          MAC_SIGN_P12_PASSWORD: ${{ secrets.MAC_SIGN_P12_PASSWORD }}
+        run: |
+          if (-not $env:MAC_SIGN_P12_BASE64) { Write-Host "No signing certificate: ad-hoc signing."; exit 0 }
+          $p12 = Join-Path $env:RUNNER_TEMP "sign.p12"
+          [IO.File]::WriteAllBytes($p12, [Convert]::FromBase64String($env:MAC_SIGN_P12_BASE64))
+          $kc = Join-Path $env:RUNNER_TEMP "sign.keychain-db"
+          $kcPass = [guid]::NewGuid().ToString()
+          security create-keychain -p $kcPass $kc
+          security set-keychain-settings -lut 21600 $kc
+          security unlock-keychain -p $kcPass $kc
+          security import $p12 -k $kc -P $env:MAC_SIGN_P12_PASSWORD -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $kcPass $kc | Out-Null
+          $existing = (security list-keychains -d user) -replace '"','' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+          security list-keychains -d user -s $kc @existing
+          security find-identity -p codesigning $kc
+          "MAC_SIGN_IDENTITY=Screenshot One Code Signing" >> $env:GITHUB_ENV
+
+      - name: Build macOS bundles and installer
         if: steps.assets.outputs.skip == 'false'
         run: ./Build-MacApp.ps1 -Arch all -Version "${{ needs.release.outputs.version }}"
 
       - name: Upload macOS archives
         if: steps.assets.outputs.skip == 'false'
         run: |
-          $zips = Get-ChildItem dist/macOS -Filter *.zip | ForEach-Object { $_.FullName }
-          if (-not $zips) { throw "No macOS archives were built" }
+          $zips = @(Get-ChildItem dist/macOS -Filter *.zip | ForEach-Object { $_.FullName })
+          $zips += @(Get-ChildItem dist/macOS -Filter *.pkg | ForEach-Object { $_.FullName })
+          if ($zips.Count -lt 3) { throw "Expected 2 macOS archives and the .pkg installer" }
           gh release upload "${{ needs.release.outputs.version }}" $zips --clobber --repo $env:GITHUB_REPOSITORY

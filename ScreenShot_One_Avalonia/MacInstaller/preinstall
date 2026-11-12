@@ -1,0 +1,6 @@
+#!/bin/bash
+# Інсталятор Screenshot One: закриваємо стару копію й прибираємо її, щоб не лишилось файлів попередньої версії
+/usr/bin/pkill -x Screenshot_One 2>/dev/null || true
+sleep 1
+rm -rf "/Applications/Screenshot_One.app"
+exit 0

@@ -941,6 +941,10 @@ namespace ScreenShot_One_Avalonia
                         string exeName = OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg";
                         string ffmpegExecutable = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, exeName);
 
+                        // Mac: ffmpeg усередині .app або з Homebrew (програми з Finder не бачать PATH)
+                        if (!File.Exists(ffmpegExecutable) && OperatingSystem.IsMacOS() && MacVideoRecorderService.FindFfmpeg() is string macFfmpeg)
+                            ffmpegExecutable = macFfmpeg;
+
                         if (!File.Exists(ffmpegExecutable))
                         {
                             if (File.Exists(exeName))

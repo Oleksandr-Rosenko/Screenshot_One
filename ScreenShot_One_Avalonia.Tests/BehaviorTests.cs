@@ -196,7 +196,8 @@ namespace ScreenShot_One_Avalonia.Tests
               ""assets"": [
                 { ""name"": ""ScreenShotOne-win-Setup.exe"", ""browser_download_url"": ""https://d/win.exe"" },
                 { ""name"": ""Screenshot_One-v2.5.5-macOS-arm64.zip"", ""browser_download_url"": ""https://d/arm.zip"" },
-                { ""name"": ""Screenshot_One-v2.5.5-macOS-x64.zip"", ""browser_download_url"": ""https://d/x64.zip"" }
+                { ""name"": ""Screenshot_One-v2.5.5-macOS-x64.zip"", ""browser_download_url"": ""https://d/x64.zip"" },
+                { ""name"": ""Screenshot_One-v2.5.5-macOS.pkg"", ""browser_download_url"": ""https://d/mac.pkg"" }
               ]}";
 
             var arm = MacUpdateChecker.ParseRelease(json, arm64: true);
@@ -206,6 +207,7 @@ namespace ScreenShot_One_Avalonia.Tests
             Assert.Equal(new Version(2, 5, 5), arm!.Version);
             Assert.Equal("https://d/arm.zip", arm.DownloadUrl);
             Assert.Equal("https://d/x64.zip", x64!.DownloadUrl);
+            Assert.Equal("https://d/mac.pkg", arm.PkgUrl);
 
             // Тег з префіксом v і реліз без Mac-архівів — посилання на сторінку релізу
             var noMac = MacUpdateChecker.ParseRelease(@"{""tag_name"":""v3.0.0"",""html_url"":""https://p"",""assets"":[]}", true);
@@ -214,6 +216,37 @@ namespace ScreenShot_One_Avalonia.Tests
             Assert.Equal("https://p", noMac.PageUrl);
 
             Assert.Null(MacUpdateChecker.ParseRelease(@"{""tag_name"":""latest""}", true));
+        }
+
+        [Fact]
+        public void MacSelfUpdate_InstallScript_SwapsContentsSafely()
+        {
+            string script = MacUpdateChecker.BuildInstallScript(4242, "/Applications/Screenshot One's.app", "/tmp/w/new/Screenshot_One.app", "/tmp/w");
+            Assert.StartsWith("#!/bin/bash\n", script);
+            Assert.Contains("PID=4242;", script);
+            Assert.Contains("APP='/Applications/Screenshot One'\\''s.app'", script); // лапки в шляху екрановано
+            Assert.Contains("mv \"$APP/Contents\" \"$APP/Contents.old\"", script);
+            Assert.Contains("/usr/bin/ditto \"$NEW/Contents\" \"$APP/Contents\"", script);
+            Assert.Contains("mv \"$APP/Contents.old\" \"$APP/Contents\"", script); // відкат при помилці
+            Assert.Contains("/usr/bin/open \"$APP\"", script);
+            Assert.DoesNotContain("\r", script);
+
+            // Синтаксис bash (де він є: Linux/macOS, Git Bash на Windows)
+            string? bash = new[] { "/bin/bash", @"C:\Program Files\Git\bin\bash.exe" }.FirstOrDefault(File.Exists);
+            if (bash != null)
+            {
+                string tmp = Path.Combine(Path.GetTempPath(), "so-install-" + Guid.NewGuid().ToString("N") + ".sh");
+                File.WriteAllText(tmp, script);
+                try
+                {
+                    var psi = new System.Diagnostics.ProcessStartInfo(bash) { ArgumentList = { "-n", tmp }, RedirectStandardError = true, UseShellExecute = false };
+                    using var p = System.Diagnostics.Process.Start(psi)!;
+                    string err = p.StandardError.ReadToEnd();
+                    p.WaitForExit();
+                    Assert.True(p.ExitCode == 0, "bash -n: " + err);
+                }
+                finally { File.Delete(tmp); }
+            }
         }
 
         [Fact]

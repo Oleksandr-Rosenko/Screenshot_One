@@ -140,6 +140,14 @@ namespace ScreenShot_One_Avalonia
 
         }
 
+        /// <summary>Вихід перед самооновленням на Mac: дописати історію й закрити програму.</summary>
+        public static void ShutdownForUpdate()
+        {
+            SettingsManager.UnregisterAll();
+            HistoryManager.WaitForPendingSaves(TimeSpan.FromSeconds(5));
+            if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) desktop.Shutdown();
+        }
+
         private NativeMenu BuildTrayMenu(IClassicDesktopStyleApplicationLifetime desktop)
         {
             var menu = new NativeMenu();

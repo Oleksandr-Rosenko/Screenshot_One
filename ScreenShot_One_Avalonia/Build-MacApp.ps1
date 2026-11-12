@@ -1,17 +1,65 @@
 param(
     [ValidateSet("arm64", "x64", "all")]
     [string]$Arch = "arm64",
-    [string]$Version = "2.8.0",
-    [string]$Configuration = "Release"
+    [string]$Version = "2.8.1",
+    [string]$Configuration = "Release",
+    # Ідентичність підпису: "-" — ad-hoc; у CI — власний сертифікат (стабільний підпис → macOS пам'ятає
+    # дозвіл «Запис екрана» між оновленнями). Береться з MAC_SIGN_IDENTITY, якщо не задано.
+    [string]$SignIdentity = $env:MAC_SIGN_IDENTITY
 )
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = $PSScriptRoot
 $ProjectFile = Join-Path $ScriptDir "ScreenShot_One_Avalonia.csproj"
 $DistDir = Join-Path $ScriptDir "dist/macOS"
+$OnMac = $IsMacOS
+if ([string]::IsNullOrWhiteSpace($SignIdentity)) { $SignIdentity = "-" }
 
 if (-not (Test-Path $DistDir)) {
     New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
+}
+
+# Статичні збірки ffmpeg для macOS (ffmpeg.martin-riedl.de): з ними запис і обрізка відео працюють
+# одразу, без Homebrew. Якщо завантаження не вдалось — програма шукатиме ffmpeg із Homebrew, як раніше.
+function Get-Ffmpeg([string]$targetArch, [string]$destDir) {
+    $ffArch = if ($targetArch -eq "arm64") { "arm64" } else { "amd64" }
+    $cacheDir = Join-Path $DistDir "ffmpeg-cache/$targetArch"
+    $cached = Join-Path $cacheDir "ffmpeg"
+    if (-not (Test-Path $cached)) {
+        New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null
+        $zip = Join-Path $cacheDir "ffmpeg.zip"
+        $url = "https://ffmpeg.martin-riedl.de/redirect/latest/macos/$ffArch/release/ffmpeg.zip"
+        Write-Host "Downloading ffmpeg ($ffArch): $url"
+        try {
+            Invoke-WebRequest -Uri $url -OutFile $zip -MaximumRetryCount 3 -RetryIntervalSec 5
+            Expand-Archive -Path $zip -DestinationPath $cacheDir -Force
+        } catch {
+            Write-Warning "ffmpeg download failed: $($_.Exception.Message). Video will need Homebrew ffmpeg."
+            return $false
+        }
+        $found = Get-ChildItem -Path $cacheDir -Recurse -File -Filter "ffmpeg" | Select-Object -First 1
+        if (-not $found) { Write-Warning "ffmpeg binary not found in archive"; return $false }
+        if ($found.FullName -ne $cached) { Move-Item $found.FullName $cached -Force }
+    }
+    Copy-Item $cached (Join-Path $destDir "ffmpeg") -Force
+    if ($OnMac) { chmod +x (Join-Path $destDir "ffmpeg") }
+    return $true
+}
+
+# Підпис: кожен Mach-O файл окремо, потім сам бандл. Без «hardened runtime» (йому потрібні
+# entitlements для JIT .NET). Якщо власний сертифікат не спрацював — ad-hoc, щоб збірка не падала.
+function Sign-Bundle([string]$bundleDir, [string]$identity) {
+    $macho = Get-ChildItem -Path $bundleDir -Recurse -File | Where-Object {
+        (& file -b $_.FullName) -match 'Mach-O'
+    }
+    foreach ($f in $macho) {
+        codesign --force --timestamp=none --sign $identity $f.FullName 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "codesign failed: $($f.FullName)" }
+    }
+    codesign --force --timestamp=none --sign $identity $bundleDir
+    if ($LASTEXITCODE -ne 0) { throw "codesign failed: $bundleDir" }
+    codesign --verify --strict $bundleDir
+    if ($LASTEXITCODE -ne 0) { throw "codesign verify failed: $bundleDir" }
 }
 
 $Architectures = if ($Arch -eq "all") { @("arm64", "x64") } else { @($Arch) }
@@ -53,13 +101,16 @@ foreach ($targetArch in $Architectures) {
         Write-Warning "swiftc not found: OCR on macOS will be unavailable in this build"
     }
 
+    # ffmpeg усередині програми (запис і обрізка відео без Homebrew)
+    Write-Host "=== [macOS $targetArch] Bundling ffmpeg ===" -ForegroundColor Cyan
+    Get-Ffmpeg $targetArch $macOSDir | Out-Null
+
     # Copy Info.plist
     $plistSrc = Join-Path $ScriptDir "Info.plist"
     if (Test-Path $plistSrc) {
         Copy-Item -Path $plistSrc -Destination (Join-Path $contentsDir "Info.plist") -Force
     }
 
-    # Copy icon if available
     # Іконка програми для Finder/Dock (Info.plist → CFBundleIconFile = icon.icns)
     $icnsSrc = Join-Path $ScriptDir "Assets/icon.icns"
     if (Test-Path $icnsSrc) {
@@ -71,22 +122,64 @@ foreach ($targetArch in $Architectures) {
         Copy-Item -Path $icoSrc -Destination (Join-Path $resourcesDir "icon.ico") -Force
     }
 
-    Write-Host "=== [macOS $targetArch] 3. Compressing into distributable ZIP ===" -ForegroundColor Cyan
+    if ($OnMac) {
+        Write-Host "=== [macOS $targetArch] Signing (identity: $(if ($SignIdentity -eq '-') { 'ad-hoc' } else { $SignIdentity })) ===" -ForegroundColor Cyan
+        try { Sign-Bundle $bundleDir $SignIdentity }
+        catch {
+            if ($SignIdentity -eq "-") { throw }
+            Write-Warning "Signing with '$SignIdentity' failed ($($_.Exception.Message)); falling back to ad-hoc"
+            Sign-Bundle $bundleDir "-"
+        }
+    }
+
+    Write-Host "=== [macOS $targetArch] 3. Compressing into ZIP (used by the in-app updater) ===" -ForegroundColor Cyan
     $zipFileName = "Screenshot_One-v$Version-macOS-$targetArch.zip"
     $zipPath = Join-Path $DistDir $zipFileName
     if (Test-Path $zipPath) {
         Remove-Item -Path $zipPath -Force
     }
 
-    $packScript = Join-Path $ScriptDir "package_mac_zip.py"
-    python $packScript $bundleDir $zipPath
+    if ($OnMac) {
+        # ditto зберігає підпис, права й символічні посилання
+        ditto -c -k --sequesterRsrc --keepParent $bundleDir $zipPath
+        if ($LASTEXITCODE -ne 0) { throw "ditto failed" }
+    } else {
+        $packScript = Join-Path $ScriptDir "package_mac_zip.py"
+        python $packScript $bundleDir $zipPath
+    }
 
     Write-Host ">>> Built: $zipPath" -ForegroundColor Green
 }
 
+# Один інсталятор .pkg для всіх Mac (сам вибирає Apple Silicon чи Intel)
+if ($OnMac -and $Arch -eq "all") {
+    Write-Host "`n=== 4. Building universal installer (.pkg) ===" -ForegroundColor Cyan
+    $pkgWork = Join-Path $DistDir "pkg-work"
+    if (Test-Path $pkgWork) { Remove-Item $pkgWork -Recurse -Force }
+    New-Item -ItemType Directory -Path $pkgWork -Force | Out-Null
+    $scripts = Join-Path $ScriptDir "MacInstaller"
+    chmod +x (Join-Path $scripts "preinstall") (Join-Path $scripts "postinstall")
+
+    foreach ($targetArch in $Architectures) {
+        $root = Join-Path $DistDir $targetArch
+        $plist = Join-Path $pkgWork "component-$targetArch.plist"
+        pkgbuild --analyze --root $root $plist
+        if ($LASTEXITCODE -ne 0) { throw "pkgbuild --analyze failed" }
+        # Не «переносимий»: інакше Installer може оновити стару копію деінде (наприклад, у «Завантаженнях»)
+        plutil -replace "0.BundleIsRelocatable" -bool NO $plist
+        pkgbuild --root $root --component-plist $plist --install-location /Applications `
+            --identifier "com.screenshotone.app.$targetArch" --version $Version `
+            --scripts $scripts (Join-Path $pkgWork "$targetArch.pkg")
+        if ($LASTEXITCODE -ne 0) { throw "pkgbuild failed for $targetArch" }
+    }
+
+    $pkgPath = Join-Path $DistDir "Screenshot_One-v$Version-macOS.pkg"
+    if (Test-Path $pkgPath) { Remove-Item $pkgPath -Force }
+    productbuild --distribution (Join-Path $scripts "distribution.xml") --package-path $pkgWork $pkgPath
+    if ($LASTEXITCODE -ne 0) { throw "productbuild failed" }
+    Write-Host ">>> Built: $pkgPath" -ForegroundColor Green
+}
+
 Write-Host "`n=== macOS build completed successfully! ===" -ForegroundColor Green
 Write-Host "Bundles created in: $DistDir" -ForegroundColor Yellow
-Write-Host "On macOS, to run after downloading:" -ForegroundColor Gray
-Write-Host "  1. Unzip the archive" -ForegroundColor Gray
-Write-Host "  2. Run: xattr -cr Screenshot_One.app (clears Gatekeeper quarantine)" -ForegroundColor Gray
-Write-Host "  3. Open Screenshot_One.app" -ForegroundColor Gray
+Write-Host "First install: open Screenshot_One-v$Version-macOS.pkg (once: System Settings → Privacy & Security → Open Anyway)." -ForegroundColor Gray

@@ -38,7 +38,7 @@ jobs:
   macos:
     name: Build (macOS)
     runs-on: macos-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -61,3 +61,27 @@ jobs:
           out=$("$RUNNER_TEMP/ocr-helper-$(uname -m | sed 's/x86_64/x64/')" --selftest)
           echo "Recognized: $out"
           echo "$out" | grep -qi "screenshot"
+
+      # Повна збірка для Mac, як у релізі: .app для обох архітектур, ffmpeg усередині, підпис, інсталятор .pkg
+      - name: Build macOS bundles and installer
+        shell: pwsh
+        working-directory: ScreenShot_One_Avalonia
+        env:
+          EnableWindowsTargeting: 'true'
+        run: ./Build-MacApp.ps1 -Arch all -Version 0.0.0
+
+      - name: Verify macOS bundle
+        working-directory: ScreenShot_One_Avalonia/dist/macOS
+        run: |
+          set -e
+          ls -la
+          test -f Screenshot_One-v0.0.0-macOS.pkg
+          test -f Screenshot_One-v0.0.0-macOS-arm64.zip
+          test -f Screenshot_One-v0.0.0-macOS-x64.zip
+          for a in arm64 x64; do codesign --verify --strict --verbose=2 "$a/Screenshot_One.app"; done
+          file arm64/Screenshot_One.app/Contents/MacOS/ffmpeg | grep -q arm64
+          file x64/Screenshot_One.app/Contents/MacOS/ffmpeg | grep -q x86_64
+          arm64/Screenshot_One.app/Contents/MacOS/ffmpeg -hide_banner -version | head -1
+          pkgutil --expand Screenshot_One-v0.0.0-macOS.pkg "$RUNNER_TEMP/pkg-expanded"
+          ls "$RUNNER_TEMP/pkg-expanded"
+          grep -q hostArchitectures "$RUNNER_TEMP/pkg-expanded/Distribution"

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Один інсталятор для всіх Mac: сам ставить версію для Apple Silicon (M1–M4) або Intel -->
+<installer-gui-script minSpecVersion="2">
+    <title>Screenshot One</title>
+    <options customize="never" require-scripts="false" hostArchitectures="x86_64,arm64"/>
+    <domains enable_localSystem="true"/>
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="10.15"/>
+        </allowed-os-versions>
+    </volume-check>
+    <script><![CDATA[
+        function isArm() { return system.sysctl('hw.optional.arm64') == 1; }
+    ]]></script>
+    <choices-outline>
+        <line choice="arm64"/>
+        <line choice="x64"/>
+    </choices-outline>
+    <choice id="arm64" visible="false" selected="isArm()" enabled="isArm()">
+        <pkg-ref id="com.screenshotone.app.arm64"/>
+    </choice>
+    <choice id="x64" visible="false" selected="!isArm()" enabled="!isArm()">
+        <pkg-ref id="com.screenshotone.app.x64"/>
+    </choice>
+    <pkg-ref id="com.screenshotone.app.arm64">arm64.pkg</pkg-ref>
+    <pkg-ref id="com.screenshotone.app.x64">x64.pkg</pkg-ref>
+</installer-gui-script>

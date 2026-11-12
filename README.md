@@ -14,6 +14,15 @@
 - Завантаження на Google Drive або catbox.moe з копіюванням посилання.
 - Світла й темна тема, автозапуск, автоматичні оновлення через [Velopack](https://velopack.io/).
 
+## Встановлення
+
+- **Windows:** `ScreenShotOne-win-Setup.exe` з [останнього релізу](https://github.com/Oleksandr-Rosenko/Screenshot_One/releases/latest). Оновлення ставляться самі.
+- **macOS:** `Screenshot_One-vX.Y.Z-macOS.pkg` з [останнього релізу](https://github.com/Oleksandr-Rosenko/Screenshot_One/releases/latest) — один файл для Apple Silicon і Intel.
+  1. Відкрийте .pkg. Перший раз macOS скаже, що не може перевірити розробника (програма не підписана сертифікатом Apple): «Системні параметри → Конфіденційність і безпека → Усе одно відкрити».
+  2. «Продовжити → Встановити» — програма сама з'явиться в «Програмах» і запуститься.
+  3. Дозвольте «Запис екрана», коли програма попросить, і перезапустіть її.
+  Наступні оновлення програма ставить сама. ffmpeg для відео вже всередині.
+
 ## Гарячі клавіші за замовчуванням
 
 | Дія | Windows | macOS |
@@ -42,7 +51,7 @@
 
 Файли, яких немає в git:
 
-- `ScreenShot_One_Avalonia/ffmpeg.exe` — для обрізки відео на Windows ([збірки ffmpeg](https://github.com/BtbN/FFmpeg-Builds/releases)). На macOS: `brew install ffmpeg`.
+- `ScreenShot_One_Avalonia/ffmpeg.exe` — для обрізки відео на Windows ([збірки ffmpeg](https://github.com/BtbN/FFmpeg-Builds/releases)). На macOS ffmpeg вбудовується в `.app` під час збірки (`Build-MacApp.ps1`).
 - `ScreenShot_One_Avalonia/credentials.json` — OAuth-ключ Google Drive (Desktop app) з Google Cloud Console. Без нього програма збирається, але завантаження на Drive не працює.
 
 ```bash

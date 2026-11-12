@@ -98,7 +98,12 @@ dotnet test ScreenShot_One_Avalonia.Tests -p:Platform=x64
 4. Теги релізів — версія без `v` (`2.5.4`). Velopack-id пакета `ScreenShotOne`.
 
 Запасний спосіб — `Deploy.ps1` на Windows-машині автора (потрібні `credentials.json`, `ffmpeg.exe`, токен).
-macOS-архіви (`Screenshot_One-vX.Y.Z-macOS-arm64.zip` / `-x64.zip`) збирає job `macos` у `release.yml` (`Build-MacApp.ps1 -Arch all`) і докладає до того самого релізу. Якщо архівів у релізі немає — повторний ручний запуск Release їх додасть.
+macOS (з 2.8.1) — job `macos` у `release.yml` (`Build-MacApp.ps1 -Arch all`) докладає до того самого релізу:
+- `Screenshot_One-vX.Y.Z-macOS.pkg` — **перше встановлення**, один файл для arm64 і x64 (`MacInstaller/distribution.xml` вибирає за `hw.optional.arm64`). `preinstall` закриває й прибирає стару копію; `postinstall` знімає карантин, віддає `.app` користувачу (`chown`) і запускає програму.
+- `Screenshot_One-vX.Y.Z-macOS-arm64.zip` / `-x64.zip` — для **самооновлення** (`MacUpdateChecker.SelfUpdateAsync`: завантаження → `ditto -x -k` → скрипт після виходу підміняє `Contents/` з відкатом → перезапуск). Якщо `.app` не доступний для запису — завантажує й відкриває .pkg.
+- ffmpeg (статичний, ffmpeg.martin-riedl.de) кладеться в `Contents/MacOS/ffmpeg`. Підпис: кожен Mach-O + бандл, без hardened runtime. Секрети `MAC_SIGN_P12_BASE64` / `MAC_SIGN_P12_PASSWORD` — власний (не Apple) сертифікат «Screenshot One Code Signing»: стабільний підпис, macOS пам'ятає дозвіл «Запис екрана» між оновленнями. Без секретів — ad-hoc (працює, але дозвіл може злітати після оновлень). Сертифікат Apple Developer ($99/рік) автор поки не бере — тож перше відкриття .pkg вимагає «Усе одно відкрити».
+- CI (`ci.yml`, job macOS) збирає все те саме з версією 0.0.0 і перевіряє підпис, архітектуру ffmpeg і вміст .pkg.
+Якщо Mac-файлів у релізі немає — повторний ручний запуск Release їх додасть.
 
 CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і збірка під macOS при кожному push у `main`/`claude/**` і в PR.
 
@@ -130,7 +135,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 3. Історія займає багато місця: два PNG на скріншот + Base64 вставок у JSON. Варіанти: зберігати оригінал і фігури, а підсумкову картинку рендерити за потреби; вставки тримати окремими файлами.
 4. Відеоредактор: ~20 «магічних» `Task.Delay` маскують гонки VLC — замінити на події `MediaPlayer` (Playing, LengthChanged, EndReached). Робити обережно, з ручною перевіркою.
 5. Mac: нативний знімок через `CGDisplayCreateImage` позначений Apple як застарілий (macOS 14+); на перспективу — ScreenCaptureKit. Зараз при збої автоматично працює `screencapture`.
-6. Mac: підпис і нотаризація `.app` (зараз користувач знімає карантин `xattr -cr`); вбудувати `ffmpeg` у бандл.
+6. Mac: підпис і нотаризація сертифікатом Apple Developer (прибере крок «Усе одно відкрити» і дасть Velopack на Mac).
 
 ## Наступні функції (порівняння з CleanShot X / Snagit, погоджено з автором)
 
@@ -150,6 +155,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 
 ## Історія ключових змін
 
+- 2.8.1 — macOS: універсальний інсталятор .pkg, вбудований ffmpeg, самооновлення без пароля, стабільний підпис (якщо є секрети).
 - 2.8.0 — локалізація: українська, англійська, російська; автовибір за мовою ОС, вибір у налаштуваннях.
 - 2.7.3 — нова іконка «SO» (варіант B, обрав автор).
 - 2.7.2 — розгорнута панель редактора, суцільні меню, кнопки обрізки поверх полотна, справжнє центрування історії, кнопка Google Диска, перейменування ярлика Windows (`WindowsShell`).
