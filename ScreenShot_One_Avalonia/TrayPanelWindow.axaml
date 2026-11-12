@@ -1,0 +1,182 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        x:Class="ScreenShot_One_Avalonia.TrayPanelWindow"
+        Title="Screenshot One" Width="384" SizeToContent="Height"
+        WindowDecorations="None" Background="Transparent" TransparencyLevelHint="Transparent"
+        Topmost="True" ShowInTaskbar="False" CanResize="False">
+
+	<Window.Styles>
+		<!-- Плитка дії: іконка в кружку, назва, гаряча клавіша -->
+		<Style Selector="Button.tile">
+			<Setter Property="Margin" Value="4"/>
+			<Setter Property="Padding" Value="6,12"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+		</Style>
+		<Style Selector="Button.tile:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource ActiveToolBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+		</Style>
+		<Style Selector="Button.tile Border.iconbg">
+			<Setter Property="Width" Value="40"/>
+			<Setter Property="Height" Value="40"/>
+			<Setter Property="CornerRadius" Value="20"/>
+			<Setter Property="HorizontalAlignment" Value="Center"/>
+			<Setter Property="Background" Value="{DynamicResource ActiveToolBrush}"/>
+		</Style>
+		<Style Selector="Button.tile material|MaterialIcon">
+			<Setter Property="Width" Value="22"/>
+			<Setter Property="Height" Value="22"/>
+			<Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+		</Style>
+		<Style Selector="Button.tile.rec Border.iconbg">
+			<Setter Property="Background" Value="#26E5735F"/>
+		</Style>
+		<Style Selector="Button.tile.rec material|MaterialIcon">
+			<Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+		</Style>
+		<Style Selector="TextBlock.tileTitle">
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="HorizontalAlignment" Value="Center"/>
+			<Setter Property="Foreground" Value="{DynamicResource ToolbarIconBrush}"/>
+		</Style>
+		<Style Selector="TextBlock.tileKeys">
+			<Setter Property="FontSize" Value="10.5"/>
+			<Setter Property="HorizontalAlignment" Value="Center"/>
+			<Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}"/>
+		</Style>
+		<!-- Нижні дії -->
+		<Style Selector="Button.foot">
+			<Setter Property="Padding" Value="8,6"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+		</Style>
+		<Style Selector="Button.foot material|MaterialIcon">
+			<Setter Property="Width" Value="18"/>
+			<Setter Property="Height" Value="18"/>
+			<Setter Property="Foreground" Value="{DynamicResource ToolbarIconBrush}"/>
+		</Style>
+		<Style Selector="Button.foot TextBlock">
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="Foreground" Value="{DynamicResource ToolbarIconBrush}"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="Button.foot.muted material|MaterialIcon">
+			<Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}"/>
+		</Style>
+		<Style Selector="Button.foot.muted TextBlock">
+			<Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}"/>
+		</Style>
+		<Style Selector="Button.thumb">
+			<Setter Property="Margin" Value="4"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Height" Value="66"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="ClipToBounds" Value="True"/>
+			<Setter Property="Background" Value="{DynamicResource CanvasBackdropBrush}"/>
+		</Style>
+		<Style Selector="Button.thumb:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+		</Style>
+	</Window.Styles>
+
+	<Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
+	        CornerRadius="14" Padding="14,14,14,10" Margin="10" BoxShadow="0 10 30 0 #55000000">
+		<StackPanel Spacing="10">
+			<!-- Шапка -->
+			<StackPanel Orientation="Horizontal" Spacing="8">
+				<Image Source="/Assets/tray.png" Width="22" Height="22"/>
+				<TextBlock Text="Screenshot One" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource ToolbarIconBrush}" VerticalAlignment="Center"/>
+				<TextBlock Name="TxtVersion" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center"/>
+			</StackPanel>
+
+			<!-- Плитки дій -->
+			<UniformGrid Columns="3" Rows="2">
+				<Button Classes="tile" Tag="Region" Click="Tile_Click">
+					<StackPanel Spacing="4">
+						<Border Classes="iconbg"><material:MaterialIcon Kind="SelectionDrag"/></Border>
+						<TextBlock Classes="tileTitle" Text="{DynamicResource Panel_Region}"/>
+						<TextBlock Classes="tileKeys" Name="KeysRegion"/>
+					</StackPanel>
+				</Button>
+				<Button Classes="tile" Tag="FullScreen" Click="Tile_Click">
+					<StackPanel Spacing="4">
+						<Border Classes="iconbg"><material:MaterialIcon Kind="Monitor"/></Border>
+						<TextBlock Classes="tileTitle" Text="{DynamicResource Panel_Screen}"/>
+						<TextBlock Classes="tileKeys" Name="KeysFullScreen"/>
+					</StackPanel>
+				</Button>
+				<Button Classes="tile" Tag="AllScreens" Click="Tile_Click">
+					<StackPanel Spacing="4">
+						<Border Classes="iconbg"><material:MaterialIcon Kind="MonitorMultiple"/></Border>
+						<TextBlock Classes="tileTitle" Text="{DynamicResource Panel_AllScreens}"/>
+						<TextBlock Classes="tileKeys" Name="KeysAllScreens"/>
+					</StackPanel>
+				</Button>
+				<Button Classes="tile" Tag="Ocr" Click="Tile_Click">
+					<StackPanel Spacing="4">
+						<Border Classes="iconbg"><material:MaterialIcon Kind="TextRecognition"/></Border>
+						<TextBlock Classes="tileTitle" Text="{DynamicResource Panel_Text}"/>
+						<TextBlock Classes="tileKeys" Name="KeysOcr"/>
+					</StackPanel>
+				</Button>
+				<Button Classes="tile rec" Tag="Video" Click="Tile_Click">
+					<StackPanel Spacing="4">
+						<Border Classes="iconbg"><material:MaterialIcon Kind="RecordCircleOutline"/></Border>
+						<TextBlock Classes="tileTitle" Text="{DynamicResource Panel_Video}"/>
+						<TextBlock Classes="tileKeys" Name="KeysVideo"/>
+					</StackPanel>
+				</Button>
+				<Button Classes="tile" Tag="RegionDelayed" Click="Tile_Click">
+					<StackPanel Spacing="4">
+						<Border Classes="iconbg"><material:MaterialIcon Kind="TimerOutline"/></Border>
+						<TextBlock Classes="tileTitle" Text="{DynamicResource Panel_Delay}"/>
+						<TextBlock Classes="tileKeys" Text="{DynamicResource Panel_DelayHint}"/>
+					</StackPanel>
+				</Button>
+			</UniformGrid>
+
+			<!-- Останні знімки -->
+			<Grid ColumnDefinitions="*,Auto" Margin="4,2,4,0">
+				<TextBlock Text="{DynamicResource Panel_Recent}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center"/>
+				<Button Grid.Column="1" Classes="foot" Padding="4,2" Tag="History" Click="Tile_Click">
+					<TextBlock Text="{DynamicResource Panel_AllHistory}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
+				</Button>
+			</Grid>
+			<UniformGrid Name="RecentGrid" Columns="3"/>
+			<TextBlock Name="TxtNoRecent" Text="{DynamicResource Panel_NoRecent}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" Margin="4,0,4,6" IsVisible="False"/>
+
+			<Border Height="1" Background="{DynamicResource PanelBorderBrush}" Margin="-14,0"/>
+			<Grid ColumnDefinitions="Auto,Auto,*,Auto">
+				<Button Classes="foot" Tag="Settings" Click="Tile_Click">
+					<StackPanel Orientation="Horizontal" Spacing="6">
+						<material:MaterialIcon Kind="CogOutline"/>
+						<TextBlock Text="{DynamicResource Tray_Settings}"/>
+					</StackPanel>
+				</Button>
+				<Button Grid.Column="1" Classes="foot" Tag="CheckUpdates" Click="Tile_Click">
+					<StackPanel Orientation="Horizontal" Spacing="6">
+						<material:MaterialIcon Kind="Update"/>
+						<TextBlock Text="{DynamicResource Panel_Updates}"/>
+					</StackPanel>
+				</Button>
+				<Button Grid.Column="3" Classes="foot muted" Tag="Quit" Click="Tile_Click">
+					<StackPanel Orientation="Horizontal" Spacing="6">
+						<material:MaterialIcon Kind="Power"/>
+						<TextBlock Text="{DynamicResource Tray_Exit}"/>
+					</StackPanel>
+				</Button>
+			</Grid>
+		</StackPanel>
+	</Border>
+</Window>

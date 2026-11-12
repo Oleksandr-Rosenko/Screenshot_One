@@ -112,7 +112,7 @@ namespace ScreenShot_One_Avalonia
             }
         }
 
-        private string FormatHotkey(int modifier, int vkCode)
+        public static string FormatHotkey(int modifier, int vkCode)
         {
             bool isMac = OperatingSystem.IsMacOS();
             string text = "";
@@ -127,7 +127,7 @@ namespace ScreenShot_One_Avalonia
             return text;
         }
 
-        private string ConvertFromVirtualKey(int vkCode)
+        private static string ConvertFromVirtualKey(int vkCode)
         {
             if (vkCode >= 0x41 && vkCode <= 0x5A) return ((char)vkCode).ToString();
             if (vkCode >= 0x30 && vkCode <= 0x39) return ((char)vkCode).ToString();

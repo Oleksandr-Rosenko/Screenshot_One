@@ -501,6 +501,9 @@ namespace ScreenShot_One_Avalonia.Tests
             Assert.Contains("UpdateWindow.CheckAndShowAsync(isManual: false)", appCode);
             Assert.Contains("UpdateWindow.CheckAndShowAsync(isManual: true)", appCode);
             Assert.Contains("NativeMenuItem(Loc.T(\"Tray_CheckUpdates\"))", appCode);
+            // macOS не дозволяє підмінити меню трею — при зміні мови оновлюються лише підписи (падіння 2.8.0–2.8.1)
+            Assert.Single(System.Text.RegularExpressions.Regex.Matches(appCode, @"_trayIcon\.Menu\s*="));
+            Assert.Contains("item.Header = Loc.T(key)", appCode);
         }
 
         [Fact]

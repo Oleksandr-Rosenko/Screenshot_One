@@ -45,7 +45,7 @@ namespace ScreenShot_One_Avalonia
 
     public static class HistoryManager
     {
-        private static readonly string HistoryFolderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Screenshot_One", "Screenshots");
+        public static readonly string HistoryFolderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Screenshot_One", "Screenshots");
 
         static HistoryManager() { if (!Directory.Exists(HistoryFolderPath)) Directory.CreateDirectory(HistoryFolderPath); }
 

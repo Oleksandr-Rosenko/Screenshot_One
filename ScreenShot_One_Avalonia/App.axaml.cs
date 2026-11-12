@@ -119,6 +119,11 @@ namespace ScreenShot_One_Avalonia
 
             };
 
+            // Windows: лівий клік — панель з плитками (TrayPanelWindow), правий — звичайне меню.
+            // macOS поки лишає меню: клік по значку в рядку меню відкриває саме його.
+            if (OperatingSystem.IsWindows())
+                _trayIcon.Clicked += (_, _) => TrayPanelWindow.Toggle(ScreenService.GetCursorPosition());
+
             // Червона крапка на іконці трею, поки йде запис відео
             VideoRecorderManager.OnStatusChanged += isRecording =>
                 Avalonia.Threading.Dispatcher.UIThread.Post(() =>
@@ -130,11 +135,10 @@ namespace ScreenShot_One_Avalonia
                 });
 
             _trayIcon.Menu = BuildTrayMenu(desktop);
-            // Мова змінилась у налаштуваннях — перебудовуємо меню трею (його рядки задані з коду)
-            Loc.LanguageChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                if (_trayIcon != null) _trayIcon.Menu = BuildTrayMenu(desktop);
-            });
+            // Мова змінилась — міняємо лише підписи пунктів. Саме меню НЕ підміняємо: на macOS Avalonia
+            // не дозволяє замінити меню трею («The menu being updated does not match») — у 2.8.0–2.8.1
+            // це валило програму на старті, коли мова системи не українська.
+            Loc.LanguageChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(UpdateTrayMenuTexts);
 
             _trayIcon.IsVisible = true;
 
@@ -148,20 +152,33 @@ namespace ScreenShot_One_Avalonia
             if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) desktop.Shutdown();
         }
 
-        private NativeMenu BuildTrayMenu(IClassicDesktopStyleApplicationLifetime desktop)
+        /// <summary>Дії трею — спільні для меню й панелі <see cref="TrayPanelWindow"/>.</summary>
+        public enum TrayAction { Region, RegionDelayed, FullScreen, AllScreens, Ocr, Video, History, Settings, CheckUpdates, Quit }
+
+        public void RunTrayAction(TrayAction action)
         {
-            var menu = new NativeMenu();
-
-            var regionItem = new NativeMenuItem(Loc.T("Tray_Region"));
-
-            regionItem.Click += (s, e) => ShowSingle(() => new MainWindow());
-
-            menu.Add(regionItem);
-
-            var regionDelayedItem = new NativeMenuItem(Loc.T("Tray_RegionDelayed"));
-
-            regionDelayedItem.Click += async (s, e) =>
+            switch (action)
             {
+                case TrayAction.Region: ShowSingle(() => new MainWindow()); break;
+                case TrayAction.RegionDelayed: RunDelayedRegionCaptureAsync().FireAndForget("Скріншот із затримкою"); break;
+                case TrayAction.FullScreen: CaptureAndOpenFullScreen(); break;
+                case TrayAction.AllScreens: CaptureAllScreensSimultaneously(); break;
+                case TrayAction.Ocr: ShowSingle(() => new MainWindow(ocrMode: true)); break;
+                case TrayAction.Video: ShowSingle(() => new VideoControlWindow()); break;
+                case TrayAction.History: ShowSingle(() => new HistoryWindow()); break;
+                case TrayAction.Settings: ShowSingle(() => new SettingsWindow()); break;
+                case TrayAction.CheckUpdates: UpdateWindow.CheckAndShowAsync(isManual: true).FireAndForget("Перевірка оновлень"); break;
+                case TrayAction.Quit:
+                    SettingsManager.UnregisterAll();
+                    // Дописуємо фонові збереження історії, щоб останній скріншот не загубився
+                    HistoryManager.WaitForPendingSaves(TimeSpan.FromSeconds(5));
+                    if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) desktop.Shutdown();
+                    break;
+            }
+        }
+
+        private async System.Threading.Tasks.Task RunDelayedRegionCaptureAsync()
+        {
                 var countdownWindow = new Window
                 {
                     Width = 200,
@@ -208,54 +225,48 @@ namespace ScreenShot_One_Avalonia
                 countdownWindow.Close();
 
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => ShowSingle(() => new MainWindow()));
-            };
-            menu.Add(regionDelayedItem);
+        }
 
-            var fullScreenItem = new NativeMenuItem(Loc.T("Tray_FullScreen"));
-            fullScreenItem.Click += (s, e) => CaptureAndOpenFullScreen();
-            menu.Add(fullScreenItem);
+        // Пункти меню трею з ключами рядків — для зміни мови без перебудови меню
+        private readonly System.Collections.Generic.List<(NativeMenuItem Item, string Key)> _trayMenuItems = new();
 
-            // НОВЕ: Додано пункт меню в трей для всіх екранів
-            var allScreensItem = new NativeMenuItem(Loc.T("Tray_AllScreens"));
-            allScreensItem.Click += (s, e) => CaptureAllScreensSimultaneously();
-            menu.Add(allScreensItem);
-
-            var ocrItem = new NativeMenuItem(Loc.T("Common_Ocr"));
-            ocrItem.Click += (s, e) => ShowSingle(() => new MainWindow(ocrMode: true));
-            menu.Add(ocrItem);
-
-            var videoPanelItem = new NativeMenuItem(Loc.T("Tray_Video"));
-            videoPanelItem.Click += (s, e) => ShowSingle(() => new VideoControlWindow());
-            menu.Add(videoPanelItem);
-
-            menu.Add(new NativeMenuItemSeparator());
-
-            var historyItem = new NativeMenuItem(Loc.T("Tray_History"));
-            historyItem.Click += (s, e) => ShowSingle(() => new HistoryWindow());
-            menu.Add(historyItem);
-
-            var settingsItem = new NativeMenuItem(Loc.T("Tray_Settings"));
-            settingsItem.Click += (s, e) => ShowSingle(() => new SettingsWindow());
-            menu.Add(settingsItem);
-
-            var checkUpdatesItem = new NativeMenuItem(Loc.T("Tray_CheckUpdates"));
-            checkUpdatesItem.Click += async (s, e) => await UpdateWindow.CheckAndShowAsync(isManual: true);
-            menu.Add(checkUpdatesItem);
-
-            menu.Add(new NativeMenuItemSeparator());
-
-            var exitItem = new NativeMenuItem(Loc.T("Tray_Exit"));
-            exitItem.Click += (s, e) =>
+        private void UpdateTrayMenuTexts()
+        {
+            try
             {
-                SettingsManager.UnregisterAll();
-                // Дописуємо фонові збереження історії, щоб останній скріншот не загубився
-                HistoryManager.WaitForPendingSaves(TimeSpan.FromSeconds(5));
-                desktop.Shutdown();
+                foreach (var (item, key) in _trayMenuItems) item.Header = Loc.T(key);
+            }
+            catch (Exception ex) { AppLog.Warn(ex); }
+        }
 
-            };
+        private NativeMenu BuildTrayMenu(IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            var menu = new NativeMenu();
+            _trayMenuItems.Clear();
+            void Add(string key, TrayAction action)
+            {
+                var item = new NativeMenuItem(Loc.T(key));
+                item.Click += (s, e) => RunTrayAction(action);
+                menu.Add(item);
+                _trayMenuItems.Add((item, key));
+            }
 
-            menu.Add(exitItem);
-
+            Add("Tray_Region", TrayAction.Region);
+            Add("Tray_RegionDelayed", TrayAction.RegionDelayed);
+            Add("Tray_FullScreen", TrayAction.FullScreen);
+            Add("Tray_AllScreens", TrayAction.AllScreens);
+            Add("Common_Ocr", TrayAction.Ocr);
+            Add("Tray_Video", TrayAction.Video);
+            menu.Add(new NativeMenuItemSeparator());
+            Add("Tray_History", TrayAction.History);
+            Add("Tray_Settings", TrayAction.Settings);
+            // Тест UnitTest1 шукає цей рядок: NativeMenuItem(Loc.T("Tray_CheckUpdates"))
+            var checkUpdatesItem = new NativeMenuItem(Loc.T("Tray_CheckUpdates"));
+            checkUpdatesItem.Click += (s, e) => RunTrayAction(TrayAction.CheckUpdates);
+            menu.Add(checkUpdatesItem);
+            _trayMenuItems.Add((checkUpdatesItem, "Tray_CheckUpdates"));
+            menu.Add(new NativeMenuItemSeparator());
+            Add("Tray_Exit", TrayAction.Quit);
             return menu;
         }
 

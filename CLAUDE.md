@@ -39,6 +39,8 @@
   - Відео: `IVideoRecorderService` має `PauseAsync/ResumeAsync` і мікрофон. Mac — пауза сегментами + `ffmpeg concat`; системний звук на Mac не пишеться (потрібен віртуальний аудіопристрій).
   - Редактор: інструменти `Ellipse`, `Line`, `Spotlight` (`SpotlightShape`), товщина `_strokeWidth`; `ShapeType` у JSON — числа, нові типи лише в кінець; `ShapeData.StrokeWidth` (0 — старі записи). `Pixelate` прибрано з панелі як дубль «Розмиття» (2.7.0), але його завантаження зі старих записів лишилось.
   - Панель редактора (2.7.0): групи з `Flyout` (`BtnShapesGroup`, `BtnLinesGroup`, `BtnDrawGroup`, `BtnHideGroup`, `BtnImageGroup`, `BtnShareGroup`), підсвітка — клас `active` (стиль у `App.axaml`), іконка групи = останній інструмент (`UpdateToolHighlight`). Колір/товщина/розмір тексту — у `ColorPalettePopup`. Однолітерні гарячі клавіші — `HandleToolShortcut`. **Без ScrollViewer у панелі.** З 2.7.2 при достатній ширині групи розгортаються в окремі кнопки (`BuildInlineToolButtons` / `UpdateToolbarMode`), вміст меню — у `Border.menucard` (шаблон SukiUI малює `FlyoutPresenter` без фону). Кнопки обрізки — у шарі `CropControlsLayer` поза масштабованим полотном (`PositionCropControls`).
+  - `TrayPanelWindow` (2.8.2) — панель трею: плитки дій, останні 3 знімки, налаштування/оновлення/вихід. Windows: лівий клік по значку (`TrayIcon.Clicked`), правий — `NativeMenu`. macOS поки лише меню. Дії — `App.RunTrayAction(TrayAction)`, спільні з меню.
+  - **Меню трею не підміняти** (`_trayIcon.Menu = ...` лише один раз): на macOS Avalonia падає «The menu being updated does not match». Зміна мови — `UpdateTrayMenuTexts` (лише `Header`). Так падала Mac-версія 2.8.0–2.8.1.
   - `HotkeyService` — глобальні клавіші. Windows: low-level hook в окремому потоці; macOS: Carbon `RegisterEventHotKey`.
   - `SettingsManager` / `AppSettings` — `settings.json`, міграції (`SettingsVersion`), тема, автозапуск.
   - `UpdateWindow` — оновлення через Velopack (`GithubSource`, без токена).
@@ -102,7 +104,7 @@ macOS (з 2.8.1) — job `macos` у `release.yml` (`Build-MacApp.ps1 -Arch all`)
 - `Screenshot_One-vX.Y.Z-macOS.pkg` — **перше встановлення**, один файл для arm64 і x64 (`MacInstaller/distribution.xml` вибирає за `hw.optional.arm64`). `preinstall` закриває й прибирає стару копію; `postinstall` знімає карантин, віддає `.app` користувачу (`chown`) і запускає програму.
 - `Screenshot_One-vX.Y.Z-macOS-arm64.zip` / `-x64.zip` — для **самооновлення** (`MacUpdateChecker.SelfUpdateAsync`: завантаження → `ditto -x -k` → скрипт після виходу підміняє `Contents/` з відкатом → перезапуск). Якщо `.app` не доступний для запису — завантажує й відкриває .pkg.
 - ffmpeg (статичний, ffmpeg.martin-riedl.de) кладеться в `Contents/MacOS/ffmpeg`. Підпис: кожен Mach-O + бандл, без hardened runtime. Секрети `MAC_SIGN_P12_BASE64` / `MAC_SIGN_P12_PASSWORD` — власний (не Apple) сертифікат «Screenshot One Code Signing»: стабільний підпис, macOS пам'ятає дозвіл «Запис екрана» між оновленнями. Без секретів — ad-hoc (працює, але дозвіл може злітати після оновлень). Сертифікат Apple Developer ($99/рік) автор поки не бере — тож перше відкриття .pkg вимагає «Усе одно відкрити».
-- CI (`ci.yml`, job macOS) збирає все те саме з версією 0.0.0 і перевіряє підпис, архітектуру ffmpeg і вміст .pkg.
+- CI (`ci.yml`, job macOS) збирає все те саме з версією 0.0.0, перевіряє підпис, архітектуру ffmpeg і вміст .pkg, **встановлює .pkg і запускає програму на 25 с** (у разі падіння друкує stderr, app.log і звіт macOS).
 Якщо Mac-файлів у релізі немає — повторний ручний запуск Release їх додасть.
 
 CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і збірка під macOS при кожному push у `main`/`claude/**` і в PR.
@@ -155,6 +157,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 
 ## Історія ключових змін
 
+- 2.8.2 — виправлено падіння Mac на старті (підміна меню трею при зміні мови); панель трею з плитками на Windows; запуск програми в CI на macOS.
 - 2.8.1 — macOS: універсальний інсталятор .pkg, вбудований ffmpeg, самооновлення без пароля, стабільний підпис (якщо є секрети).
 - 2.8.0 — локалізація: українська, англійська, російська; автовибір за мовою ОС, вибір у налаштуваннях.
 - 2.7.3 — нова іконка «SO» (варіант B, обрав автор).
