@@ -87,7 +87,7 @@ namespace ScreenShot_One_Avalonia
                 if (release == null || release.Version <= current)
                 {
                     if (isManual)
-                        await ShowAsync("Оновлення", $"У вас найновіша версія ({current.ToString(3)}).", ButtonEnum.Ok);
+                        await ShowAsync(Loc.T("Update_Title"), Loc.F("Update_MacLatest", current.ToString(3)), ButtonEnum.Ok);
                     return;
                 }
 
@@ -100,11 +100,11 @@ namespace ScreenShot_One_Avalonia
                 }
 
                 bool hasZip = release.DownloadUrl != null;
-                var answer = await ShowAsync("Доступне оновлення",
-                    $"Доступна нова версія {release.VersionText} (у вас {current.ToString(3)}).\n\n" +
+                var answer = await ShowAsync(Loc.T("Update_MacAvailableTitle"),
+                    Loc.F("Update_MacAvailable", release.VersionText, current.ToString(3)) +
                     (hasZip
-                        ? "Завантажити архів для Mac? Після завантаження розпакуйте його й замініть Screenshot_One.app у папці «Програми»."
-                        : "Відкрити сторінку релізу?"),
+                        ? Loc.T("Update_MacDownloadZip")
+                        : Loc.T("Update_MacOpenRelease")),
                     ButtonEnum.YesNo);
 
                 if (answer == ButtonResult.Yes)
@@ -122,7 +122,7 @@ namespace ScreenShot_One_Avalonia
             {
                 AppLog.Warn(ex);
                 if (isManual)
-                    await ShowAsync("Оновлення", $"Не вдалося перевірити оновлення: {ex.Message}", ButtonEnum.Ok);
+                    await ShowAsync(Loc.T("Update_Title"), Loc.F("Update_MacCheckFailed", ex.Message), ButtonEnum.Ok);
             }
         }
 

@@ -18,10 +18,18 @@ namespace ScreenShot_One_Avalonia
         {
             InitializeComponent();
 
+            UpdateVersionText();
+
+            SettingsManager.IsSuspended = true;
+            LoadCurrentSettings();
+        }
+
+        private void UpdateVersionText()
+        {
             var assemblyVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
             string currentVersionStr = assemblyVersion != null
                 ? $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}"
-                : "Невідома версія";
+                : Loc.T("Settings_UnknownVersion");
 
             try
             {
@@ -35,18 +43,15 @@ namespace ScreenShot_One_Avalonia
                 }
                 else
                 {
-                    if (currentVersionStr != "Невідома версія")
+                    if (currentVersionStr != Loc.T("Settings_UnknownVersion"))
                     {
-                        currentVersionStr += " (Режим розробки)";
+                        currentVersionStr += Loc.T("Settings_DevMode");
                     }
                 }
             }
             catch (Exception logEx) { AppLog.Warn(logEx); }
 
-            TxtCurrentVersion.Text = $"Поточна версія програми: {currentVersionStr}";
-
-            SettingsManager.IsSuspended = true;
-            LoadCurrentSettings();
+            TxtCurrentVersion.Text = Loc.F("Settings_CurrentVersion", currentVersionStr);
         }
 
         private void LoadCurrentSettings()
@@ -57,6 +62,11 @@ namespace ScreenShot_One_Avalonia
 
             _initialTheme = SettingsManager.Current.Theme ?? "Dark";
             ComboTheme.SelectedIndex = string.Equals(_initialTheme, "Light", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+
+            _initialLanguage = SettingsManager.Current.Language ?? "auto";
+            _languageReady = false;
+            ComboLanguage.SelectedIndex = Math.Max(0, Array.IndexOf(LanguageCodes, _initialLanguage));
+            _languageReady = true;
 
             TxtRegionKey.Text = FormatHotkey(SettingsManager.Current.RegionModifier, SettingsManager.Current.RegionKey);
             TxtFullScreenKey.Text = FormatHotkey(SettingsManager.Current.FullScreenModifier, SettingsManager.Current.FullScreenKey);
@@ -82,7 +92,7 @@ namespace ScreenShot_One_Avalonia
             {
                 var options = new Avalonia.Platform.Storage.FolderPickerOpenOptions
                 {
-                    Title = "Папка для збереження скріншотів",
+                    Title = Loc.T("Settings_ChooseFolderTitle"),
                     AllowMultiple = false
                 };
                 var start = await StorageProvider.TryGetFolderFromPathAsync(TxtSaveFolder.Text ?? ImageExport.DefaultFolder);
@@ -241,6 +251,22 @@ namespace ScreenShot_One_Avalonia
             return 0;
         }
 
+        // Порядок пунктів ComboLanguage
+        private static readonly string[] LanguageCodes = { "auto", "uk", "en", "ru" };
+        private string _initialLanguage = "auto";
+        private bool _languageReady;
+
+        private string SelectedLanguage => ComboLanguage.SelectedIndex >= 0 && ComboLanguage.SelectedIndex < LanguageCodes.Length
+            ? LanguageCodes[ComboLanguage.SelectedIndex] : "auto";
+
+        /// <summary>Мова міняється одразу (як тема); якщо закрити без «Зберегти» — повертається попередня.</summary>
+        private void ComboLanguage_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+        {
+            if (ComboLanguage == null || !_languageReady) return;
+            Loc.Apply(SelectedLanguage);
+            UpdateVersionText();
+        }
+
         private void ComboTheme_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (ComboTheme == null) return;
@@ -275,6 +301,7 @@ namespace ScreenShot_One_Avalonia
             if (!_isSaved)
             {
                 SettingsManager.ApplyTheme(_initialTheme);
+                if (SelectedLanguage != _initialLanguage) Loc.Apply(_initialLanguage);
             }
             base.OnClosing(e);
         }
@@ -291,6 +318,7 @@ namespace ScreenShot_One_Avalonia
             SettingsManager.Current.CopyToClipboardOnOpen = ChkCopyToClipboard.IsChecked == true;
             SettingsManager.Current.CopyLinkOnUpload = ChkCopyLink.IsChecked == true;
             SettingsManager.Current.Theme = ComboTheme.SelectedIndex == 1 ? "Light" : "Dark";
+            SettingsManager.Current.Language = SelectedLanguage;
             SettingsManager.Current.AfterCapture = ComboAfterCapture.SelectedIndex == 1 ? "QuickAccess" : "Editor";
             SettingsManager.Current.SaveFormat = ComboSaveFormat.SelectedIndex == 1 ? "jpg" : "png";
             SettingsManager.Current.AutoSaveToFolder = ChkAutoSave.IsChecked == true;

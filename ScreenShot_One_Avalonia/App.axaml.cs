@@ -20,6 +20,8 @@ namespace ScreenShot_One_Avalonia
             AvaloniaXamlLoader.Load(this);
             // М'ятний акцент одразу (до завантаження налаштувань), щоб не блимав стандартний синій SukiUI
             AppTheme.ApplyAccent(RequestedThemeVariant ?? Avalonia.Styling.ThemeVariant.Dark);
+            // Рядки інтерфейсу потрібні вже першим вікнам (мова з налаштувань застосовується трохи пізніше)
+            Loc.InstallCurrent();
         }
 
         public override void OnFrameworkInitializationCompleted()
@@ -31,6 +33,8 @@ namespace ScreenShot_One_Avalonia
                 InitializeTrayIcon(desktop);
 
                 SettingsManager.LoadAndRegister();
+                // Мова інтерфейсу: з налаштувань або як у системі (перебудує й меню трею)
+                Loc.Apply(SettingsManager.Current.Language);
 
                 SettingsManager.OnRegionCapture += () => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => ShowSingle(() => new MainWindow()));
 
@@ -125,15 +129,28 @@ namespace ScreenShot_One_Avalonia
                     }
                 });
 
+            _trayIcon.Menu = BuildTrayMenu(desktop);
+            // Мова змінилась у налаштуваннях — перебудовуємо меню трею (його рядки задані з коду)
+            Loc.LanguageChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (_trayIcon != null) _trayIcon.Menu = BuildTrayMenu(desktop);
+            });
+
+            _trayIcon.IsVisible = true;
+
+        }
+
+        private NativeMenu BuildTrayMenu(IClassicDesktopStyleApplicationLifetime desktop)
+        {
             var menu = new NativeMenu();
 
-            var regionItem = new NativeMenuItem("Зробити скріншот зони");
+            var regionItem = new NativeMenuItem(Loc.T("Tray_Region"));
 
             regionItem.Click += (s, e) => ShowSingle(() => new MainWindow());
 
             menu.Add(regionItem);
 
-            var regionDelayedItem = new NativeMenuItem("Скріншот зони (затримка 3 сек)");
+            var regionDelayedItem = new NativeMenuItem(Loc.T("Tray_RegionDelayed"));
 
             regionDelayedItem.Click += async (s, e) =>
             {
@@ -186,40 +203,40 @@ namespace ScreenShot_One_Avalonia
             };
             menu.Add(regionDelayedItem);
 
-            var fullScreenItem = new NativeMenuItem("Скріншот активного екрана");
+            var fullScreenItem = new NativeMenuItem(Loc.T("Tray_FullScreen"));
             fullScreenItem.Click += (s, e) => CaptureAndOpenFullScreen();
             menu.Add(fullScreenItem);
 
             // НОВЕ: Додано пункт меню в трей для всіх екранів
-            var allScreensItem = new NativeMenuItem("Скріншот усіх екранів одночасно");
+            var allScreensItem = new NativeMenuItem(Loc.T("Tray_AllScreens"));
             allScreensItem.Click += (s, e) => CaptureAllScreensSimultaneously();
             menu.Add(allScreensItem);
 
-            var ocrItem = new NativeMenuItem("Розпізнати текст (OCR)");
+            var ocrItem = new NativeMenuItem(Loc.T("Common_Ocr"));
             ocrItem.Click += (s, e) => ShowSingle(() => new MainWindow(ocrMode: true));
             menu.Add(ocrItem);
 
-            var videoPanelItem = new NativeMenuItem("Записати відео");
+            var videoPanelItem = new NativeMenuItem(Loc.T("Tray_Video"));
             videoPanelItem.Click += (s, e) => ShowSingle(() => new VideoControlWindow());
             menu.Add(videoPanelItem);
 
             menu.Add(new NativeMenuItemSeparator());
 
-            var historyItem = new NativeMenuItem("Історія");
+            var historyItem = new NativeMenuItem(Loc.T("Tray_History"));
             historyItem.Click += (s, e) => ShowSingle(() => new HistoryWindow());
             menu.Add(historyItem);
 
-            var settingsItem = new NativeMenuItem("Налаштування");
+            var settingsItem = new NativeMenuItem(Loc.T("Tray_Settings"));
             settingsItem.Click += (s, e) => ShowSingle(() => new SettingsWindow());
             menu.Add(settingsItem);
 
-            var checkUpdatesItem = new NativeMenuItem("Перевірити оновлення");
+            var checkUpdatesItem = new NativeMenuItem(Loc.T("Tray_CheckUpdates"));
             checkUpdatesItem.Click += async (s, e) => await UpdateWindow.CheckAndShowAsync(isManual: true);
             menu.Add(checkUpdatesItem);
 
             menu.Add(new NativeMenuItemSeparator());
 
-            var exitItem = new NativeMenuItem("Вихід");
+            var exitItem = new NativeMenuItem(Loc.T("Tray_Exit"));
             exitItem.Click += (s, e) =>
             {
                 SettingsManager.UnregisterAll();
@@ -231,10 +248,7 @@ namespace ScreenShot_One_Avalonia
 
             menu.Add(exitItem);
 
-            _trayIcon.Menu = menu;
-
-            _trayIcon.IsVisible = true;
-
+            return menu;
         }
 
         // Іконка трею береться з готових PNG у Assets (tray.png / tray-recording.png).

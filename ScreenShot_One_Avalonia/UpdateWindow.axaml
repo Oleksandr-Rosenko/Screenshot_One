@@ -3,7 +3,7 @@
         xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
         xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="ScreenShot_One_Avalonia.UpdateWindow"
-        Title="Оновлення Screenshot One"
+        Title="{DynamicResource Update_WindowTitle}"
         Width="520" Height="480"
         WindowStartupLocation="CenterScreen"
         Topmost="True"
@@ -17,7 +17,7 @@
 				<material:MaterialIcon Name="IconHeader" Kind="RocketLaunch" Width="28" Height="28" Foreground="{DynamicResource SukiPrimaryColor}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 			</Border>
 			<StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="5">
-				<TextBlock Name="TxtTitle" Text="Доступне оновлення!" FontSize="18" FontWeight="Bold"/>
+				<TextBlock Name="TxtTitle" Text="{DynamicResource Update_Available}" FontSize="18" FontWeight="Bold"/>
 				<StackPanel Orientation="Horizontal" Spacing="8">
 					<Border Background="{DynamicResource SukiLightBackground}" BorderBrush="{DynamicResource SukiBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="8,2">
 						<TextBlock Name="TxtCurrentVersion" Text="2.4.0" FontSize="12" Opacity="0.8"/>
@@ -35,10 +35,10 @@
 			<Grid RowDefinitions="Auto,*">
 				<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
 					<material:MaterialIcon Name="IconCardHeader" Kind="FormatListBulleted" Width="18" Height="18" Foreground="{DynamicResource SukiPrimaryColor}"/>
-					<TextBlock Name="TxtCardHeader" Text="Що нового в цій версії:" FontSize="13" FontWeight="SemiBold"/>
+					<TextBlock Name="TxtCardHeader" Text="{DynamicResource Update_WhatsNew}" FontSize="13" FontWeight="SemiBold"/>
 				</StackPanel>
 				<ScrollViewer Grid.Row="1" MaxHeight="180">
-					<TextBlock Name="TxtChangelog" Text="Завантаження опису змін..." TextWrapping="Wrap" FontSize="13" LineHeight="20" Opacity="0.9"/>
+					<TextBlock Name="TxtChangelog" Text="{DynamicResource Update_LoadingNotes}" TextWrapping="Wrap" FontSize="13" LineHeight="20" Opacity="0.9"/>
 				</ScrollViewer>
 			</Grid>
 		</suki:GlassCard>
@@ -46,7 +46,7 @@
 		<!-- Progress Section -->
 		<StackPanel Grid.Row="2" Name="PanelProgress" IsVisible="False" Margin="0,0,0,15" Spacing="8">
 			<Grid ColumnDefinitions="*,Auto">
-				<TextBlock Name="TxtProgressStatus" Text="Завантаження компонентів..." FontSize="13" Opacity="0.85"/>
+				<TextBlock Name="TxtProgressStatus" Text="{DynamicResource Update_Downloading}" FontSize="13" Opacity="0.85"/>
 				<TextBlock Grid.Column="1" Name="TxtProgressPercent" Text="0%" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource SukiPrimaryColor}"/>
 			</Grid>
 			<ProgressBar Name="ProgressBarUpdate" Height="8" Minimum="0" Maximum="100" Value="0" CornerRadius="4"/>
@@ -56,12 +56,12 @@
 		<Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto">
 			<TextBlock Name="TxtStatusMessage" Grid.Column="0" VerticalAlignment="Center" FontSize="12" Opacity="0.8" TextWrapping="Wrap" Margin="0,0,10,0"/>
 
-			<Button Grid.Column="1" Name="BtnLater" Classes="Basic" Content="Пізніше" Margin="0,0,10,0" Foreground="{DynamicResource SukiText}" FontWeight="SemiBold" Click="BtnLater_Click"/>
+			<Button Grid.Column="1" Name="BtnLater" Classes="Basic" Content="{DynamicResource Common_Later}" Margin="0,0,10,0" Foreground="{DynamicResource SukiText}" FontWeight="SemiBold" Click="BtnLater_Click"/>
 
 			<Button Grid.Column="2" Name="BtnAction" Classes="Primary" Click="BtnAction_Click">
 				<StackPanel Orientation="Horizontal" Spacing="6">
 					<material:MaterialIcon Name="IconAction" Kind="Download" Width="18" Height="18"/>
-					<TextBlock Name="TxtActionBtn" Text="Оновити зараз"/>
+					<TextBlock Name="TxtActionBtn" Text="{DynamicResource Update_Now}"/>
 				</StackPanel>
 			</Button>
 		</Grid>

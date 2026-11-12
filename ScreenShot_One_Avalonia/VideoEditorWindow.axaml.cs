@@ -122,14 +122,14 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                _ = ShowErrorDialog("Помилка ініціалізації плеєра (Конструктор)", ex);
+                _ = ShowErrorDialog(Loc.T("VEditor_ErrPlayerInit"), ex);
             }
 
             this.Opened += async (s, e) =>
             {
                 try
                 {
-                    TxtLoading.Text = "Обробка та завантаження відео, зачекайте...";
+                    TxtLoading.Text = Loc.T("VEditor_Processing");
                     TxtLoading.IsVisible = true;
 
                     if (!string.IsNullOrEmpty(_sourceFile))
@@ -188,8 +188,8 @@ namespace ScreenShot_One_Avalonia
                 }
                 catch (Exception ex)
                 {
-                    TxtLoading.Text = "Помилка завантаження відео";
-                    await ShowErrorDialog("Помилка під час відкриття відео (Opened)", ex);
+                    TxtLoading.Text = Loc.T("VEditor_LoadError");
+                    await ShowErrorDialog(Loc.T("VEditor_ErrOpen"), ex);
                 }
             };
 
@@ -269,10 +269,10 @@ namespace ScreenShot_One_Avalonia
         {
             try
             {
-                string details = $"Заголовок: {title}\n\nФайл: {_sourceFile}\n\nТип помилки: {ex.GetType().FullName}\nПовідомлення: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
+                string details = Loc.F("VEditor_ErrorDetails", title, _sourceFile, ex.GetType().FullName, ex.Message, ex.StackTrace);
                 if (ex.InnerException != null) details += $"\n\nInner Exception: {ex.InnerException.Message}\n{ex.InnerException.StackTrace}";
 
-                var box = MessageBoxManager.GetMessageBoxStandard("Критична помилка редактора", details);
+                var box = MessageBoxManager.GetMessageBoxStandard(Loc.T("VEditor_CriticalTitle"), details);
                 await box.ShowWindowDialogAsync(this);
             }
             catch
@@ -508,12 +508,12 @@ namespace ScreenShot_One_Avalonia
                     // Left/Right: Red-tinted / Dimmed (Cut)
                     TrimMaskLeft.Background = new SolidColorBrush(Color.FromArgb(160, 239, 68, 68));
                     TrimMaskRight.Background = new SolidColorBrush(Color.FromArgb(160, 239, 68, 68));
-                    if (TxtMaskLeft != null) { TxtMaskLeft.Text = "✂ ВИДАЛЯЄТЬСЯ"; TxtMaskLeft.Foreground = Brushes.White; TxtMaskLeft.IsVisible = startVal > 10; }
-                    if (TxtMaskRight != null) { TxtMaskRight.Text = "✂ ВИДАЛЯЄТЬСЯ"; TxtMaskRight.Foreground = Brushes.White; TxtMaskRight.IsVisible = rightVal > 10; }
+                    if (TxtMaskLeft != null) { TxtMaskLeft.Text = Loc.T("VEditor_Removed"); TxtMaskLeft.Foreground = Brushes.White; TxtMaskLeft.IsVisible = startVal > 10; }
+                    if (TxtMaskRight != null) { TxtMaskRight.Text = Loc.T("VEditor_Removed"); TxtMaskRight.Foreground = Brushes.White; TxtMaskRight.IsVisible = rightVal > 10; }
 
                     // Middle: Vivid Green (Keep)
                     TrimMaskActive.Background = new SolidColorBrush(Color.Parse("#3AA882"));
-                    if (TxtMaskActive != null) { TxtMaskActive.Text = "✓ ЗБЕРІГАЄТЬСЯ"; TxtMaskActive.Foreground = Brushes.White; TxtMaskActive.IsVisible = activeVal > 12; }
+                    if (TxtMaskActive != null) { TxtMaskActive.Text = Loc.T("VEditor_Kept"); TxtMaskActive.Foreground = Brushes.White; TxtMaskActive.IsVisible = activeVal > 12; }
                 }
                 else
                 {
@@ -521,12 +521,12 @@ namespace ScreenShot_One_Avalonia
                     // Left/Right: Vivid Green (Keep)
                     TrimMaskLeft.Background = new SolidColorBrush(Color.Parse("#3AA882"));
                     TrimMaskRight.Background = new SolidColorBrush(Color.Parse("#3AA882"));
-                    if (TxtMaskLeft != null) { TxtMaskLeft.Text = "✓ ЗБЕРІГАЄТЬСЯ"; TxtMaskLeft.Foreground = Brushes.White; TxtMaskLeft.IsVisible = startVal > 10; }
-                    if (TxtMaskRight != null) { TxtMaskRight.Text = "✓ ЗБЕРІГАЄТЬСЯ"; TxtMaskRight.Foreground = Brushes.White; TxtMaskRight.IsVisible = rightVal > 10; }
+                    if (TxtMaskLeft != null) { TxtMaskLeft.Text = Loc.T("VEditor_Kept"); TxtMaskLeft.Foreground = Brushes.White; TxtMaskLeft.IsVisible = startVal > 10; }
+                    if (TxtMaskRight != null) { TxtMaskRight.Text = Loc.T("VEditor_Kept"); TxtMaskRight.Foreground = Brushes.White; TxtMaskRight.IsVisible = rightVal > 10; }
 
                     // Middle: Vibrant Red (Cut)
                     TrimMaskActive.Background = new SolidColorBrush(Color.Parse("#D9614C"));
-                    if (TxtMaskActive != null) { TxtMaskActive.Text = "✂ ВИДАЛЯЄТЬСЯ"; TxtMaskActive.Foreground = Brushes.White; TxtMaskActive.IsVisible = activeVal > 12; }
+                    if (TxtMaskActive != null) { TxtMaskActive.Text = Loc.T("VEditor_Removed"); TxtMaskActive.Foreground = Brushes.White; TxtMaskActive.IsVisible = activeVal > 12; }
                 }
             }
         }
@@ -547,7 +547,7 @@ namespace ScreenShot_One_Avalonia
                     {
                         IconTrimHeader.Kind = Material.Icons.MaterialIconKind.ArrowCollapseHorizontal;
                         IconTrimHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882"));
-                        TxtTrimHeader.Text = "Режим обрізки (Залишити діапазон)";
+                        TxtTrimHeader.Text = Loc.T("VEditor_TrimHeaderKeep");
                         TxtTrimHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882"));
 
                         // Mode Segmented Buttons
@@ -565,20 +565,20 @@ namespace ScreenShot_One_Avalonia
                         }
 
                         // Badges
-                        if (TxtTrimStartLabel != null) TxtTrimStartLabel.Text = "Початок:";
-                        if (TxtTrimDurationLabel != null) TxtTrimDurationLabel.Text = "Буде збережено:";
-                        if (TxtTrimEndLabel != null) TxtTrimEndLabel.Text = "Кінець:";
+                        if (TxtTrimStartLabel != null) TxtTrimStartLabel.Text = Loc.T("VEditor_StartColon");
+                        if (TxtTrimDurationLabel != null) TxtTrimDurationLabel.Text = Loc.T("VEditor_WillBeSaved");
+                        if (TxtTrimEndLabel != null) TxtTrimEndLabel.Text = Loc.T("VEditor_EndColon");
 
                         // Sliders
-                        if (TxtTrimStartRowHeader != null) { TxtTrimStartRowHeader.Text = "Початок (звідки залишити)"; TxtTrimStartRowHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882")); }
+                        if (TxtTrimStartRowHeader != null) { TxtTrimStartRowHeader.Text = Loc.T("VEditor_StartFrom"); TxtTrimStartRowHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882")); }
                         if (TrimStartSlider != null) TrimStartSlider.Foreground = new SolidColorBrush(Color.Parse("#3AA882"));
-                        if (TxtTrimEndRowHeader != null) { TxtTrimEndRowHeader.Text = "Кінець (доки залишити)"; TxtTrimEndRowHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882")); }
+                        if (TxtTrimEndRowHeader != null) { TxtTrimEndRowHeader.Text = Loc.T("VEditor_EndTo"); TxtTrimEndRowHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882")); }
                         if (TrimEndSlider != null) TrimEndSlider.Foreground = new SolidColorBrush(Color.Parse("#3AA882"));
 
-                        if (TxtPreviewTrim != null) TxtPreviewTrim.Text = "Прев'ю збереженого";
-                        if (TxtConfirmTrim != null) TxtConfirmTrim.Text = "Зберегти виділене";
+                        if (TxtPreviewTrim != null) TxtPreviewTrim.Text = Loc.T("VEditor_PreviewSaved");
+                        if (TxtConfirmTrim != null) TxtConfirmTrim.Text = Loc.T("VEditor_SaveSelected");
                         if (IconConfirmTrim != null) { IconConfirmTrim.Kind = Material.Icons.MaterialIconKind.Check; IconConfirmTrim.Foreground = ThemeBrush("OnAccentBrush"); }
-                        if (TxtBtnSave != null) TxtBtnSave.Text = "Обрізати та зберегти";
+                        if (TxtBtnSave != null) TxtBtnSave.Text = Loc.T("VEditor_TrimAndSave");
 
                         // Status Banner Styling (Compact & calm)
                         if (TrimStatusBanner != null)
@@ -633,13 +633,13 @@ namespace ScreenShot_One_Avalonia
             {
                 if (!_isCutoutMode)
                 {
-                    TxtTrimStatusBanner.Text = $"✓ ЗБЕРЕЖЕТЬСЯ: відрізок [{startStr} – {endStr}] (тривалість {durationStr}). Початок (00:00.00–{startStr}) та кінець ({endStr}–{totalStr}) буде обрізано.";
+                    TxtTrimStatusBanner.Text = Loc.F("VEditor_BannerKeep", startStr, endStr, durationStr, totalStr);
                 }
                 else
                 {
                     long keptMs = Math.Max(0, totalMs - durationMs);
                     string keptStr = FormatTimeWithHundredths(keptMs);
-                    TxtTrimStatusBanner.Text = $"✂ ВИДАЛЯЄТЬСЯ: шматок [{startStr} – {endStr}] (-{durationStr}). Частини [00:00.00–{startStr}] та [{endStr}–{totalStr}] буде об'єднано разом (залишиться {keptStr}).";
+                    TxtTrimStatusBanner.Text = Loc.F("VEditor_BannerCut", startStr, endStr, durationStr, totalStr, keptStr);
                 }
             }
         }
@@ -822,7 +822,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                _ = ShowErrorDialog("Помилка відтворення (BtnPlayPause)", ex);
+                _ = ShowErrorDialog(Loc.T("VEditor_ErrPlayback"), ex);
             }
         }
 
@@ -842,7 +842,7 @@ namespace ScreenShot_One_Avalonia
                     BtnTrimMode.BorderThickness = new Thickness(1.5);
                     if (TxtBtnTrimMode != null)
                     {
-                        TxtBtnTrimMode.Text = "Обрізка: Увімкнено";
+                        TxtBtnTrimMode.Text = Loc.T("VEditor_TrimOn");
                         TxtBtnTrimMode.Foreground = isDark ? new SolidColorBrush(Color.Parse("#FCD34D")) : new SolidColorBrush(Color.Parse("#9A6A1F"));
                     }
 
@@ -850,7 +850,7 @@ namespace ScreenShot_One_Avalonia
                     SetVideoSliderTrackVisibility(false);
 
                     SetTrimMode(false);
-                    ToolTip.SetTip(BtnSave, "Обрізати та зберегти відео");
+                    ToolTip.SetTip(BtnSave, Loc.T("VEditor_TrimSaveTip"));
                 }
                 else
                 {
@@ -859,15 +859,15 @@ namespace ScreenShot_One_Avalonia
                     BtnTrimMode.BorderThickness = new Thickness(0);
                     if (TxtBtnTrimMode != null)
                     {
-                        TxtBtnTrimMode.Text = "Обрізка";
+                        TxtBtnTrimMode.Text = Loc.T("VEditor_Trim");
                         TxtBtnTrimMode.Foreground = null;
                     }
 
                     if (TimelineTrackBorder != null) TimelineTrackBorder.Height = 8;
                     SetVideoSliderTrackVisibility(true);
 
-                    TxtBtnSave.Text = "Зберегти";
-                    ToolTip.SetTip(BtnSave, "Зберегти відео");
+                    TxtBtnSave.Text = Loc.T("Common_Save");
+                    ToolTip.SetTip(BtnSave, Loc.T("VEditor_SaveVideo"));
                 }
             }
             catch (Exception ex)
@@ -897,7 +897,7 @@ namespace ScreenShot_One_Avalonia
 
             if (BtnTrimMode.IsChecked == true && (TrimStartSlider.Value > 0.05 || TrimEndSlider.Value < 99.95))
             {
-                ShowToast("Обрізка відео...");
+                ShowToast(Loc.T("VEditor_Trimming"));
                 if (_mediaPlayer == null)
                 {
                     BtnSave.IsEnabled = true;
@@ -1070,7 +1070,7 @@ namespace ScreenShot_One_Avalonia
 
                         if (!replaced)
                         {
-                            throw new IOException("Не вдалося оновити файл після обрізки: файл заблоковано системою.");
+                            throw new IOException(Loc.T("VEditor_FileLocked"));
                         }
                     });
 
@@ -1109,12 +1109,12 @@ namespace ScreenShot_One_Avalonia
 
                         _timer?.Start();
 
-                        ShowToast("Обрізку застосовано! Продовжуйте редагування або збережіть.");
+                        ShowToast(Loc.T("VEditor_TrimApplied"));
                     }
                 }
                 catch (Exception ex)
                 {
-                    await ShowErrorDialog("Помилка збереження обрізки", ex);
+                    await ShowErrorDialog(Loc.T("VEditor_ErrSaveTrim"), ex);
                     try
                     {
                         if (_libVLC != null && _mediaPlayer != null && File.Exists(_sourceFile))
@@ -1135,7 +1135,7 @@ namespace ScreenShot_One_Avalonia
             else
             {
                 // When trim sliders are not moved, "Зберегти" saves/finalizes and closes the editor
-                ShowToast("Відео збережено!");
+                ShowToast(Loc.T("VEditor_VideoSaved"));
                 CleanUpVlcBackground();
                 await Task.Delay(400);
                 this.Close();
@@ -1150,13 +1150,13 @@ namespace ScreenShot_One_Avalonia
             BtnSave.IsEnabled = false;
             BtnUpload.IsEnabled = false;
 
-            ShowToast("Підготовка до завантаження...");
+            ShowToast(Loc.T("VEditor_PreparingUpload"));
 
             await Task.Delay(150);
 
             CleanUpVlcBackground();
 
-            ShowToast("Завантаження на Google Диск...");
+            ShowToast(Loc.T("VEditor_UploadingDrive"));
             try
             {
                 string link = await GoogleDriveManager.UploadVideoAsync(_sourceFile);
@@ -1165,22 +1165,22 @@ namespace ScreenShot_One_Avalonia
                 {
                     var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
                     if (clipboard != null) await clipboard.SetTextAsync(link);
-                    ShowToast("Посилання скопійовано в буфер!");
+                    ShowToast(Loc.T("VEditor_LinkCopied"));
 
                     await Task.Delay(1000);
                     this.Close();
                 }
                 else
                 {
-                    ShowToast("Помилка: Посилання пусте");
+                    ShowToast(Loc.T("VEditor_EmptyLink"));
                     BtnSave.IsEnabled = true;
                     BtnUpload.IsEnabled = true;
                 }
             }
             catch (Exception ex)
             {
-                await ShowErrorDialog("Помилка завантаження на Google Диск", ex);
-                ShowToast("Помилка завантаження");
+                await ShowErrorDialog(Loc.T("VEditor_ErrDrive"), ex);
+                ShowToast(Loc.T("VEditor_UploadError"));
                 BtnSave.IsEnabled = true;
                 BtnUpload.IsEnabled = true;
             }

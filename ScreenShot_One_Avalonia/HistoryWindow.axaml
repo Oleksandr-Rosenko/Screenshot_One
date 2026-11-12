@@ -4,7 +4,7 @@
         xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:local="using:ScreenShot_One_Avalonia"
         x:Class="ScreenShot_One_Avalonia.HistoryWindow"
-        Title="Історія" Height="640" Width="820"
+        Title="{DynamicResource History_Title}" Height="640" Width="820"
         WindowStartupLocation="CenterScreen">
 
 	<Grid RowDefinitions="Auto,*">
@@ -50,18 +50,18 @@
 				<RadioButton Name="TabScreenshots" Classes="Chips" IsChecked="True" IsCheckedChanged="Tab_Checked">
 					<StackPanel Orientation="Horizontal" Spacing="6">
 						<material:MaterialIcon Kind="ImageOutline" />
-						<TextBlock Text="Скріншоти"/>
+						<TextBlock Text="{DynamicResource History_Screenshots}"/>
 					</StackPanel>
 				</RadioButton>
 				<RadioButton Name="TabVideos" Classes="Chips" IsCheckedChanged="Tab_Checked">
 					<StackPanel Orientation="Horizontal" Spacing="6">
 						<material:MaterialIcon Kind="VideoOutline" />
-						<TextBlock Text="Відео"/>
+						<TextBlock Text="{DynamicResource History_Videos}"/>
 					</StackPanel>
 				</RadioButton>
 			</StackPanel>
 			<!-- Компактна кнопка без підпису; що саме вона очистить — у підказці -->
-			<Button Grid.Column="1" Name="BtnClearAll" Classes="Basic hbtn danger" Click="BtnClearAll_Click" ToolTip.Tip="Очистити скріншоти" VerticalAlignment="Center">
+			<Button Grid.Column="1" Name="BtnClearAll" Classes="Basic hbtn danger" Click="BtnClearAll_Click" ToolTip.Tip="{DynamicResource History_ClearScreenshots}" VerticalAlignment="Center">
 				<material:MaterialIcon Kind="DeleteSweepOutline"/>
 			</Button>
 		</Grid>
@@ -69,11 +69,11 @@
 		<Grid Grid.Row="1" Margin="12,0,12,8">
 			<StackPanel Name="EmptyScreenshotsText" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" IsVisible="False">
 				<material:MaterialIcon Kind="ImageOutline" Width="40" Height="40" Foreground="{DynamicResource MutedTextBrush}"/>
-				<TextBlock Text="Тут з'являться ваші скріншоти" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center"/>
+				<TextBlock Text="{DynamicResource History_EmptyScreens}" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center"/>
 			</StackPanel>
 			<StackPanel Name="EmptyVideosText" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" IsVisible="False">
 				<material:MaterialIcon Kind="VideoOutline" Width="40" Height="40" Foreground="{DynamicResource MutedTextBrush}"/>
-				<TextBlock Text="Тут з'являться ваші відеозаписи" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center"/>
+				<TextBlock Text="{DynamicResource History_EmptyVideos}" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center"/>
 			</StackPanel>
 
 			<ListBox Name="ScreenshotsListBox" Classes="gallery" Background="Transparent" DoubleTapped="ListBox_DoubleTapped">
@@ -95,13 +95,13 @@
 									<Border Classes="hactions" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Padding="2" CornerRadius="9"
 									        Background="{DynamicResource ToastBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1">
 										<StackPanel Orientation="Horizontal" Spacing="0">
-											<Button Classes="Basic hbtn" ToolTip.Tip="Копіювати скріншот" Click="BtnCopyFromHistory_Click" Tag="{Binding Path}">
+											<Button Classes="Basic hbtn" ToolTip.Tip="{DynamicResource History_CopyScreenshot}" Click="BtnCopyFromHistory_Click" Tag="{Binding Path}">
 												<material:MaterialIcon Kind="ContentCopy"/>
 											</Button>
-											<Button Classes="Basic hbtn" ToolTip.Tip="Вивантажити на Google Диск" Click="BtnUploadFromHistory_Click" Tag="{Binding Path}">
+											<Button Classes="Basic hbtn" ToolTip.Tip="{DynamicResource Common_UploadToDrive}" Click="BtnUploadFromHistory_Click" Tag="{Binding Path}">
 												<material:MaterialIcon Kind="GoogleDrive" Foreground="#4285F4"/>
 											</Button>
-											<Button Classes="Basic hbtn danger" ToolTip.Tip="Видалити" Click="BtnDeleteFromHistory_Click" Tag="{Binding Path}">
+											<Button Classes="Basic hbtn danger" ToolTip.Tip="{DynamicResource Common_Delete}" Click="BtnDeleteFromHistory_Click" Tag="{Binding Path}">
 												<material:MaterialIcon Kind="DeleteOutline"/>
 											</Button>
 										</StackPanel>
@@ -136,13 +136,13 @@
 									<Border Classes="hactions" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Padding="2" CornerRadius="9"
 									        Background="{DynamicResource ToastBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1">
 										<StackPanel Orientation="Horizontal" Spacing="0">
-											<Button Classes="Basic hbtn" ToolTip.Tip="Показати в папці" Click="BtnOpenFolder_Click" Tag="{Binding Path}">
+											<Button Classes="Basic hbtn" ToolTip.Tip="{DynamicResource History_ShowInFolder}" Click="BtnOpenFolder_Click" Tag="{Binding Path}">
 												<material:MaterialIcon Kind="FolderOpenOutline"/>
 											</Button>
-											<Button Classes="Basic hbtn" ToolTip.Tip="Вивантажити на Google Диск" Click="BtnUploadFromHistory_Click" Tag="{Binding Path}">
+											<Button Classes="Basic hbtn" ToolTip.Tip="{DynamicResource Common_UploadToDrive}" Click="BtnUploadFromHistory_Click" Tag="{Binding Path}">
 												<material:MaterialIcon Kind="GoogleDrive" Foreground="#4285F4"/>
 											</Button>
-											<Button Classes="Basic hbtn danger" ToolTip.Tip="Видалити" Click="BtnDeleteFromHistory_Click" Tag="{Binding Path}">
+											<Button Classes="Basic hbtn danger" ToolTip.Tip="{DynamicResource Common_Delete}" Click="BtnDeleteFromHistory_Click" Tag="{Binding Path}">
 												<material:MaterialIcon Kind="DeleteOutline"/>
 											</Button>
 										</StackPanel>
@@ -160,18 +160,18 @@
 		</Grid>
 
 		<Border Name="ToastNotification" Grid.RowSpan="2" Background="{DynamicResource ToastBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="10" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,30" Padding="25,15" IsVisible="False" IsHitTestVisible="False" ZIndex="50">
-			<TextBlock Name="ToastText" Text="Скопійовано в буфер!" Foreground="{DynamicResource SukiText}" FontSize="16" FontWeight="SemiBold"/>
+			<TextBlock Name="ToastText" Text="{DynamicResource Common_CopiedToClipboard}" Foreground="{DynamicResource SukiText}" FontSize="16" FontWeight="SemiBold"/>
 		</Border>
 
 		<Border Name="DialogOverlay" Grid.RowSpan="2" Background="#99000000" IsVisible="False" ZIndex="100">
 			<Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="35" CornerRadius="20" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1">
 				<StackPanel Spacing="20">
-					<TextBlock Name="DialogTitle" Text="Підтвердження" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
-					<TextBlock Name="DialogMessage" Text="Видалити цей елемент?" FontSize="16" HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="350"/>
+					<TextBlock Name="DialogTitle" Text="{DynamicResource Common_Confirm}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
+					<TextBlock Name="DialogMessage" Text="{DynamicResource History_DeleteItem}" FontSize="16" HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="350"/>
 					<StackPanel Orientation="Horizontal" Spacing="15" HorizontalAlignment="Center" Margin="0,15,0,0">
-						<Button Name="BtnDialogYes" Classes="Flat" Content="Так" Width="110" Click="BtnDialogYes_Click"/>
-						<Button Name="BtnDialogNo" Classes="Basic" Content="Ні" Width="110" Click="BtnDialogNo_Click"/>
-						<Button Name="BtnDialogOk" Classes="Flat" Content="ОК" Width="110" Click="BtnDialogOk_Click" IsVisible="False"/>
+						<Button Name="BtnDialogYes" Classes="Flat" Content="{DynamicResource Common_Yes}" Width="110" Click="BtnDialogYes_Click"/>
+						<Button Name="BtnDialogNo" Classes="Basic" Content="{DynamicResource Common_No}" Width="110" Click="BtnDialogNo_Click"/>
+						<Button Name="BtnDialogOk" Classes="Flat" Content="{DynamicResource Common_Ok}" Width="110" Click="BtnDialogOk_Click" IsVisible="False"/>
 					</StackPanel>
 				</StackPanel>
 			</Border>

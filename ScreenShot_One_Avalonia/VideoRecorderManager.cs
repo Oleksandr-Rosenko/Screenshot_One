@@ -196,8 +196,8 @@ namespace ScreenShot_One_Avalonia
                 foreach (var display in displays)
                 {
                     string realName = string.IsNullOrWhiteSpace(display.FriendlyName)
-                        ? $"Екран {counter}"
-                        : $"{display.FriendlyName} (Екран {counter})";
+                        ? Loc.F("Video_Screen", counter)
+                        : Loc.F("Video_ScreenNamed", display.FriendlyName, counter);
 
                     monitorList.Add(new MonitorInfo { DisplayName = realName, DeviceName = display.DeviceName });
                     counter++;
@@ -212,7 +212,7 @@ namespace ScreenShot_One_Avalonia
 
         public Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null, bool recordMicrophone = false)
         {
-            if (_isRecording) return Task.FromResult(RecordingStartResult.Fail("Запис уже йде."));
+            if (_isRecording) return Task.FromResult(RecordingStartResult.Fail(Loc.T("Video_AlreadyRecording")));
             _isPaused = false;
 
             try
@@ -221,7 +221,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                return Task.FromResult(RecordingStartResult.Fail($"Не вдалося створити папку для відео: {ex.Message}"));
+                return Task.FromResult(RecordingStartResult.Fail(Loc.F("Video_FolderFailed", ex.Message)));
             }
 
             var options = new RecorderOptions
@@ -296,7 +296,7 @@ namespace ScreenShot_One_Avalonia
 
                 thisRecorder.OnRecordingFailed += (s, e) =>
                 {
-                    _lastError = string.IsNullOrWhiteSpace(e.Error) ? "Невідома помилка запису." : e.Error;
+                    _lastError = string.IsNullOrWhiteSpace(e.Error) ? Loc.T("Video_UnknownRecordError") : e.Error;
                     AppLog.Write($"[WindowsVideoRecorder] Recording failed: {_lastError}");
 
                     completion.TrySetResult(VideoRecorderManager.IsNonEmptyFile(path) ? path : string.Empty);
@@ -323,7 +323,7 @@ namespace ScreenShot_One_Avalonia
                 if (!_isRecording)
                 {
                     // Помилка прийшла одразу під час старту — її вже обробив OnRecordingFailed
-                    return Task.FromResult(RecordingStartResult.Fail($"Не вдалося почати запис: {_lastError}"));
+                    return Task.FromResult(RecordingStartResult.Fail(Loc.F("Video_StartFailed", _lastError)));
                 }
 
                 OnStatusChanged?.Invoke(true);
@@ -337,7 +337,7 @@ namespace ScreenShot_One_Avalonia
                 _completion = null;
                 if (recorder != null) DisposeLater(recorder);
                 OnStatusChanged?.Invoke(false);
-                return Task.FromResult(RecordingStartResult.Fail($"Не вдалося почати запис: {ex.Message}"));
+                return Task.FromResult(RecordingStartResult.Fail(Loc.F("Video_StartFailed", ex.Message)));
             }
         }
 
@@ -391,7 +391,7 @@ namespace ScreenShot_One_Avalonia
         public event Action<string>? OnRecordingFailed { add { } remove { } }
         public IReadOnlyList<MonitorInfo> GetDisplays() => new List<MonitorInfo>();
         public Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null, bool recordMicrophone = false)
-            => Task.FromResult(RecordingStartResult.Fail("Запис через ScreenRecorderLib доступний лише на Windows."));
+            => Task.FromResult(RecordingStartResult.Fail(Loc.T("Video_WindowsOnly")));
         public Task<string> StopRecordingAsync() => Task.FromResult(string.Empty);
         public bool IsPaused => false;
         public event Action<bool>? OnPausedChanged { add { } remove { } }
@@ -440,12 +440,12 @@ namespace ScreenShot_One_Avalonia
             {
                 for (int i = 0; i < screens.Count; i++)
                 {
-                    list.Add(new MonitorInfo { DisplayName = $"Екран {i + 1}", DeviceName = i.ToString() });
+                    list.Add(new MonitorInfo { DisplayName = Loc.F("Video_Screen", i + 1), DeviceName = i.ToString() });
                 }
             }
             else
             {
-                list.Add(new MonitorInfo { DisplayName = "Головний екран", DeviceName = "0" });
+                list.Add(new MonitorInfo { DisplayName = Loc.T("Video_MainScreen"), DeviceName = "0" });
             }
             return list;
         }
@@ -497,14 +497,13 @@ namespace ScreenShot_One_Avalonia
 
         public async Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null, bool recordMicrophone = false)
         {
-            if (_isRecording || _isStarting) return RecordingStartResult.Fail("Запис уже йде.");
+            if (_isRecording || _isStarting) return RecordingStartResult.Fail(Loc.T("Video_AlreadyRecording"));
 
             _ffmpegExe = FindFfmpeg();
             if (_ffmpegExe == null)
             {
                 return RecordingStartResult.Fail(
-                    "Для запису відео на Mac потрібен ffmpeg, а його не знайдено.\n\n" +
-                    "Встановіть його командою «brew install ffmpeg» у Терміналі й спробуйте ще раз.");
+                    Loc.T("Video_NoFfmpeg"));
             }
 
             try
@@ -513,7 +512,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                return RecordingStartResult.Fail($"Не вдалося створити папку для відео: {ex.Message}");
+                return RecordingStartResult.Fail(Loc.F("Video_FolderFailed", ex.Message));
             }
 
             int screenIndex = int.TryParse(monitorDeviceName, out int parsed) && parsed >= 0 ? parsed : 0;
@@ -537,9 +536,9 @@ namespace ScreenShot_One_Avalonia
             }
 
             string hint = recordMicrophone
-                ? "Перевірте дозволи «Запис екрана» і «Мікрофон» у Системних параметрах → Приватність і безпека."
-                : "Перевірте, що Screenshot One має дозвіл «Запис екрана» в Системних параметрах → Приватність і безпека.";
-            return RecordingStartResult.Fail("ffmpeg завершився одразу після старту. " + hint + "\n\n" + lastError);
+                ? Loc.T("Video_MacHintMic")
+                : Loc.T("Video_MacHint");
+            return RecordingStartResult.Fail(Loc.F("Video_FfmpegExited", hint, lastError));
         }
 
         private string NextSegmentPath()
@@ -580,7 +579,7 @@ namespace ScreenShot_One_Avalonia
             {
                 _isStarting = false;
                 AppLog.Write($"[MacVideoRecorder] Start error: {ex.Message}");
-                return $"Не вдалося запустити ffmpeg: {ex.Message}";
+                return Loc.F("Video_FfmpegStartFailed", ex.Message);
             }
 
             _ffmpegProc = proc;
@@ -743,7 +742,7 @@ namespace ScreenShot_One_Avalonia
             _isPaused = false;
             _ffmpegProc = null;
             OnStatusChanged?.Invoke(false);
-            OnRecordingFailed?.Invoke("Запис зупинився: ffmpeg несподівано завершив роботу.\n\n" + GetLastLog());
+            OnRecordingFailed?.Invoke(Loc.F("Video_FfmpegCrashed", GetLastLog()));
         }
 
         private void AppendLog(string line)
@@ -759,7 +758,7 @@ namespace ScreenShot_One_Avalonia
         {
             lock (_logLock)
             {
-                return _ffmpegLog.Count == 0 ? "" : "Повідомлення ffmpeg:\n" + string.Join("\n", _ffmpegLog);
+                return _ffmpegLog.Count == 0 ? "" : Loc.F("Video_FfmpegLog", string.Join("\n", _ffmpegLog));
             }
         }
     }
@@ -771,7 +770,7 @@ namespace ScreenShot_One_Avalonia
         public event Action<string>? OnRecordingFailed { add { } remove { } }
         public IReadOnlyList<MonitorInfo> GetDisplays() => new List<MonitorInfo>();
         public Task<RecordingStartResult> StartRecordingAsync(bool showClicks, bool recordSystemAudio, string monitorDeviceName, int? left = null, int? top = null, int? right = null, int? bottom = null, bool recordMicrophone = false)
-            => Task.FromResult(RecordingStartResult.Fail("Запис відео на цій платформі не підтримується."));
+            => Task.FromResult(RecordingStartResult.Fail(Loc.T("Video_Unsupported")));
         public Task<string> StopRecordingAsync() => Task.FromResult(string.Empty);
         public bool IsPaused => false;
         public event Action<bool>? OnPausedChanged { add { } remove { } }

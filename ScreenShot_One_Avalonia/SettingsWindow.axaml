@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
         x:Class="ScreenShot_One_Avalonia.SettingsWindow"
-        Title="Налаштування" Width="600" Height="760" MinHeight="420" MinWidth="520"
+        Title="{DynamicResource Settings_Title}" Width="600" Height="760" MinHeight="420" MinWidth="520"
         WindowStartupLocation="CenterScreen"
         Icon="/Assets/icon.ico">
 
@@ -52,29 +52,40 @@
 
 		<!-- Загальні -->
 		<StackPanel>
-			<TextBlock Classes="sectionTitle" Text="ЗАГАЛЬНІ"/>
+			<TextBlock Classes="sectionTitle" Text="{DynamicResource Settings_General}"/>
 			<Border Classes="section">
 				<StackPanel>
 					<Grid Classes="row" ColumnDefinitions="*,Auto">
-						<TextBlock Classes="label" Text="Запускати програму разом із системою"/>
+						<TextBlock Classes="label" Text="{DynamicResource Settings_StartOnBoot}"/>
 						<ToggleSwitch Grid.Column="1" Name="ChkStartOnBoot" OnContent="" OffContent="" VerticalAlignment="Center"/>
 					</Grid>
 					<Border Classes="divider"/>
 					<Grid Classes="row" ColumnDefinitions="*,Auto">
-						<TextBlock Classes="label" Text="Копіювати скріншот у буфер одразу після знімка"/>
+						<TextBlock Classes="label" Text="{DynamicResource Settings_CopyOnCapture}"/>
 						<ToggleSwitch Grid.Column="1" Name="ChkCopyToClipboard" OnContent="" OffContent="" VerticalAlignment="Center"/>
 					</Grid>
 					<Border Classes="divider"/>
 					<Grid Classes="row" ColumnDefinitions="*,Auto">
-						<TextBlock Classes="label" Text="Копіювати посилання після завантаження в хмару"/>
+						<TextBlock Classes="label" Text="{DynamicResource Settings_CopyLink}"/>
 						<ToggleSwitch Grid.Column="1" Name="ChkCopyLink" OnContent="" OffContent="" VerticalAlignment="Center"/>
 					</Grid>
 					<Border Classes="divider"/>
 					<Grid Classes="row" ColumnDefinitions="*,Auto">
-						<TextBlock Classes="label" Text="Тема оформлення"/>
+						<TextBlock Classes="label" Text="{DynamicResource Settings_Theme}"/>
 						<ComboBox Grid.Column="1" Name="ComboTheme" Width="240" VerticalAlignment="Center" SelectionChanged="ComboTheme_SelectionChanged">
-							<ComboBoxItem Content="Темна"/>
-							<ComboBoxItem Content="Світла"/>
+							<ComboBoxItem Content="{DynamicResource Settings_ThemeDark}"/>
+							<ComboBoxItem Content="{DynamicResource Settings_ThemeLight}"/>
+						</ComboBox>
+					</Grid>
+					<Border Classes="divider"/>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<TextBlock Classes="label" Text="{DynamicResource Settings_Language}"/>
+						<!-- Назви мов — завжди своєю мовою, щоб свою мову можна було знайти з будь-якої -->
+						<ComboBox Grid.Column="1" Name="ComboLanguage" Width="240" VerticalAlignment="Center" SelectionChanged="ComboLanguage_SelectionChanged">
+							<ComboBoxItem Content="{DynamicResource Settings_LanguageAuto}"/>
+							<ComboBoxItem Content="Українська"/>
+							<ComboBoxItem Content="English"/>
+							<ComboBoxItem Content="Русский"/>
 						</ComboBox>
 					</Grid>
 				</StackPanel>
@@ -83,37 +94,37 @@
 
 		<!-- Знімки та файли -->
 		<StackPanel>
-			<TextBlock Classes="sectionTitle" Text="ЗНІМКИ ТА ФАЙЛИ"/>
+			<TextBlock Classes="sectionTitle" Text="{DynamicResource Settings_Capture}"/>
 			<Border Classes="section">
 				<StackPanel>
 					<Grid Classes="row" ColumnDefinitions="*,Auto">
-						<TextBlock Classes="label" Text="Після знімка"/>
+						<TextBlock Classes="label" Text="{DynamicResource Settings_AfterCapture}"/>
 						<ComboBox Grid.Column="1" Name="ComboAfterCapture" Width="240" VerticalAlignment="Center">
-							<ComboBoxItem Content="Відкривати редактор"/>
-							<ComboBoxItem Content="Показувати мініатюру"/>
+							<ComboBoxItem Content="{DynamicResource Settings_OpenEditor}"/>
+							<ComboBoxItem Content="{DynamicResource Settings_ShowThumbnail}"/>
 						</ComboBox>
 					</Grid>
 					<Border Classes="divider"/>
 					<StackPanel Margin="0,10" Spacing="8">
-						<TextBlock Classes="label" Text="Папка для збереження"/>
+						<TextBlock Classes="label" Text="{DynamicResource Settings_SaveFolder}"/>
 						<Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
 							<TextBox Name="TxtSaveFolder" IsReadOnly="True" FontSize="13"/>
-							<Button Name="BtnChooseFolder" Grid.Column="1" Content="Обрати…" Click="BtnChooseFolder_Click"/>
+							<Button Name="BtnChooseFolder" Grid.Column="1" Content="{DynamicResource Settings_Choose}" Click="BtnChooseFolder_Click"/>
 						</Grid>
 					</StackPanel>
 					<Border Classes="divider"/>
 					<Grid Classes="row" ColumnDefinitions="*,Auto">
-						<TextBlock Classes="label" Text="Формат файлу"/>
+						<TextBlock Classes="label" Text="{DynamicResource Settings_Format}"/>
 						<ComboBox Grid.Column="1" Name="ComboSaveFormat" Width="240" VerticalAlignment="Center">
-							<ComboBoxItem Content="PNG — без втрат"/>
-							<ComboBoxItem Content="JPG — менший розмір"/>
+							<ComboBoxItem Content="{DynamicResource Settings_FormatPng}"/>
+							<ComboBoxItem Content="{DynamicResource Settings_FormatJpg}"/>
 						</ComboBox>
 					</Grid>
 					<Border Classes="divider"/>
 					<Grid Classes="row" ColumnDefinitions="*,Auto">
 						<StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,8">
-							<TextBlock Classes="label" Text="Автоматично зберігати кожен скріншот"/>
-							<TextBlock Classes="hint" Text="У папку вище, при «Копіювати та закрити» і з мініатюри"/>
+							<TextBlock Classes="label" Text="{DynamicResource Settings_AutoSave}"/>
+							<TextBlock Classes="hint" Text="{DynamicResource Settings_AutoSaveHint}"/>
 						</StackPanel>
 						<ToggleSwitch Grid.Column="1" Name="ChkAutoSave" OnContent="" OffContent="" VerticalAlignment="Center"/>
 					</Grid>
@@ -123,35 +134,35 @@
 
 		<!-- Гарячі клавіші -->
 		<StackPanel>
-			<TextBlock Classes="sectionTitle" Text="ГАРЯЧІ КЛАВІШІ"/>
+			<TextBlock Classes="sectionTitle" Text="{DynamicResource Settings_Hotkeys}"/>
 			<Border Classes="section">
 				<StackPanel>
-					<TextBlock Classes="hint" Text="Клікніть у поле й натисніть потрібну комбінацію клавіш." Margin="0,10,0,4"/>
+					<TextBlock Classes="hint" Text="{DynamicResource Settings_HotkeysHint}" Margin="0,10,0,4"/>
 					<Grid Classes="row" ColumnDefinitions="*,Auto">
-						<TextBlock Classes="label" Text="Скріншот зони"/>
+						<TextBlock Classes="label" Text="{DynamicResource Settings_HkRegion}"/>
 						<TextBox Grid.Column="1" Name="TxtRegionKey" Classes="hotkey" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="Region"/>
 					</Grid>
 					<Grid Classes="row" ColumnDefinitions="*,Auto">
-						<TextBlock Classes="label" Text="Скріншот екрана"/>
+						<TextBlock Classes="label" Text="{DynamicResource Settings_HkFullScreen}"/>
 						<TextBox Grid.Column="1" Name="TxtFullScreenKey" Classes="hotkey" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="FullScreen"/>
 					</Grid>
 					<Grid Classes="row" ColumnDefinitions="*,Auto">
-						<TextBlock Classes="label" Text="Скріншот усіх екранів"/>
+						<TextBlock Classes="label" Text="{DynamicResource Settings_HkAllScreens}"/>
 						<TextBox Grid.Column="1" Name="TxtAllScreensKey" Classes="hotkey" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="AllScreens"/>
 					</Grid>
 					<Grid Classes="row" ColumnDefinitions="*,Auto">
-						<TextBlock Classes="label" Text="Запис відео"/>
+						<TextBlock Classes="label" Text="{DynamicResource Common_RecordVideo}"/>
 						<TextBox Grid.Column="1" Name="TxtVideoKey" Classes="hotkey" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="Video"/>
 					</Grid>
 					<Grid Classes="row" ColumnDefinitions="*,Auto">
-						<TextBlock Classes="label" Text="Розпізнати текст (OCR)"/>
+						<TextBlock Classes="label" Text="{DynamicResource Common_Ocr}"/>
 						<TextBox Grid.Column="1" Name="TxtOcrKey" Classes="hotkey" KeyDown="Hotkey_KeyDown" KeyUp="Hotkey_KeyUp" Tag="Ocr"/>
 					</Grid>
 				</StackPanel>
 			</Border>
 		</StackPanel>
 
-		<Button Classes="Flat" Content="Зберегти та закрити" FontWeight="SemiBold" FontSize="15"
+		<Button Classes="Flat" Content="{DynamicResource Settings_SaveAndClose}" FontWeight="SemiBold" FontSize="15"
                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10" CornerRadius="10" Click="BtnSave_Click"/>
 		<TextBlock Name="TxtCurrentVersion" HorizontalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" FontSize="12"/>
 	</StackPanel>

@@ -64,6 +64,9 @@ namespace ScreenShot_One_Avalonia
         // Версія схеми налаштувань — для разових міграцій (див. SettingsManager.Migrate)
         public int SettingsVersion { get; set; } = 0;
 
+        // Мова інтерфейсу: "auto" — як у системі, або "uk" / "en" / "ru"
+        public string Language { get; set; } = "auto";
+
         // Windows: для якої версії вже оновлено ярлики й кеш іконок (null — ще ні)
         public string? LastShellRefreshVersion { get; set; }
     }

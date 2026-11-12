@@ -26,7 +26,7 @@ namespace ScreenShot_One_Avalonia
             if (OperatingSystem.IsMacOS())
                 return RecognizeMacAsync(bitmap);
 
-            throw new OcrUnavailableException("Розпізнавання тексту на цій системі не підтримується.");
+            throw new OcrUnavailableException(Loc.T("Ocr_Unsupported"));
         }
 
         /// <summary>Нормалізує результат: обрізає пробіли в кінці рядків і порожні рядки на краях.</summary>
@@ -76,8 +76,7 @@ namespace ScreenShot_One_Avalonia
                          ?? Windows.Media.Ocr.OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("en-US"));
             if (engine == null)
                 throw new OcrUnavailableException(
-                    "У Windows не встановлено жодної мови з підтримкою розпізнавання тексту.\n\n" +
-                    "Додайте мову в «Параметри → Час і мова → Мова та регіон» (разом із компонентом «Оптичне розпізнавання символів»).");
+                    Loc.T("Ocr_NoWindowsLanguage"));
 
             // Дрібний текст розпізнається краще, якщо зображення збільшити
             Bitmap input = bitmap;
@@ -128,7 +127,7 @@ namespace ScreenShot_One_Avalonia
         {
             string? helper = FindMacHelper();
             if (helper == null)
-                throw new OcrUnavailableException("Модуль розпізнавання тексту (ocr-helper) не знайдено в програмі. Встановіть свіжу версію Screenshot One.");
+                throw new OcrUnavailableException(Loc.T("Ocr_HelperMissing"));
 
             string tempPath = Path.Combine(Path.GetTempPath(), $"ocr_{Guid.NewGuid():N}.png");
             try
@@ -146,14 +145,14 @@ namespace ScreenShot_One_Avalonia
                 };
                 psi.ArgumentList.Add(tempPath);
 
-                using var proc = Process.Start(psi) ?? throw new OcrUnavailableException("Не вдалося запустити ocr-helper.");
+                using var proc = Process.Start(psi) ?? throw new OcrUnavailableException(Loc.T("Ocr_HelperStartFailed"));
                 var stdout = proc.StandardOutput.ReadToEndAsync();
                 var stderr = proc.StandardError.ReadToEndAsync();
                 using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(30));
                 await proc.WaitForExitAsync(cts.Token).ConfigureAwait(false);
 
                 if (proc.ExitCode != 0)
-                    throw new InvalidOperationException($"ocr-helper завершився з кодом {proc.ExitCode}: {await stderr.ConfigureAwait(false)}");
+                    throw new InvalidOperationException($"ocr-helper exited with code {proc.ExitCode}: {await stderr.ConfigureAwait(false)}");
 
                 return CleanUp(await stdout.ConfigureAwait(false));
             }

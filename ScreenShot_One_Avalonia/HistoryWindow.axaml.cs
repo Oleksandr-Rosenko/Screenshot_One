@@ -35,25 +35,26 @@ namespace ScreenShot_One_Avalonia
         }
         public bool IsVideo { get; set; }
 
-        private static readonly string[] MonthsGenitive =
-            { "січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня" };
 
         /// <summary>Людська дата: «Сьогодні, 13:04», «Вчора, 18:20», «11 листопада, 09:15», «3 березня 2025, 10:00».</summary>
         public static string FriendlyDate(DateTime time, DateTime now)
         {
             string hm = time.ToString("HH:mm");
-            if (time.Date == now.Date) return $"Сьогодні, {hm}";
-            if (time.Date == now.Date.AddDays(-1)) return $"Вчора, {hm}";
-            string day = $"{time.Day} {MonthsGenitive[time.Month - 1]}";
-            return time.Year == now.Year ? $"{day}, {hm}" : $"{day} {time.Year}, {hm}";
+            if (time.Date == now.Date) return Loc.F("History_Today", hm);
+            if (time.Date == now.Date.AddDays(-1)) return Loc.F("History_Yesterday", hm);
+            string month = Loc.T("History_Months").Split(',')[time.Month - 1];
+            return time.Year == now.Year
+                ? Loc.F("History_DateThisYear", time.Day, month, hm)
+                : Loc.F("History_DateOtherYear", time.Day, month, hm, time.Year);
         }
 
         /// <summary>«245 КБ», «2,4 МБ».</summary>
         public static string FriendlySize(long bytes)
         {
-            if (bytes < 1024) return $"{bytes} Б";
-            if (bytes < 1024 * 1024) return $"{bytes / 1024.0:0} КБ";
-            return $"{bytes / (1024.0 * 1024.0):0.#} МБ".Replace('.', ',');
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            if (bytes < 1024) return Loc.F("History_Bytes", bytes);
+            if (bytes < 1024 * 1024) return Loc.F("History_KB", (bytes / 1024.0).ToString("0", inv));
+            return Loc.F("History_MB", (bytes / (1024.0 * 1024.0)).ToString("0.#", inv).Replace(".", Loc.T("History_DecimalSeparator")));
         }
 
         /// <summary>Розмір PNG без декодування — з заголовка IHDR (байти 16–23).</summary>
@@ -81,7 +82,7 @@ namespace ScreenShot_One_Avalonia
                 FileName = file.Name,
                 DateString = file.CreationTime.ToString("dd.MM.yyyy HH:mm"),
                 Title = FriendlyDate(file.CreationTime, DateTime.Now),
-                Details = isVideo ? $"Відео · {details}" : details,
+                Details = isVideo ? Loc.F("History_VideoDetails", details) : details,
                 IsVideo = isVideo,
                 ImageSource = null
             };
@@ -273,13 +274,13 @@ namespace ScreenShot_One_Avalonia
             {
                 ScreenshotsListBox.IsVisible = true;
                 VideosListBox.IsVisible = false;
-                ToolTip.SetTip(BtnClearAll, "Очистити скріншоти");
+                ToolTip.SetTip(BtnClearAll, Loc.T("History_ClearScreenshots"));
             }
             else
             {
                 ScreenshotsListBox.IsVisible = false;
                 VideosListBox.IsVisible = true;
-                ToolTip.SetTip(BtnClearAll, "Очистити відео");
+                ToolTip.SetTip(BtnClearAll, Loc.T("History_ClearVideos"));
             }
             UpdatePlaceholders();
             Avalonia.Threading.Dispatcher.UIThread.Post(UpdateGalleryLayout, Avalonia.Threading.DispatcherPriority.Loaded);
@@ -481,11 +482,11 @@ namespace ScreenShot_One_Avalonia
 
                     var bitmap = new Bitmap(filePath);
                     await clipboard.SetBitmapAsync(bitmap);
-                    ShowToast("Скріншот скопійовано!");
+                    ShowToast(Loc.T("History_Copied"));
                 }
                 catch (Exception ex)
                 {
-                    await ShowCustomDialog("Помилка", $"Не вдалося скопіювати: {ex.Message}", false);
+                    await ShowCustomDialog(Loc.T("Common_Error"), Loc.F("History_CopyFailed", ex.Message), false);
                 }
             }
         }
@@ -509,7 +510,7 @@ namespace ScreenShot_One_Avalonia
                 }
                 catch (Exception ex)
                 {
-                    await ShowCustomDialog("Помилка", $"Не вдалося відкрити теку: {ex.Message}", false);
+                    await ShowCustomDialog(Loc.T("Common_Error"), Loc.F("History_OpenFolderFailed", ex.Message), false);
                 }
             }
         }
@@ -518,7 +519,7 @@ namespace ScreenShot_One_Avalonia
         {
             if (sender is Button button && button.Tag is string filePath)
             {
-                bool result = await ShowCustomDialog("Підтвердження", "Видалити цей елемент?", true);
+                bool result = await ShowCustomDialog(Loc.T("Common_Confirm"), Loc.T("History_DeleteItem"), true);
                 if (result)
                 {
                     try
@@ -534,9 +535,9 @@ namespace ScreenShot_One_Avalonia
         private async void BtnClearAll_Click(object? sender, RoutedEventArgs e)
         {
             bool isScreenshotsTab = TabScreenshots.IsChecked == true;
-            string targetName = isScreenshotsTab ? "всі скріншоти" : "всі відеозаписи";
+            string targetName = isScreenshotsTab ? Loc.T("History_AllScreenshots") : Loc.T("History_AllVideos");
 
-            bool result = await ShowCustomDialog("Увага!", $"Повністю видалити {targetName} з історії?", true);
+            bool result = await ShowCustomDialog(Loc.T("Common_Attention"), Loc.F("History_ClearConfirm", targetName), true);
 
             if (result)
             {
@@ -567,7 +568,7 @@ namespace ScreenShot_One_Avalonia
                 if (!await UploadConsent.ConfirmAsync(this)) return;
                 try
                 {
-                    ShowToast("Вивантаження на Google Диск...");
+                    ShowToast(Loc.T("History_UploadingDrive"));
 
                     string link = "";
                     if (filePath.ToLower().EndsWith(".mp4"))
@@ -580,16 +581,16 @@ namespace ScreenShot_One_Avalonia
                         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
                         if (clipboard != null) await clipboard.SetTextAsync(link);
 
-                        ShowToast("Посилання на Google Диск скопійовано!");
+                        ShowToast(Loc.T("History_DriveLinkCopied"));
                     }
                     else
                     {
-                        await ShowCustomDialog("Помилка", "Посилання пусте.", false);
+                        await ShowCustomDialog(Loc.T("Common_Error"), Loc.T("History_EmptyLink"), false);
                     }
                 }
                 catch (Exception ex)
                 {
-                    await ShowCustomDialog("Помилка", $"Не вдалося вивантажити:\n{ex.Message}", false);
+                    await ShowCustomDialog(Loc.T("Common_Error"), Loc.F("History_UploadFailed", ex.Message), false);
                 }
             }
         }
@@ -657,7 +658,7 @@ namespace ScreenShot_One_Avalonia
                 }
                 catch (Exception ex)
                 {
-                    await ShowCustomDialog("Помилка", $"Не вдалося відкрити: {ex.Message}", false);
+                    await ShowCustomDialog(Loc.T("Common_Error"), Loc.F("History_OpenFailed", ex.Message), false);
                 }
             }
         }
@@ -676,7 +677,7 @@ namespace ScreenShot_One_Avalonia
                         TabVideos.IsChecked = true;
                         ScreenshotsListBox.IsVisible = false;
                         VideosListBox.IsVisible = true;
-                        ToolTip.SetTip(BtnClearAll, "Очистити відео");
+                        ToolTip.SetTip(BtnClearAll, Loc.T("History_ClearVideos"));
 
                         if (targetItem != null)
                         {
@@ -696,7 +697,7 @@ namespace ScreenShot_One_Avalonia
                         TabScreenshots.IsChecked = true;
                         ScreenshotsListBox.IsVisible = true;
                         VideosListBox.IsVisible = false;
-                        ToolTip.SetTip(BtnClearAll, "Очистити скріншоти");
+                        ToolTip.SetTip(BtnClearAll, Loc.T("History_ClearScreenshots"));
 
                         if (targetItem != null)
                         {

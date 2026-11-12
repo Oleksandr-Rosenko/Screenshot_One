@@ -173,7 +173,7 @@ namespace ScreenShot_One_Avalonia
         private async Task CopyAsync(bool showStatus)
         {
             await ClipboardHelper.CopyImageAsync(_bitmap, TopLevel.GetTopLevel(this));
-            if (showStatus) ShowStatus("Скопійовано в буфер");
+            if (showStatus) ShowStatus(Loc.T("Quick_Copied"));
         }
 
         private void ShowStatus(string text)
@@ -196,7 +196,7 @@ namespace ScreenShot_One_Avalonia
             catch (Exception ex)
             {
                 AppLog.Error(ex, "Мініатюра: копіювання");
-                ShowStatus("Не вдалося скопіювати");
+                ShowStatus(Loc.T("Quick_CopyFailed"));
             }
         }
 
@@ -206,14 +206,14 @@ namespace ScreenShot_One_Avalonia
             {
                 string path = ImageExport.SaveToFolder(_bitmap);
                 _savedToFile = true;
-                ShowStatus("Збережено: " + System.IO.Path.GetFileName(path));
+                ShowStatus(Loc.F("Editor_Saved", System.IO.Path.GetFileName(path)));
                 await Task.Delay(1200);
                 Close();
             }
             catch (Exception ex)
             {
                 AppLog.Error(ex, "Мініатюра: збереження у файл");
-                ShowStatus("Не вдалося зберегти");
+                ShowStatus(Loc.T("Quick_SaveFailed"));
             }
         }
 

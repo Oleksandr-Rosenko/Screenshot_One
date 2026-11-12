@@ -3,7 +3,7 @@
         xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
         xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="ScreenShot_One_Avalonia.EditorWindow"
-        Title="Редактор" Height="700" Width="1000"
+        Title="{DynamicResource Editor_Title}" Height="700" Width="1000"
         WindowState="Maximized"
         Icon="/Assets/icon.ico">
 
@@ -12,21 +12,21 @@
 		<Border Grid.Row="0" Margin="10,8,10,6" Padding="6,4" CornerRadius="12" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1">
 			<Grid ColumnDefinitions="*,Auto">
 				<StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-				<Button Name="BtnBackToHistory" Classes="Basic" ToolTip.Tip="Назад до історії" Click="BtnBackToHistory_Click" IsVisible="False" Margin="2,0,4,0">
+				<Button Name="BtnBackToHistory" Classes="Basic" ToolTip.Tip="{DynamicResource Common_BackToHistory}" Click="BtnBackToHistory_Click" IsVisible="False" Margin="2,0,4,0">
 					<StackPanel Orientation="Horizontal" Spacing="4">
 						<material:MaterialIcon Kind="ArrowLeft" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}"/>
-						<TextBlock Text="До історії" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
+						<TextBlock Text="{DynamicResource Common_ToHistory}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
 					</StackPanel>
 				</Button>
 				<Border Name="SepBackToHistory" Width="1" Height="24" Margin="6,0" Background="{DynamicResource PanelBorderBrush}" VerticalAlignment="Center" IsVisible="False"/>
 
-				<Button Name="BtnSelect" Classes="Basic tool" ToolTip.Tip="Виділення та переміщення (V)" Click="BtnSelect_Click">
+				<Button Name="BtnSelect" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_Select}" Click="BtnSelect_Click">
 					<material:MaterialIcon Kind="CursorDefault"/>
 				</Button>
-				<Button Name="BtnCrop" Classes="Basic tool" ToolTip.Tip="Обрізати (C)" Click="BtnCrop_Click">
+				<Button Name="BtnCrop" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_Crop}" Click="BtnCrop_Click">
 					<material:MaterialIcon Kind="Crop"/>
 				</Button>
-				<Button Name="BtnImageGroup" Classes="Basic tool" ToolTip.Tip="Додати зображення">
+				<Button Name="BtnImageGroup" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_AddImage}">
 					<material:MaterialIcon Kind="ImagePlusOutline"/>
 					<Button.Flyout>
 						<Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Transient">
@@ -35,14 +35,14 @@
 							<Button Name="BtnPasteImage" Classes="Basic menuitem" Click="BtnPasteImage_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
 									<material:MaterialIcon Kind="ImageAdd"/>
-									<TextBlock Grid.Column="1" Text="Вставити картинку поверх" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_PasteOver}" VerticalAlignment="Center"/>
 								<TextBlock Grid.Column="2" Classes="shortcut" Text="Ctrl+V"/>
 								</Grid>
 							</Button>
 							<Button Name="BtnSplit" Classes="Basic menuitem" Click="BtnSplit_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
 									<material:MaterialIcon Kind="ViewSplitVertical"/>
-									<TextBlock Grid.Column="1" Text="Додати зображення поруч (колаж)" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_Collage}" VerticalAlignment="Center"/>
 								</Grid>
 							</Button>
 							</StackPanel>
@@ -53,14 +53,14 @@
 
 				<Border Width="1" Height="24" Margin="6,0" Background="{DynamicResource PanelBorderBrush}" VerticalAlignment="Center"/>
 
-				<Button Name="BtnStamp" Classes="Basic tool" ToolTip.Tip="Нумерація (N)" Click="BtnStamp_Click">
+				<Button Name="BtnStamp" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_Stamp}" Click="BtnStamp_Click">
 					<material:MaterialIcon Kind="Numeric1CircleOutline"/>
 				</Button>
 				<StackPanel Orientation="Horizontal">
-					<Button Name="BtnShapesGroup" Classes="Basic tool" ToolTip.Tip="Фігури: прямокутник (R), еліпс (E)" Click="BtnShapesGroup_Click">
+					<Button Name="BtnShapesGroup" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_ShapesGroup}" Click="BtnShapesGroup_Click">
 						<material:MaterialIcon Name="IcoShapesGroup" Kind="RectangleOutline"/>
 					</Button>
-					<Button Name="BtnShapesGroupMore" Classes="Basic more" ToolTip.Tip="Інші варіанти">
+					<Button Name="BtnShapesGroupMore" Classes="Basic more" ToolTip.Tip="{DynamicResource Editor_More}">
 						<material:MaterialIcon Kind="ChevronDown"/>
 						<Button.Flyout>
 							<Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Transient">
@@ -69,14 +69,14 @@
 							<Button Name="BtnRectangle" Classes="Basic menuitem" Click="BtnRectangle_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
 									<material:MaterialIcon Kind="RectangleOutline"/>
-									<TextBlock Grid.Column="1" Text="Прямокутник" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_Rectangle}" VerticalAlignment="Center"/>
 								<TextBlock Grid.Column="2" Classes="shortcut" Text="R"/>
 								</Grid>
 							</Button>
 							<Button Name="BtnEllipse" Classes="Basic menuitem" Click="BtnEllipse_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
 									<material:MaterialIcon Kind="EllipseOutline"/>
-									<TextBlock Grid.Column="1" Text="Еліпс" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_Ellipse}" VerticalAlignment="Center"/>
 								<TextBlock Grid.Column="2" Classes="shortcut" Text="E"/>
 								</Grid>
 							</Button>
@@ -87,10 +87,10 @@
 					</Button>
 				</StackPanel>
 				<StackPanel Orientation="Horizontal">
-					<Button Name="BtnLinesGroup" Classes="Basic tool" ToolTip.Tip="Лінії: стрілка (A), лінія (L), зв'язок" Click="BtnLinesGroup_Click">
+					<Button Name="BtnLinesGroup" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_LinesGroup}" Click="BtnLinesGroup_Click">
 						<material:MaterialIcon Name="IcoLinesGroup" Kind="ArrowTopRight"/>
 					</Button>
-					<Button Name="BtnLinesGroupMore" Classes="Basic more" ToolTip.Tip="Інші варіанти">
+					<Button Name="BtnLinesGroupMore" Classes="Basic more" ToolTip.Tip="{DynamicResource Editor_More}">
 						<material:MaterialIcon Kind="ChevronDown"/>
 						<Button.Flyout>
 							<Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Transient">
@@ -99,21 +99,21 @@
 							<Button Name="BtnArrow" Classes="Basic menuitem" Click="BtnArrow_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
 									<material:MaterialIcon Kind="ArrowTopRight"/>
-									<TextBlock Grid.Column="1" Text="Стрілка" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_Arrow}" VerticalAlignment="Center"/>
 								<TextBlock Grid.Column="2" Classes="shortcut" Text="A"/>
 								</Grid>
 							</Button>
 							<Button Name="BtnLine" Classes="Basic menuitem" Click="BtnLine_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
 									<material:MaterialIcon Kind="VectorLine"/>
-									<TextBlock Grid.Column="1" Text="Пряма лінія (Shift — під 45°)" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_Line}" VerticalAlignment="Center"/>
 								<TextBlock Grid.Column="2" Classes="shortcut" Text="L"/>
 								</Grid>
 							</Button>
 							<Button Name="BtnConnector" Classes="Basic menuitem" Click="BtnConnector_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
 									<material:MaterialIcon Kind="VectorPolyline"/>
-									<TextBlock Grid.Column="1" Text="Зв'язок (лінія з точками)" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_Connector}" VerticalAlignment="Center"/>
 								</Grid>
 							</Button>
 								</StackPanel>
@@ -123,10 +123,10 @@
 					</Button>
 				</StackPanel>
 				<StackPanel Orientation="Horizontal">
-					<Button Name="BtnDrawGroup" Classes="Basic tool" ToolTip.Tip="Малювання: олівець (P), маркер (H)" Click="BtnDrawGroup_Click">
+					<Button Name="BtnDrawGroup" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_DrawGroup}" Click="BtnDrawGroup_Click">
 						<material:MaterialIcon Name="IcoDrawGroup" Kind="Pencil"/>
 					</Button>
-					<Button Name="BtnDrawGroupMore" Classes="Basic more" ToolTip.Tip="Інші варіанти">
+					<Button Name="BtnDrawGroupMore" Classes="Basic more" ToolTip.Tip="{DynamicResource Editor_More}">
 						<material:MaterialIcon Kind="ChevronDown"/>
 						<Button.Flyout>
 							<Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Transient">
@@ -135,14 +135,14 @@
 							<Button Name="BtnPencil" Classes="Basic menuitem" Click="BtnPencil_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
 									<material:MaterialIcon Kind="Pencil"/>
-									<TextBlock Grid.Column="1" Text="Олівець" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_Pencil}" VerticalAlignment="Center"/>
 								<TextBlock Grid.Column="2" Classes="shortcut" Text="P"/>
 								</Grid>
 							</Button>
 							<Button Name="BtnHighlighter" Classes="Basic menuitem" Click="BtnHighlighter_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
 									<material:MaterialIcon Kind="Marker"/>
-									<TextBlock Grid.Column="1" Text="Маркер" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_Highlighter}" VerticalAlignment="Center"/>
 								<TextBlock Grid.Column="2" Classes="shortcut" Text="H"/>
 								</Grid>
 							</Button>
@@ -152,14 +152,14 @@
 						</Button.Flyout>
 					</Button>
 				</StackPanel>
-				<Button Name="BtnText" Classes="Basic tool" ToolTip.Tip="Текст (T)" Click="BtnText_Click">
+				<Button Name="BtnText" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_Text}" Click="BtnText_Click">
 					<material:MaterialIcon Kind="FormatText"/>
 				</Button>
 				<StackPanel Orientation="Horizontal">
-					<Button Name="BtnHideGroup" Classes="Basic tool" ToolTip.Tip="Приховати: розмиття (B), прожектор (S)" Click="BtnHideGroup_Click">
+					<Button Name="BtnHideGroup" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_HideGroup}" Click="BtnHideGroup_Click">
 						<material:MaterialIcon Name="IcoHideGroup" Kind="Blur"/>
 					</Button>
-					<Button Name="BtnHideGroupMore" Classes="Basic more" ToolTip.Tip="Інші варіанти">
+					<Button Name="BtnHideGroupMore" Classes="Basic more" ToolTip.Tip="{DynamicResource Editor_More}">
 						<material:MaterialIcon Kind="ChevronDown"/>
 						<Button.Flyout>
 							<Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Transient">
@@ -168,14 +168,14 @@
 							<Button Name="BtnBlur" Classes="Basic menuitem" Click="BtnBlur_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
 									<material:MaterialIcon Kind="Blur"/>
-									<TextBlock Grid.Column="1" Text="Розмиття (для паролів і особистих даних)" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_Blur}" VerticalAlignment="Center"/>
 								<TextBlock Grid.Column="2" Classes="shortcut" Text="B"/>
 								</Grid>
 							</Button>
 							<Button Name="BtnSpotlight" Classes="Basic menuitem" Click="BtnSpotlight_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
 									<material:MaterialIcon Kind="SpotlightBeam"/>
-									<TextBlock Grid.Column="1" Text="Прожектор: затемнити все, крім області" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_Spotlight}" VerticalAlignment="Center"/>
 								<TextBlock Grid.Column="2" Classes="shortcut" Text="S"/>
 								</Grid>
 							</Button>
@@ -188,14 +188,14 @@
 
 				<Border Width="1" Height="24" Margin="6,0" Background="{DynamicResource PanelBorderBrush}" VerticalAlignment="Center"/>
 
-				<Button Name="BtnCurrentColorIndicator" Classes="Basic tool" Click="BtnCurrentColorIndicator_Click" ToolTip.Tip="Колір, товщина ліній, розмір тексту">
+				<Button Name="BtnCurrentColorIndicator" Classes="Basic tool" Click="BtnCurrentColorIndicator_Click" ToolTip.Tip="{DynamicResource Editor_ColorTip}">
 					<Border Name="ColorSwatch" Width="20" Height="20" CornerRadius="10" Background="#E53935" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="2"/>
 				</Button>
 
 				<Popup Name="ColorPalettePopup" Placement="Bottom" PlacementTarget="{Binding ElementName=BtnCurrentColorIndicator}" IsLightDismissEnabled="True">
 					<Border Padding="12" CornerRadius="12" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1">
 						<StackPanel Spacing="10" Width="200">
-							<TextBlock Text="Колір" Classes="shortcut"/>
+							<TextBlock Text="{DynamicResource Editor_Color}" Classes="shortcut"/>
 							<UniformGrid Columns="4">
 								<Button Background="#E53935" Width="30" Height="30" Margin="3" Click="BtnColorVariant_Click" CornerRadius="15" BorderThickness="0"/>
 								<Button Background="#43A047" Width="30" Height="30" Margin="3" Click="BtnColorVariant_Click" CornerRadius="15" BorderThickness="0"/>
@@ -206,14 +206,14 @@
 								<Button Background="#FDD835" Width="30" Height="30" Margin="3" Click="BtnColorVariant_Click" CornerRadius="15" BorderThickness="0"/>
 								<Button Background="#8E24AA" Width="30" Height="30" Margin="3" Click="BtnColorVariant_Click" CornerRadius="15" BorderThickness="0"/>
 							</UniformGrid>
-							<TextBlock Text="Товщина ліній" Classes="shortcut"/>
+							<TextBlock Text="{DynamicResource Editor_StrokeWidth}" Classes="shortcut"/>
 							<ComboBox Name="ComboStrokeWidth" HorizontalAlignment="Stretch" SelectedIndex="1" SelectionChanged="ComboStrokeWidth_SelectionChanged">
-								<ComboBoxItem Content="Тонка" Tag="2"/>
-								<ComboBoxItem Content="Середня" Tag="3"/>
-								<ComboBoxItem Content="Товста" Tag="5"/>
-								<ComboBoxItem Content="Дуже товста" Tag="8"/>
+								<ComboBoxItem Content="{DynamicResource Editor_Thin}" Tag="2"/>
+								<ComboBoxItem Content="{DynamicResource Editor_Medium}" Tag="3"/>
+								<ComboBoxItem Content="{DynamicResource Editor_Thick}" Tag="5"/>
+								<ComboBoxItem Content="{DynamicResource Editor_VeryThick}" Tag="8"/>
 							</ComboBox>
-							<TextBlock Text="Розмір тексту" Classes="shortcut"/>
+							<TextBlock Text="{DynamicResource Editor_FontSize}" Classes="shortcut"/>
 							<ComboBox Name="ComboFontSize" HorizontalAlignment="Stretch" SelectedIndex="1">
 								<ComboBoxItem Content="14"/>
 								<ComboBoxItem Content="18"/>
@@ -228,22 +228,22 @@
 
 				<Border Width="1" Height="24" Margin="6,0" Background="{DynamicResource PanelBorderBrush}" VerticalAlignment="Center"/>
 
-				<Button Name="BtnUndo" Classes="Basic tool" ToolTip.Tip="Скасувати (Ctrl+Z)" Click="BtnUndo_Click">
+				<Button Name="BtnUndo" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_Undo}" Click="BtnUndo_Click">
 					<material:MaterialIcon Kind="Undo"/>
 				</Button>
-				<Button Name="BtnRedo" Classes="Basic tool" ToolTip.Tip="Повторити (Ctrl+Y)" Click="BtnRedo_Click">
+				<Button Name="BtnRedo" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_Redo}" Click="BtnRedo_Click">
 					<material:MaterialIcon Kind="Redo"/>
 				</Button>
 				</StackPanel>
 
 				<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-				<Button Name="BtnOcr" Classes="Basic tool" ToolTip.Tip="Розпізнати текст із зображення (копіюється в буфер)" Click="BtnOcr_Click">
+				<Button Name="BtnOcr" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_OcrTip}" Click="BtnOcr_Click">
 					<material:MaterialIcon Kind="TextRecognition"/>
 				</Button>
-				<Button Name="BtnSaveAs" Classes="Basic tool" ToolTip.Tip="Зберегти як файл (Ctrl+S)" Click="BtnSaveAs_Click">
+				<Button Name="BtnSaveAs" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_SaveAs}" Click="BtnSaveAs_Click">
 					<material:MaterialIcon Kind="ContentSaveOutline"/>
 				</Button>
-				<Button Name="BtnShareGroup" Classes="Basic tool" ToolTip.Tip="Поділитися посиланням">
+				<Button Name="BtnShareGroup" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_Share}">
 					<material:MaterialIcon Kind="ShareVariantOutline"/>
 					<Button.Flyout>
 						<Flyout Placement="BottomEdgeAlignedRight" ShowMode="Transient">
@@ -252,13 +252,13 @@
 							<Button Name="BtnPublicUpload" Classes="Basic menuitem" Click="BtnPublicUpload_Click">
 								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
 									<material:MaterialIcon Kind="CloudUploadOutline"/>
-									<TextBlock Grid.Column="1" Text="Публічне посилання (catbox.moe)" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_PublicLink}" VerticalAlignment="Center"/>
 								</Grid>
 							</Button>
 							<Button Name="BtnDriveUpload" Classes="Basic menuitem" Click="BtnDriveUpload_Click">
 								<Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
 									<material:MaterialIcon Kind="GoogleDrive" Foreground="#4688F4"/>
-									<TextBlock Grid.Column="1" Text="Мій Google Drive" VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Text="{DynamicResource Editor_MyDrive}" VerticalAlignment="Center"/>
 								</Grid>
 							</Button>
 							</StackPanel>
@@ -270,7 +270,7 @@
 				<Button Name="BtnSave" Classes="Flat" Click="BtnSave_Click" Margin="8,0,2,0" Padding="16,8" CornerRadius="10">
 					<StackPanel Orientation="Horizontal" Spacing="8">
 						<material:MaterialIcon Kind="ContentCopy" Width="18" Height="18" Foreground="{DynamicResource OnAccentBrush}"/>
-						<TextBlock Text="Копіювати та закрити" VerticalAlignment="Center" FontWeight="SemiBold"/>
+						<TextBlock Text="{DynamicResource Editor_CopyAndClose}" VerticalAlignment="Center" FontWeight="SemiBold"/>
 					</StackPanel>
 				</Button>
 				</StackPanel>
@@ -291,7 +291,7 @@
 						<Border Name="SplitPlaceholder" IsVisible="False" Background="{DynamicResource SukiLightBackground}" BorderBrush="{DynamicResource SukiBorderBrush}" BorderThickness="2" CornerRadius="10" Cursor="Hand" PointerPressed="SplitPlaceholder_PointerPressed">
 							<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" IsHitTestVisible="False">
 								<material:MaterialIcon Kind="ImageAdd" Width="64" Height="64" Foreground="{DynamicResource SukiTextLow}"/>
-								<TextBlock Text="Клікніть, щоб вибрати файл,&#x0a;перетягніть сюди файл (Drag &amp; Drop)&#x0a;або натисніть Ctrl+V" Foreground="{DynamicResource SukiTextLow}" FontSize="18" TextAlignment="Center" FontWeight="SemiBold"/>
+								<TextBlock Text="{DynamicResource Editor_SplitHint}" Foreground="{DynamicResource SukiTextLow}" FontSize="18" TextAlignment="Center" FontWeight="SemiBold"/>
 							</StackPanel>
 						</Border>
 					</Canvas>
@@ -311,17 +311,17 @@
 		<Canvas Grid.Row="1" Name="CropControlsLayer" ClipToBounds="True">
 			<Border Name="CropControlsPanel" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="4" IsVisible="False" BoxShadow="0 4 14 0 #66000000">
 				<StackPanel Orientation="Horizontal">
-					<Button Name="BtnConfirmCrop" Classes="Basic" Width="40" Height="40" CornerRadius="20" Click="BtnConfirmCrop_Click" ToolTip.Tip="Застосувати обрізку (Enter)" Foreground="{DynamicResource AccentBrush}">
+					<Button Name="BtnConfirmCrop" Classes="Basic" Width="40" Height="40" CornerRadius="20" Click="BtnConfirmCrop_Click" ToolTip.Tip="{DynamicResource Editor_ApplyCrop}" Foreground="{DynamicResource AccentBrush}">
 						<material:MaterialIcon Kind="Check" Width="24" Height="24"/>
 					</Button>
-					<Button Name="BtnCancelCrop" Classes="Basic" Width="40" Height="40" CornerRadius="20" Click="BtnCancelCrop_Click" ToolTip.Tip="Скасувати (Esc)" Foreground="{DynamicResource DangerBrush}" Margin="5,0,0,0">
+					<Button Name="BtnCancelCrop" Classes="Basic" Width="40" Height="40" CornerRadius="20" Click="BtnCancelCrop_Click" ToolTip.Tip="{DynamicResource Editor_CancelEsc}" Foreground="{DynamicResource DangerBrush}" Margin="5,0,0,0">
 						<material:MaterialIcon Kind="Close" Width="24" Height="24"/>
 					</Button>
 				</StackPanel>
 			</Border>
 		</Canvas>
 		<Border Name="ToastNotification" Grid.Row="1" Background="{DynamicResource ToastBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="10" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,30" Padding="25,15" IsVisible="False" IsHitTestVisible="False">
-			<TextBlock Name="ToastText" Text="Скопійовано в буфер!" Foreground="{DynamicResource SukiText}" FontSize="18" FontWeight="SemiBold"/>
+			<TextBlock Name="ToastText" Text="{DynamicResource Common_CopiedToClipboard}" Foreground="{DynamicResource SukiText}" FontSize="18" FontWeight="SemiBold"/>
 		</Border>
 	</Grid>
 </suki:SukiWindow>

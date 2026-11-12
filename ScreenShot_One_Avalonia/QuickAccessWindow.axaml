@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="ScreenShot_One_Avalonia.QuickAccessWindow"
-        Title="Скріншот" Width="300" SizeToContent="Height"
+        Title="{DynamicResource Quick_Title}" Width="300" SizeToContent="Height"
         WindowDecorations="None" Background="Transparent" TransparencyLevelHint="Transparent"
         Topmost="True" ShowInTaskbar="False" ShowActivated="False" CanResize="False">
 
@@ -11,22 +11,22 @@
 		<StackPanel Spacing="8">
 			<!-- Мініатюра: подвійний клік — редагувати, перетягування — вставити файл у будь-яку програму -->
 			<Border Name="ThumbBorder" CornerRadius="8" ClipToBounds="True" Cursor="Hand" Background="{DynamicResource CanvasBackdropBrush}"
-			        ToolTip.Tip="Перетягніть у будь-яку програму · Подвійний клік — редагувати">
+			        ToolTip.Tip="{DynamicResource Quick_Hint}">
 				<Image Name="ThumbImage" Stretch="Uniform" MaxHeight="190"/>
 			</Border>
 
 			<!-- Кнопки-іконки з підказками (раніше підписи не вміщались і обрізались) -->
 			<Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
-				<Button Name="BtnEdit" Grid.Column="0" Classes="Basic tool" Click="BtnEdit_Click" ToolTip.Tip="Редагувати (подвійний клік по мініатюрі)">
+				<Button Name="BtnEdit" Grid.Column="0" Classes="Basic tool" Click="BtnEdit_Click" ToolTip.Tip="{DynamicResource Quick_Edit}">
 					<material:MaterialIcon Kind="PencilOutline"/>
 				</Button>
-				<Button Name="BtnCopy" Grid.Column="1" Classes="Basic tool" Click="BtnCopy_Click" ToolTip.Tip="Копіювати в буфер">
+				<Button Name="BtnCopy" Grid.Column="1" Classes="Basic tool" Click="BtnCopy_Click" ToolTip.Tip="{DynamicResource Quick_Copy}">
 					<material:MaterialIcon Kind="ContentCopy"/>
 				</Button>
-				<Button Name="BtnSaveFile" Grid.Column="2" Classes="Basic tool" Click="BtnSaveFile_Click" ToolTip.Tip="Зберегти у папку">
+				<Button Name="BtnSaveFile" Grid.Column="2" Classes="Basic tool" Click="BtnSaveFile_Click" ToolTip.Tip="{DynamicResource Quick_SaveToFolder}">
 					<material:MaterialIcon Kind="ContentSaveOutline"/>
 				</Button>
-				<Button Name="BtnDismiss" Grid.Column="4" Classes="Basic tool" Click="BtnDismiss_Click" ToolTip.Tip="Закрити">
+				<Button Name="BtnDismiss" Grid.Column="4" Classes="Basic tool" Click="BtnDismiss_Click" ToolTip.Tip="{DynamicResource Common_Close}">
 					<material:MaterialIcon Kind="Close"/>
 				</Button>
 			</Grid>

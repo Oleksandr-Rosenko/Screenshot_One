@@ -54,9 +54,8 @@ namespace ScreenShot_One_Avalonia
             if (firstLine.Length > 300) firstLine = firstLine.Substring(0, 300) + "…";
 
             var box = MessageBoxManager.GetMessageBoxStandard(
-                "Програма завершилась аварійно",
-                "Минулого разу Screenshot One аварійно завершився:\n\n" + firstLine +
-                "\n\nВідкрити папку з журналом (app.log), щоб надіслати його розробнику?",
+                Loc.T("Crash_Title"),
+                Loc.F("Crash_Text", firstLine),
                 ButtonEnum.YesNo, Icon.Warning);
 
             if (await box.ShowWindowAsync() == ButtonResult.Yes) OpenLogFolder();

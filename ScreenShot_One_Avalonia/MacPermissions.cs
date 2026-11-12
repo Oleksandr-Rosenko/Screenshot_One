@@ -30,11 +30,8 @@ namespace ScreenShot_One_Avalonia
             try
             {
                 var box = MessageBoxManager.GetMessageBoxStandard(
-                    "Потрібен дозвіл «Запис екрана»",
-                    "macOS не дозволяє Screenshot One бачити вміст екрана — скріншоти й відео міститимуть лише шпалери.\n\n" +
-                    "Відкрийте «Системні налаштування → Конфіденційність і безпека → Запис екрана», " +
-                    "увімкніть Screenshot One і перезапустіть програму.\n\n" +
-                    "Відкрити налаштування зараз?",
+                    Loc.T("Mac_PermissionTitle"),
+                    Loc.T("Mac_PermissionText"),
                     ButtonEnum.YesNo, Icon.Warning);
 
                 if (await box.ShowWindowAsync() == ButtonResult.Yes)

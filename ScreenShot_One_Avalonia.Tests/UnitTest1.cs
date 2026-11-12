@@ -500,7 +500,7 @@ namespace ScreenShot_One_Avalonia.Tests
             string appCode = File.ReadAllText(GetSourceFilePath("App.axaml.cs"));
             Assert.Contains("UpdateWindow.CheckAndShowAsync(isManual: false)", appCode);
             Assert.Contains("UpdateWindow.CheckAndShowAsync(isManual: true)", appCode);
-            Assert.Contains("NativeMenuItem(\"Перевірити оновлення\")", appCode);
+            Assert.Contains("NativeMenuItem(Loc.T(\"Tray_CheckUpdates\"))", appCode);
         }
 
         [Fact]
@@ -523,7 +523,8 @@ namespace ScreenShot_One_Avalonia.Tests
             string xaml = File.ReadAllText(GetSourceFilePath("SettingsWindow.axaml"));
             Assert.Contains("Name=\"ComboTheme\"", xaml);
             Assert.Contains("SelectionChanged=\"ComboTheme_SelectionChanged\"", xaml);
-            Assert.Contains("Тема оформлення", xaml);
+            Assert.Contains("{DynamicResource Settings_Theme}", xaml);
+            Assert.Equal("Тема оформлення", Strings.All["Settings_Theme"][0]);
 
             string code = File.ReadAllText(GetSourceFilePath("SettingsWindow.axaml.cs"));
             Assert.Contains("_initialTheme", code);

@@ -18,11 +18,8 @@ namespace ScreenShot_One_Avalonia
             if (SettingsManager.Current.PublicUploadWarningAccepted) return true;
 
             var box = MessageBoxManager.GetMessageBoxStandard(
-                "Публічне посилання",
-                "Завантажений файл буде доступний УСІМ, хто має посилання " +
-                "(Google Drive — «усі, хто має посилання»; catbox.moe — повністю публічний хостинг).\n\n" +
-                "Не завантажуйте скріншоти з паролями, особистими чи робочими даними.\n\n" +
-                "Продовжити? (Це попередження більше не показуватиметься.)",
+                Loc.T("Upload_PublicTitle"),
+                Loc.T("Upload_PublicText"),
                 ButtonEnum.YesNo, Icon.Warning);
 
             ButtonResult result;

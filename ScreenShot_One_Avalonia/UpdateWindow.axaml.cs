@@ -38,8 +38,8 @@ namespace ScreenShot_One_Avalonia
         private UpdateWindowState _state = UpdateWindowState.Checking;
         private UpdateManager? _updateManager;
         private UpdateInfo? _updateInfo;
-        private string _currentVersion = "2.7.3";
-        private string _newVersion = "2.7.3";
+        private string _currentVersion = "2.8.0";
+        private string _newVersion = "2.8.0";
         private bool _isDownloading = false;
         private bool _isReadyToRestart = false;
 
@@ -103,7 +103,7 @@ namespace ScreenShot_One_Avalonia
         {
             _state = UpdateWindowState.Checking;
 
-            TxtTitle.Text = "Перевірка оновлень...";
+            TxtTitle.Text = Loc.T("Update_Checking");
             IconHeader.Kind = MaterialIconKind.Radar;
             IconHeader.Foreground = Accent;
             BorderIconHeader.Background = AccentSoft;
@@ -114,17 +114,17 @@ namespace ScreenShot_One_Avalonia
 
             IconCardHeader.Kind = MaterialIconKind.ServerNetwork;
             IconCardHeader.Foreground = Accent;
-            TxtCardHeader.Text = "Пошук нових релізів:";
-            TxtChangelog.Text = "Підключення до сервера оновлень GitHub та перевірка наявності свіжих пакунків...";
+            TxtCardHeader.Text = Loc.T("Update_SearchHeader");
+            TxtChangelog.Text = Loc.T("Update_Connecting");
 
             PanelProgress.IsVisible = true;
             ProgressBarUpdate.IsIndeterminate = true;
-            TxtProgressStatus.Text = "Перевірка наявності оновлень...";
+            TxtProgressStatus.Text = Loc.T("Update_CheckingStatus");
             TxtProgressPercent.IsVisible = false;
             TxtStatusMessage.Text = "";
 
             BtnLater.IsVisible = true;
-            BtnLater.Content = "Закрити";
+            BtnLater.Content = Loc.T("Common_Close");
             BtnLater.IsEnabled = true;
 
             BtnAction.IsVisible = false;
@@ -139,7 +139,7 @@ namespace ScreenShot_One_Avalonia
         {
             _state = UpdateWindowState.UpdateAvailable;
 
-            TxtTitle.Text = "Доступне оновлення!";
+            TxtTitle.Text = Loc.T("Update_Available");
             IconHeader.Kind = MaterialIconKind.RocketLaunch;
             // SukiPrimaryColor у SukiUI — це Color, а не пензель. Пряме приведення (IBrush) кидало InvalidCastException,
             // і замість «Доступне оновлення» показувалась помилка — оновитися через програму було неможливо.
@@ -154,7 +154,7 @@ namespace ScreenShot_One_Avalonia
 
             IconCardHeader.Kind = MaterialIconKind.FormatListBulleted;
             IconCardHeader.Foreground = Accent;
-            TxtCardHeader.Text = "Що нового в цій версії:";
+            TxtCardHeader.Text = Loc.T("Update_WhatsNew");
 
             PanelProgress.IsVisible = false;
             ProgressBarUpdate.IsIndeterminate = false;
@@ -164,12 +164,12 @@ namespace ScreenShot_One_Avalonia
             TxtStatusMessage.Text = "";
 
             BtnLater.IsVisible = true;
-            BtnLater.Content = "Пізніше";
+            BtnLater.Content = Loc.T("Common_Later");
             BtnLater.IsEnabled = true;
 
             BtnAction.IsVisible = true;
             BtnAction.IsEnabled = true;
-            TxtActionBtn.Text = "Оновити зараз";
+            TxtActionBtn.Text = Loc.T("Update_Now");
             IconAction.Kind = MaterialIconKind.Download;
 
             _ = LoadReleaseNotesAsync(_newVersion);
@@ -179,7 +179,7 @@ namespace ScreenShot_One_Avalonia
         {
             _state = UpdateWindowState.UpToDate;
 
-            TxtTitle.Text = "У вас найновіша версія!";
+            TxtTitle.Text = Loc.T("Update_Latest");
             IconHeader.Kind = MaterialIconKind.CheckCircleOutline;
             IconHeader.Foreground = Accent;
             BorderIconHeader.Background = AccentSoft;
@@ -187,13 +187,13 @@ namespace ScreenShot_One_Avalonia
             TxtCurrentVersion.Text = _currentVersion.Trim().TrimStart('v', 'V');
             TxtArrow.IsVisible = true;
             BorderNewVersion.IsVisible = true;
-            TxtNewVersion.Text = "Актуальна";
+            TxtNewVersion.Text = Loc.T("Update_UpToDate");
             TxtNewVersion.Foreground = Accent;
 
             IconCardHeader.Kind = MaterialIconKind.ShieldCheckOutline;
             IconCardHeader.Foreground = Accent;
-            TxtCardHeader.Text = "Статус системи:";
-            TxtChangelog.Text = "Програма працює на останній стабільній версії. Всі доступні оновлення та виправлення вже встановлені.";
+            TxtCardHeader.Text = Loc.T("Update_StatusHeader");
+            TxtChangelog.Text = Loc.T("Update_AllInstalled");
 
             PanelProgress.IsVisible = false;
             ProgressBarUpdate.IsIndeterminate = false;
@@ -203,7 +203,7 @@ namespace ScreenShot_One_Avalonia
 
             BtnAction.IsVisible = true;
             BtnAction.IsEnabled = true;
-            TxtActionBtn.Text = "Чудово";
+            TxtActionBtn.Text = Loc.T("Update_Great");
             IconAction.Kind = MaterialIconKind.Check;
         }
 
@@ -211,7 +211,7 @@ namespace ScreenShot_One_Avalonia
         {
             _state = UpdateWindowState.Error;
 
-            TxtTitle.Text = "Не вдалося перевірити оновлення";
+            TxtTitle.Text = Loc.T("Update_CheckFailed");
             IconHeader.Kind = MaterialIconKind.AlertCircleOutline;
             IconHeader.Foreground = Brushes.Coral;
             BorderIconHeader.Background = new SolidColorBrush(Color.FromArgb(30, 255, 127, 80));
@@ -222,25 +222,25 @@ namespace ScreenShot_One_Avalonia
 
             IconCardHeader.Kind = MaterialIconKind.CloudAlert;
             IconCardHeader.Foreground = Brushes.Coral;
-            TxtCardHeader.Text = "Стан підключення:";
+            TxtCardHeader.Text = Loc.T("Update_ConnHeader");
 
             string msg;
             string exStr = ex.ToString();
             if (ex is TimeoutException || ex is OperationCanceledException || ex is TaskCanceledException || exStr.Contains("504") || exStr.Contains("Gateway Time-out") || exStr.Contains("timed out") || exStr.Contains("Timeout") || exStr.Contains("canceled") || exStr.Contains("cancelled"))
             {
-                msg = "Сервер оновлень GitHub тимчасово не відповідає (помилка 504 Gateway Time-out або затримка зв'язку).\n\nБудь ласка, зачекайте 1–2 хвилини та натисніть «Спробувати знову».";
+                msg = Loc.T("Update_Err504");
             }
             else if (exStr.Contains("403") || exStr.Contains("rate limit"))
             {
-                msg = "Вичерпано ліміт публічних запитів до GitHub для вашої IP-адреси.\n\nБудь ласка, зачекайте 15–20 хвилин та спробуйте знову.";
+                msg = Loc.T("Update_ErrRateLimit");
             }
             else if (exStr.Contains("Socket") || exStr.Contains("NameResolution") || exStr.Contains("No such host"))
             {
-                msg = "Немає підключення до мережі інтернет або сервер недоступний.\n\nПеревірте мережеве з'єднання та натисніть «Спробувати знову».";
+                msg = Loc.T("Update_ErrOffline");
             }
             else
             {
-                msg = $"Не вдалося виконати перевірку:\n{ex.Message}";
+                msg = Loc.F("Update_ErrOther", ex.Message);
             }
 
             TxtChangelog.Text = msg;
@@ -249,12 +249,12 @@ namespace ScreenShot_One_Avalonia
             TxtStatusMessage.Text = "";
 
             BtnLater.IsVisible = true;
-            BtnLater.Content = "Закрити";
+            BtnLater.Content = Loc.T("Common_Close");
             BtnLater.IsEnabled = true;
 
             BtnAction.IsVisible = true;
             BtnAction.IsEnabled = true;
-            TxtActionBtn.Text = "Спробувати знову";
+            TxtActionBtn.Text = Loc.T("Update_TryAgain");
             IconAction.Kind = MaterialIconKind.Refresh;
         }
 
@@ -354,7 +354,7 @@ namespace ScreenShot_One_Avalonia
                     bool hasActiveEditors = desktop.Windows.Any(w => w is EditorWindow || w is VideoEditorWindow);
                     if (hasActiveEditors)
                     {
-                        TxtStatusMessage.Text = "Будь ласка, збережіть та закрийте відкритий редактор перед перезапуском!";
+                        TxtStatusMessage.Text = Loc.T("Update_CloseEditorFirst");
                         TxtStatusMessage.Foreground = Brushes.Orange;
                         return;
                     }
@@ -368,7 +368,7 @@ namespace ScreenShot_One_Avalonia
                 }
                 catch (Exception ex)
                 {
-                    TxtStatusMessage.Text = $"Не вдалося перезапустити: {ex.Message}";
+                    TxtStatusMessage.Text = Loc.F("Update_RestartFailed", ex.Message);
                     TxtStatusMessage.Foreground = Danger;
                 }
                 return;
@@ -382,7 +382,7 @@ namespace ScreenShot_One_Avalonia
             BtnAction.IsEnabled = false;
             PanelProgress.IsVisible = true;
             ProgressBarUpdate.IsIndeterminate = false;
-            TxtProgressStatus.Text = "Завантаження компонентів...";
+            TxtProgressStatus.Text = Loc.T("Update_Downloading");
             TxtStatusMessage.Text = "";
 
             try
@@ -402,19 +402,19 @@ namespace ScreenShot_One_Avalonia
                 _isDownloading = false;
                 ProgressBarUpdate.Value = 100;
                 TxtProgressPercent.Text = "100%";
-                TxtProgressStatus.Text = "Оновлення готове до встановлення!";
-                TxtActionBtn.Text = "Перезапустити зараз";
+                TxtProgressStatus.Text = Loc.T("Update_Ready");
+                TxtActionBtn.Text = Loc.T("Update_RestartNow");
                 IconAction.Kind = MaterialIconKind.Restart;
                 BtnAction.IsEnabled = true;
                 BtnLater.IsEnabled = true;
-                BtnLater.Content = "Пізніше";
+                BtnLater.Content = Loc.T("Common_Later");
             }
             catch (Exception ex)
             {
                 _isDownloading = false;
                 BtnAction.IsEnabled = true;
                 BtnLater.IsEnabled = true;
-                TxtStatusMessage.Text = $"Помилка завантаження: {ex.Message}";
+                TxtStatusMessage.Text = Loc.F("Update_DownloadFailed", ex.Message);
                 TxtStatusMessage.Foreground = Danger;
             }
         }
@@ -424,7 +424,7 @@ namespace ScreenShot_One_Avalonia
             if (_isDownloading && !_isReadyToRestart)
             {
                 e.Cancel = true;
-                TxtStatusMessage.Text = "Завантаження триває, зачекайте завершення...";
+                TxtStatusMessage.Text = Loc.T("Update_InProgress");
                 TxtStatusMessage.Foreground = Brushes.Orange;
                 return;
             }
@@ -445,7 +445,7 @@ namespace ScreenShot_One_Avalonia
                 return $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
             }
 
-            return "2.7.3";
+            return "2.8.0";
         }
 
         public static async Task CheckAndShowAsync(bool isManual = true)

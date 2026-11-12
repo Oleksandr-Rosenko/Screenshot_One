@@ -158,6 +158,7 @@ namespace ScreenShot_One_Avalonia.Tests
         [Fact]
         public void HistoryItem_FriendlyDateAndSize_AreHumanReadable()
         {
+            Loc.SetForTests("uk");
             var now = new DateTime(2026, 11, 11, 15, 0, 0);
             Assert.Equal("Сьогодні, 13:04", HistoryItem.FriendlyDate(new DateTime(2026, 11, 11, 13, 4, 0), now));
             Assert.Equal("Вчора, 18:20", HistoryItem.FriendlyDate(new DateTime(2026, 11, 10, 18, 20, 0), now));

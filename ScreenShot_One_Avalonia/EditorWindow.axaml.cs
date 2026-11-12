@@ -247,7 +247,7 @@ namespace ScreenShot_One_Avalonia
 
             var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Виберіть зображення для порівняння",
+                Title = Loc.T("Editor_ChooseCompareImage"),
                 AllowMultiple = false,
                 FileTypeFilter = new[] { FilePickerFileTypes.ImageAll }
             });
@@ -274,7 +274,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                MessageBoxManager.GetMessageBoxStandard("Помилка", $"Не вдалося обробити файл: {ex.Message}").ShowWindowAsync();
+                MessageBoxManager.GetMessageBoxStandard(Loc.T("Common_Error"), Loc.F("Editor_FileProcessFailed", ex.Message)).ShowWindowAsync();
             }
         }
 
@@ -323,7 +323,7 @@ namespace ScreenShot_One_Avalonia
                     if (bmp != null)
                     {
                         AddImageOverlay(bmp);
-                        ToastText.Text = "Зображення вставлено!";
+                        ToastText.Text = Loc.T("Editor_ImagePasted");
                         ToastNotification.IsVisible = true;
                         _ = Task.Delay(1500).ContinueWith(_ =>
                         {
@@ -332,7 +332,7 @@ namespace ScreenShot_One_Avalonia
                     }
                     else
                     {
-                        ToastText.Text = "У буфері обміну немає зображення";
+                        ToastText.Text = Loc.T("Editor_NoImageInClipboard");
                         ToastNotification.IsVisible = true;
                         _ = Task.Delay(1500).ContinueWith(_ =>
                         {
@@ -567,7 +567,7 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                MessageBoxManager.GetMessageBoxStandard("Помилка", $"Не вдалося завантажити зображення: {ex.Message}").ShowWindowAsync();
+                MessageBoxManager.GetMessageBoxStandard(Loc.T("Common_Error"), Loc.F("Editor_ImageLoadFailed", ex.Message)).ShowWindowAsync();
             }
         }
 
@@ -1505,7 +1505,7 @@ namespace ScreenShot_One_Avalonia
 
             {
 
-                MessageBoxManager.GetMessageBoxStandard("Помилка", $"Не вдалося обрізати зображення: {ex.Message}").ShowWindowAsync();
+                MessageBoxManager.GetMessageBoxStandard(Loc.T("Common_Error"), Loc.F("Editor_CropFailed", ex.Message)).ShowWindowAsync();
 
             }
         }
@@ -1859,15 +1859,15 @@ namespace ScreenShot_One_Avalonia
 
         private static string ToolTipFor(DrawingTool tool) => tool switch
         {
-            DrawingTool.Rectangle => "Прямокутник (R)",
-            DrawingTool.Ellipse => "Еліпс (E)",
-            DrawingTool.Arrow => "Стрілка (A)",
-            DrawingTool.Line => "Пряма лінія (L, Shift — під 45°)",
-            DrawingTool.Connector => "Зв'язок (лінія з точками)",
-            DrawingTool.Pencil => "Олівець (P)",
-            DrawingTool.Highlighter => "Маркер (H)",
-            DrawingTool.Blur => "Розмиття — для паролів і особистих даних (B)",
-            DrawingTool.Spotlight => "Прожектор: затемнити все, крім області (S)",
+            DrawingTool.Rectangle => Loc.T("Editor_TipRectangle"),
+            DrawingTool.Ellipse => Loc.T("Editor_TipEllipse"),
+            DrawingTool.Arrow => Loc.T("Editor_TipArrow"),
+            DrawingTool.Line => Loc.T("Editor_TipLine"),
+            DrawingTool.Connector => Loc.T("Editor_Connector"),
+            DrawingTool.Pencil => Loc.T("Editor_TipPencil"),
+            DrawingTool.Highlighter => Loc.T("Editor_TipHighlighter"),
+            DrawingTool.Blur => Loc.T("Editor_TipBlur"),
+            DrawingTool.Spotlight => Loc.T("Editor_TipSpotlight"),
             _ => ""
         };
 
@@ -1902,18 +1902,18 @@ namespace ScreenShot_One_Avalonia
                 return b;
             }
 
-            _inlineSplitButton = MakeInlineButton(Material.Icons.MaterialIconKind.ViewSplitVertical, "Додати зображення поруч (колаж)",
+            _inlineSplitButton = MakeInlineButton(Material.Icons.MaterialIconKind.ViewSplitVertical, Loc.T("Editor_Collage"),
                 () => BtnSplit_Click(this, new RoutedEventArgs()));
             AddInlineGroup(BtnImageGroup,
-                MakeInlineButton(Material.Icons.MaterialIconKind.ImageAdd, "Вставити картинку поверх (Ctrl+V)", () => BtnPasteImage_Click(this, new RoutedEventArgs())),
+                MakeInlineButton(Material.Icons.MaterialIconKind.ImageAdd, Loc.T("Editor_PasteOverTip"), () => BtnPasteImage_Click(this, new RoutedEventArgs())),
                 _inlineSplitButton);
             if (BtnShapesGroup.Parent is Control shapes) AddInlineGroup(shapes, Tool(DrawingTool.Rectangle), Tool(DrawingTool.Ellipse));
             if (BtnLinesGroup.Parent is Control lines) AddInlineGroup(lines, Tool(DrawingTool.Arrow), Tool(DrawingTool.Line), Tool(DrawingTool.Connector));
             if (BtnDrawGroup.Parent is Control draw) AddInlineGroup(draw, Tool(DrawingTool.Pencil), Tool(DrawingTool.Highlighter));
             if (BtnHideGroup.Parent is Control hide) AddInlineGroup(hide, Tool(DrawingTool.Blur), Tool(DrawingTool.Spotlight));
             AddInlineGroup(BtnShareGroup,
-                MakeInlineButton(Material.Icons.MaterialIconKind.CloudUploadOutline, "Публічне посилання (catbox.moe)", () => BtnPublicUpload_Click(this, new RoutedEventArgs())),
-                MakeInlineButton(Material.Icons.MaterialIconKind.GoogleDrive, "Завантажити в мій Google Drive", () => BtnDriveUpload_Click(this, new RoutedEventArgs()),
+                MakeInlineButton(Material.Icons.MaterialIconKind.CloudUploadOutline, Loc.T("Editor_PublicLink"), () => BtnPublicUpload_Click(this, new RoutedEventArgs())),
+                MakeInlineButton(Material.Icons.MaterialIconKind.GoogleDrive, Loc.T("Editor_MyDriveTip"), () => BtnDriveUpload_Click(this, new RoutedEventArgs()),
                     new SolidColorBrush(Color.Parse("#4688F4")))); // бренд Google Drive
 
             if (BtnSelect.Parent is Control left && left.Parent is Control grid)
@@ -2153,7 +2153,7 @@ namespace ScreenShot_One_Avalonia
                 // Раніше тут був порожній catch: якщо диск повний або файл зайнятий,
                 // скріншот мовчки не потрапляв в історію. Тепер — лог і повідомлення.
                 AppLog.Error(ex, "Збереження в історію");
-                MessageBoxManager.GetMessageBoxStandard("Помилка", $"Не вдалося зберегти скріншот в історію: {ex.Message}").ShowWindowAsync();
+                MessageBoxManager.GetMessageBoxStandard(Loc.T("Common_Error"), Loc.F("Editor_HistorySaveFailed", ex.Message)).ShowWindowAsync();
             }
         }
 
@@ -2166,7 +2166,7 @@ namespace ScreenShot_One_Avalonia
             catch (Exception ex)
             {
                 _isSavedToHistory = false;
-                await MessageBoxManager.GetMessageBoxStandard("Помилка", $"Не вдалося зберегти скріншот в історію: {ex.Message}").ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard(Loc.T("Common_Error"), Loc.F("Editor_HistorySaveFailed", ex.Message)).ShowWindowAsync();
             }
         }
 
@@ -2181,7 +2181,7 @@ namespace ScreenShot_One_Avalonia
             catch (Exception ex)
             {
                 AppLog.Error(ex, "Копіювання в буфер обміну");
-                var box = MessageBoxManager.GetMessageBoxStandard("Помилка Буфера", $"Помилка: {ex.Message}\n\nСтек: {ex.StackTrace}");
+                var box = MessageBoxManager.GetMessageBoxStandard(Loc.T("Editor_ClipboardError"), Loc.F("Editor_ErrorDetails", ex.Message, ex.StackTrace));
                 await box.ShowWindowDialogAsync(this);
             }
             finally
@@ -2198,7 +2198,7 @@ namespace ScreenShot_One_Avalonia
             try
             {
                 ToastNotification.IsVisible = true;
-                ToastText.Text = "Завантаження на Google Drive...";
+                ToastText.Text = Loc.T("Editor_UploadingDrive");
 
                 var rtb = CreateRenderedBitmap();
                 if (!_isSavedToHistory) SaveToHistoryDatabase(rtb);
@@ -2213,11 +2213,11 @@ namespace ScreenShot_One_Avalonia
                 {
                     var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
                     if (clipboard != null) await clipboard.SetTextAsync(webLink);
-                    ToastText.Text = "Посилання (Drive) скопійовано!";
+                    ToastText.Text = Loc.T("Editor_DriveLinkCopied");
                 }
                 else
                 {
-                    ToastText.Text = "Успішно завантажено!";
+                    ToastText.Text = Loc.T("Editor_Uploaded");
                 }
 
                 await System.Threading.Tasks.Task.Delay(1500);
@@ -2226,7 +2226,7 @@ namespace ScreenShot_One_Avalonia
             catch (Exception ex)
             {
                 AppLog.Error(ex, "Завантаження в хмару");
-                var box = MessageBoxManager.GetMessageBoxStandard("Помилка", $"Помилка завантаження: {ex.Message}");
+                var box = MessageBoxManager.GetMessageBoxStandard(Loc.T("Common_Error"), Loc.F("Editor_UploadFailed", ex.Message));
                 await box.ShowWindowDialogAsync(this);
                 ToastNotification.IsVisible = false;
             }
@@ -2247,7 +2247,7 @@ namespace ScreenShot_One_Avalonia
             try
             {
                 ToastNotification.IsVisible = true;
-                ToastText.Text = "Створення публічного посилання...";
+                ToastText.Text = Loc.T("Editor_CreatingPublicLink");
 
                 var rtb = CreateRenderedBitmap();
                 if (!_isSavedToHistory) SaveToHistoryDatabase(rtb);
@@ -2262,11 +2262,11 @@ namespace ScreenShot_One_Avalonia
                 {
                     var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
                     if (clipboard != null) await clipboard.SetTextAsync(webLink);
-                    ToastText.Text = "Публічне посилання скопійовано!";
+                    ToastText.Text = Loc.T("Editor_PublicLinkCopied");
                 }
                 else
                 {
-                    ToastText.Text = "Успішно завантажено!";
+                    ToastText.Text = Loc.T("Editor_Uploaded");
                 }
 
                 await System.Threading.Tasks.Task.Delay(1500);
@@ -2275,7 +2275,7 @@ namespace ScreenShot_One_Avalonia
             catch (Exception ex)
             {
                 AppLog.Error(ex, "Завантаження в хмару");
-                var box = MessageBoxManager.GetMessageBoxStandard("Помилка", $"Помилка завантаження: {ex.Message}");
+                var box = MessageBoxManager.GetMessageBoxStandard(Loc.T("Common_Error"), Loc.F("Editor_UploadFailed", ex.Message));
                 await box.ShowWindowDialogAsync(this);
                 ToastNotification.IsVisible = false;
             }
@@ -2294,7 +2294,7 @@ namespace ScreenShot_One_Avalonia
             BtnOcr.IsEnabled = false;
             try
             {
-                ToastText.Text = "Розпізнаю текст…";
+                ToastText.Text = Loc.T("Ocr_Recognizing");
                 ToastNotification.IsVisible = true;
 
                 string text;
@@ -2305,12 +2305,12 @@ namespace ScreenShot_One_Avalonia
 
                 if (string.IsNullOrWhiteSpace(text))
                 {
-                    ToastText.Text = "Текст не знайдено";
+                    ToastText.Text = Loc.T("Ocr_NotFound");
                 }
                 else
                 {
                     await ClipboardHelper.CopyTextAsync(text, TopLevel.GetTopLevel(this));
-                    ToastText.Text = $"Текст скопійовано ({text.Length} симв.)";
+                    ToastText.Text = Loc.F("Ocr_Copied", text.Length);
                 }
                 await Task.Delay(1800);
                 ToastNotification.IsVisible = false;
@@ -2319,7 +2319,7 @@ namespace ScreenShot_One_Avalonia
             {
                 ToastNotification.IsVisible = false;
                 if (ex is not OcrUnavailableException) AppLog.Error(ex, "OCR у редакторі");
-                await MessageBoxManager.GetMessageBoxStandard("Розпізнавання тексту", ex.Message).ShowWindowDialogAsync(this);
+                await MessageBoxManager.GetMessageBoxStandard(Loc.T("Ocr_Title"), ex.Message).ShowWindowDialogAsync(this);
             }
             finally
             {
@@ -2343,7 +2343,7 @@ namespace ScreenShot_One_Avalonia
 
                 var options = new FilePickerSaveOptions
                 {
-                    Title = "Зберегти скріншот",
+                    Title = Loc.T("Editor_SaveScreenshotTitle"),
                     SuggestedFileName = ImageExport.BuildFileName(DateTime.Now, ext),
                     DefaultExtension = ext,
                     FileTypeChoices = ext == "jpg" ? new[] { jpg, png } : new[] { png, jpg },
@@ -2368,7 +2368,7 @@ namespace ScreenShot_One_Avalonia
                     ImageExport.Save(rtb, path);
                 }
 
-                ToastText.Text = $"Збережено: {System.IO.Path.GetFileName(path)}";
+                ToastText.Text = Loc.F("Editor_Saved", System.IO.Path.GetFileName(path));
                 ToastNotification.IsVisible = true;
                 await Task.Delay(1500);
                 ToastNotification.IsVisible = false;
@@ -2376,7 +2376,7 @@ namespace ScreenShot_One_Avalonia
             catch (Exception ex)
             {
                 AppLog.Error(ex, "Зберегти як файл");
-                await MessageBoxManager.GetMessageBoxStandard("Помилка", $"Не вдалося зберегти файл: {ex.Message}").ShowWindowDialogAsync(this);
+                await MessageBoxManager.GetMessageBoxStandard(Loc.T("Common_Error"), Loc.F("Editor_FileSaveFailed", ex.Message)).ShowWindowDialogAsync(this);
             }
         }
 
@@ -2402,7 +2402,7 @@ namespace ScreenShot_One_Avalonia
                 }
                 rtb.Dispose();
 
-                ToastText.Text = "Картинку скопійовано в буфер!";
+                ToastText.Text = Loc.T("Editor_ImageCopied");
                 ToastNotification.IsVisible = true;
                 await Task.Delay(800);
             }

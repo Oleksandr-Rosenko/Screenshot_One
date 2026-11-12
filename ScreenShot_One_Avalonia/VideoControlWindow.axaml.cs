@@ -73,7 +73,7 @@ namespace ScreenShot_One_Avalonia
                 _ownsRecording = false;
                 SetRecordingStateUI(false);
                 CloseRegionWindow();
-                await ShowErrorAsync("Запис зупинено", error);
+                await ShowErrorAsync(Loc.T("Video_Stopped"), error);
             });
         }
 
@@ -138,7 +138,7 @@ namespace ScreenShot_One_Avalonia
                     }
                     else
                     {
-                        await ShowErrorAsync("Помилка", "Не вдалося продовжити запис.");
+                        await ShowErrorAsync(Loc.T("Common_Error"), Loc.T("Video_ResumeFailed"));
                     }
                 }
                 else
@@ -153,7 +153,7 @@ namespace ScreenShot_One_Avalonia
                     }
                     else
                     {
-                        await ShowErrorAsync("Помилка", "Не вдалося поставити запис на паузу.");
+                        await ShowErrorAsync(Loc.T("Common_Error"), Loc.T("Video_PauseFailed"));
                     }
                 }
             }
@@ -246,7 +246,7 @@ namespace ScreenShot_One_Avalonia
             catch (Exception ex)
             {
                 TxtTimer.Text = "Err";
-                await ShowErrorAsync("Критична помилка", ex.ToString());
+                await ShowErrorAsync(Loc.T("Video_CriticalError"), ex.ToString());
             }
         }
 
@@ -271,7 +271,7 @@ namespace ScreenShot_One_Avalonia
                     // Раніше тут інтерфейс однаково показував «йде запис», навіть якщо запис не стартував
                     SetRecordingStateUI(false);
                     CloseRegionWindow();
-                    await ShowErrorAsync("Не вдалося почати запис", result.Error ?? "Невідома помилка.");
+                    await ShowErrorAsync(Loc.T("Video_StartFailedTitle"), result.Error ?? Loc.T("Common_UnknownError"));
                     return;
                 }
 
@@ -322,7 +322,7 @@ namespace ScreenShot_One_Avalonia
             }
             else
             {
-                await ShowErrorAsync("Відео не збережено", "Не вдалося отримати файл запису. Спробуйте записати ще раз.");
+                await ShowErrorAsync(Loc.T("Video_NotSavedTitle"), Loc.T("Video_NotSaved"));
             }
         }
 

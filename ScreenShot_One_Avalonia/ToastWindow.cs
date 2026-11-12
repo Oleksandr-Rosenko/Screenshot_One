@@ -97,20 +97,20 @@ namespace ScreenShot_One_Avalonia
     {
         public static async Task RecognizeAndCopyAsync(Bitmap bitmap)
         {
-            var toast = ToastWindow.ShowMessage("Розпізнаю текст…");
+            var toast = ToastWindow.ShowMessage(Loc.T("Ocr_Recognizing"));
             try
             {
                 string text = await OcrService.RecognizeAsync(bitmap);
                 if (string.IsNullOrWhiteSpace(text))
                 {
-                    toast.SetMessage("Текст не знайдено", 2500);
+                    toast.SetMessage(Loc.T("Ocr_NotFound"), 2500);
                     return;
                 }
 
                 await ClipboardHelper.CopyTextAsync(text, toast);
                 string preview = text.Replace(Environment.NewLine, " ");
                 if (preview.Length > 80) preview = preview.Substring(0, 80) + "…";
-                toast.SetMessage($"Текст скопійовано ({text.Length} симв.)\n{preview}", 3500);
+                toast.SetMessage(Loc.F("Ocr_Copied", text.Length) + "\n" + preview, 3500);
             }
             catch (OcrUnavailableException ex)
             {
@@ -119,7 +119,7 @@ namespace ScreenShot_One_Avalonia
             catch (Exception ex)
             {
                 AppLog.Error(ex, "OCR");
-                toast.SetMessage("Не вдалося розпізнати текст: " + ex.Message, 6000);
+                toast.SetMessage(Loc.F("Ocr_Failed", ex.Message), 6000);
             }
             finally
             {
