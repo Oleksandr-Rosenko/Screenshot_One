@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using Avalonia.Media.Imaging;
 using System;
 using System.Collections.Generic;
@@ -22,7 +23,17 @@ namespace ScreenShot_One_Avalonia
         public string DateString { get; set; } = "";
         // 2.7.0: «Сьогодні, 13:04» і «1200 × 700 · 245 КБ» замість технічного імені файлу
         public string Title { get; set; } = "";
-        public string Details { get; set; } = "";
+        private string _details = "";
+        public string Details
+        {
+            get => _details;
+            set
+            {
+                _details = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Details)));
+            }
+        }
+        public bool IsVideo { get; set; }
 
         private static readonly string[] MonthsGenitive =
             { "січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня" };
@@ -60,10 +71,10 @@ namespace ScreenShot_One_Avalonia
             catch { return null; }
         }
 
+        /// <summary>Без відкриття файлу (швидко навіть для сотень записів); розміри PNG дочитуються разом із мініатюрою.</summary>
         public static HistoryItem FromFile(FileInfo file, bool isVideo)
         {
             string details = FriendlySize(file.Length);
-            if (!isVideo && ReadPngSize(file.FullName) is { } size) details = $"{size.Width} × {size.Height} · {details}";
             return new HistoryItem
             {
                 Path = file.FullName,
@@ -71,6 +82,7 @@ namespace ScreenShot_One_Avalonia
                 DateString = file.CreationTime.ToString("dd.MM.yyyy HH:mm"),
                 Title = FriendlyDate(file.CreationTime, DateTime.Now),
                 Details = isVideo ? $"Відео · {details}" : details,
+                IsVideo = isVideo,
                 ImageSource = null
             };
         }
@@ -156,6 +168,11 @@ namespace ScreenShot_One_Avalonia
         }
 
         private List<HistoryItem> _screenshotItems = new List<HistoryItem>();
+        // Показані картки (підвантажуються сторінками при прокрутці); прив'язані до сітки ОДИН раз
+        private readonly System.Collections.ObjectModel.ObservableCollection<HistoryItem> _shownScreens = new();
+        private readonly System.Collections.ObjectModel.ObservableCollection<HistoryItem> _shownVideos = new();
+        private bool _isLoading = true;
+        private const int PageSize = 40;
 
         private List<HistoryItem> _videoItems = new List<HistoryItem>();
 
@@ -170,8 +187,50 @@ namespace ScreenShot_One_Avalonia
 
             InitializeComponent();
 
+            // Сітка карток по центру: ширина підганяється під ціле число колонок
+            SizeChanged += (_, _) => UpdateGalleryLayout();
+
+            ScreenshotsListBox.ItemsSource = _shownScreens;
+            VideosListBox.ItemsSource = _shownVideos;
+            // Наступна сторінка карток — коли до кінця лишається кілька рядів
+            ScreenshotsListBox.AddHandler(ScrollViewer.ScrollChangedEvent, (_, e) => OnGalleryScrolled(e, isVideo: false));
+            VideosListBox.AddHandler(ScrollViewer.ScrollChangedEvent, (_, e) => OnGalleryScrolled(e, isVideo: true));
+
             LoadHistory();
 
+        }
+
+        // Ширина «слота» однієї картки: 236 px картки + по 6 px відступу з кожного боку
+        private const double CardSlotWidth = 248;
+        // Поля сітки (Margin 12 з кожного боку) + запас під смугу прокрутки
+        private const double GalleryChrome = 24 + 18;
+
+        /// <summary>Скільки колонок вміщується і яка ширина сітки (публічне для тестів).</summary>
+        public static (int Columns, double Width) ComputeGalleryLayout(double windowWidth)
+        {
+            int cols = Math.Max(1, (int)((windowWidth - GalleryChrome) / CardSlotWidth));
+            return (cols, cols * CardSlotWidth);
+        }
+
+        /// <summary>
+        /// Центрує сітку: панель отримує ширину рівно під N колонок (тоді неповний останній рядок
+        /// вирівнюється по лівому краю сітки, а не «плаває»), шапка — ту саму ширину, щоб кнопка
+        /// очищення стояла над правим краєм карток.
+        /// </summary>
+        private void UpdateGalleryLayout()
+        {
+            if (Bounds.Width <= 0) return;
+            var (_, width) = ComputeGalleryLayout(Bounds.Width);
+
+            if (HeaderRow != null)
+            {
+                HeaderRow.Width = width - 12; // вирівнювання по краях самих карток (без їхніх зовнішніх відступів)
+                HeaderRow.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center;
+            }
+            foreach (var lb in new[] { ScreenshotsListBox, VideosListBox })
+            {
+                if (lb?.ItemsPanelRoot is Panel panel) panel.Width = width;
+            }
         }
 
         private void Tab_Checked(object? sender, RoutedEventArgs e)
@@ -183,15 +242,16 @@ namespace ScreenShot_One_Avalonia
             {
                 ScreenshotsListBox.IsVisible = true;
                 VideosListBox.IsVisible = false;
-                if (TxtClearAll != null) TxtClearAll.Text = "Очистити скріншоти";
+                ToolTip.SetTip(BtnClearAll, "Очистити скріншоти");
             }
             else
             {
                 ScreenshotsListBox.IsVisible = false;
                 VideosListBox.IsVisible = true;
-                if (TxtClearAll != null) TxtClearAll.Text = "Очистити відео";
+                ToolTip.SetTip(BtnClearAll, "Очистити відео");
             }
             UpdatePlaceholders();
+            Avalonia.Threading.Dispatcher.UIThread.Post(UpdateGalleryLayout, Avalonia.Threading.DispatcherPriority.Loaded);
         }
 
         private void UpdatePlaceholders()
@@ -200,13 +260,13 @@ namespace ScreenShot_One_Avalonia
 
             if (TabScreenshots.IsChecked == true)
             {
-                EmptyScreenshotsText.IsVisible = _screenshotItems.Count == 0;
+                EmptyScreenshotsText.IsVisible = !_isLoading && _screenshotItems.Count == 0;
                 EmptyVideosText.IsVisible = false;
             }
             else
             {
                 EmptyScreenshotsText.IsVisible = false;
-                EmptyVideosText.IsVisible = _videoItems.Count == 0;
+                EmptyVideosText.IsVisible = !_isLoading && _videoItems.Count == 0;
             }
         }
 
@@ -218,12 +278,8 @@ namespace ScreenShot_One_Avalonia
         {
             int currentVersion = ++_loadHistoryVersion;
 
-            // Прив'язаний до відображення список НЕ змінюємо на місці: сітка (WrapPanel) не терпить
-            // мутацій без сповіщень і падала з ArgumentOutOfRange. Щоразу прив'язуємо новий список.
-            _screenshotItems = new List<HistoryItem>();
-            _videoItems = new List<HistoryItem>();
-            ScreenshotsListBox.ItemsSource = _screenshotItems;
-            VideosListBox.ItemsSource = _videoItems;
+            // Поки читаємо диск — не показуємо «тут порожньо» (раніше це висіло кілька секунд при кожному відкритті)
+            _isLoading = true;
             UpdatePlaceholders();
 
             var (newScreenshots, newVideos) = await Task.Run(() =>
@@ -274,43 +330,80 @@ namespace ScreenShot_One_Avalonia
 
             _screenshotItems = newScreenshots;
             _videoItems = newVideos;
-            ScreenshotsListBox.ItemsSource = _screenshotItems;
-            VideosListBox.ItemsSource = _videoItems;
+            // Показані колекції сповіщають сітку про кожну зміну — без перепривʼязки (WrapPanel падав на «тихих» мутаціях)
+            _shownScreens.Clear();
+            _shownVideos.Clear();
+            AppendPage(isVideo: false);
+            AppendPage(isVideo: true);
+            _isLoading = false;
 
             UpdatePlaceholders();
-            _ = LoadThumbnailsAsync(_screenshotItems.ToList(), _videoItems.ToList());
+            // Панель сітки створюється разом з елементами — підганяємо ширину після розмітки
+            Avalonia.Threading.Dispatcher.UIThread.Post(UpdateGalleryLayout, Avalonia.Threading.DispatcherPriority.Loaded);
+            // Мініатюри завантажує AppendPage — лише для показаних карток
         }
 
-        private async Task LoadThumbnailsAsync(List<HistoryItem> screens, List<HistoryItem> videos)
+        /// <summary>
+        /// Показує наступну сторінку карток і запускає для неї мініатюри.
+        /// Раніше сітка створювала картки й декодувала мініатюри одразу для всіх записів (до 500) — вікно
+        /// відкривалось із затримкою в кілька секунд.
+        /// </summary>
+        private void AppendPage(bool isVideo)
         {
-            await Task.Run(() =>
-            {
-                foreach (var item in screens)
-                {
-                    try
-                    {
-                        if (File.Exists(item.Path))
-                        {
-                            using var fs = File.OpenRead(item.Path);
-                            var bmp = Bitmap.DecodeToWidth(fs, 280);
-                            Avalonia.Threading.Dispatcher.UIThread.Post(() => item.ImageSource = bmp);
-                        }
-                    }
-                    catch (Exception logEx) { AppLog.Warn(logEx); }
-                }
+            var all = isVideo ? _videoItems : _screenshotItems;
+            var shown = isVideo ? _shownVideos : _shownScreens;
+            if (shown.Count >= all.Count) return;
 
-                foreach (var item in videos)
+            var page = all.Skip(shown.Count).Take(PageSize).ToList();
+            foreach (var item in page) shown.Add(item);
+            LoadThumbnailsAsync(page).FireAndForget("Мініатюри історії");
+
+            // На великому екрані перша сторінка може не заповнити вікно — тоді докидаємо ще одну
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                var lb = isVideo ? VideosListBox : ScreenshotsListBox;
+                var sv = lb.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
+                if (sv != null && lb.IsVisible && sv.Extent.Height <= sv.Viewport.Height + 200) AppendPage(isVideo);
+                UpdateGalleryLayout();
+            }, Avalonia.Threading.DispatcherPriority.Loaded);
+        }
+
+        private void OnGalleryScrolled(ScrollChangedEventArgs e, bool isVideo)
+        {
+            if (e.Source is not ScrollViewer sv) return;
+            if (sv.Offset.Y + sv.Viewport.Height >= sv.Extent.Height - 700) AppendPage(isVideo);
+        }
+
+        private Task LoadThumbnailsAsync(List<HistoryItem> items)
+        {
+            return Task.Run(() =>
+            {
+                Parallel.ForEach(items, new ParallelOptions { MaxDegreeOfParallelism = 4 }, item =>
                 {
                     try
                     {
-                        var bmp = GenerateVideoThumbnail(item.Path);
-                        if (bmp != null)
+                        if (item.IsVideo)
                         {
-                            Avalonia.Threading.Dispatcher.UIThread.Post(() => item.ImageSource = bmp);
+                            var vbmp = GenerateVideoThumbnail(item.Path);
+                            if (vbmp != null) Avalonia.Threading.Dispatcher.UIThread.Post(() => item.ImageSource = vbmp);
+                            return;
                         }
+                        if (!File.Exists(item.Path)) return;
+
+                        string? details = null;
+                        if (HistoryItem.ReadPngSize(item.Path) is { } size)
+                            details = $"{size.Width} × {size.Height} · {HistoryItem.FriendlySize(new FileInfo(item.Path).Length)}";
+
+                        using var fs = File.OpenRead(item.Path);
+                        var bmp = Bitmap.DecodeToWidth(fs, 280);
+                        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                        {
+                            item.ImageSource = bmp;
+                            if (details != null) item.Details = details;
+                        });
                     }
                     catch (Exception logEx) { AppLog.Warn(logEx); }
-                }
+                });
             });
         }
 
@@ -552,7 +645,7 @@ namespace ScreenShot_One_Avalonia
                         TabVideos.IsChecked = true;
                         ScreenshotsListBox.IsVisible = false;
                         VideosListBox.IsVisible = true;
-                        if (TxtClearAll != null) TxtClearAll.Text = "Очистити відео";
+                        ToolTip.SetTip(BtnClearAll, "Очистити відео");
 
                         if (targetItem != null)
                         {
@@ -572,7 +665,7 @@ namespace ScreenShot_One_Avalonia
                         TabScreenshots.IsChecked = true;
                         ScreenshotsListBox.IsVisible = true;
                         VideosListBox.IsVisible = false;
-                        if (TxtClearAll != null) TxtClearAll.Text = "Очистити скріншоти";
+                        ToolTip.SetTip(BtnClearAll, "Очистити скріншоти");
 
                         if (targetItem != null)
                         {

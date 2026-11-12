@@ -3,7 +3,7 @@
         xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
         xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="ScreenShot_One_Avalonia.UpdateWindow"
-        Title="Оновлення Screenshot_One"
+        Title="Оновлення Screenshot One"
         Width="520" Height="480"
         WindowStartupLocation="CenterScreen"
         Topmost="True"

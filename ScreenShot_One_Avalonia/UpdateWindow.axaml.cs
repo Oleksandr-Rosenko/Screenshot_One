@@ -38,8 +38,8 @@ namespace ScreenShot_One_Avalonia
         private UpdateWindowState _state = UpdateWindowState.Checking;
         private UpdateManager? _updateManager;
         private UpdateInfo? _updateInfo;
-        private string _currentVersion = "2.7.0";
-        private string _newVersion = "2.7.0";
+        private string _currentVersion = "2.7.1";
+        private string _newVersion = "2.7.1";
         private bool _isDownloading = false;
         private bool _isReadyToRestart = false;
 
@@ -461,7 +461,7 @@ namespace ScreenShot_One_Avalonia
                 return $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
             }
 
-            return "2.7.0";
+            return "2.7.1";
         }
 
         public static async Task CheckAndShowAsync(bool isManual = true)

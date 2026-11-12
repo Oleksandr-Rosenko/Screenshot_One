@@ -102,7 +102,7 @@ jobs:
           $version = "${{ steps.ver.outputs.version }}"
           # Попередній реліз — для дельта-оновлень (менший розмір завантаження для користувачів)
           vpk download github --repoUrl $repoUrl --token $env:GH_TOKEN
-          vpk pack -u ScreenShotOne -v $version -p "bin\x64\Release\net10.0-windows10.0.19041.0\win-x64\publish" -e Screenshot_One.exe
+          vpk pack -u ScreenShotOne -v $version -p "bin\x64\Release\net10.0-windows10.0.19041.0\win-x64\publish" -e Screenshot_One.exe --packTitle "Screenshot One"
           if ($LASTEXITCODE -ne 0) { throw "Pack failed" }
           vpk upload github --repoUrl $repoUrl --token $env:GH_TOKEN --publish
           if ($LASTEXITCODE -ne 0) { throw "Upload failed" }

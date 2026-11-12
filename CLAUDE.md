@@ -13,6 +13,7 @@
   - `MainWindow` — оверлей виділення зони для скріншота.
   - `EditorWindow` — редактор скріншотів (~1900 рядків code-behind): фігури (`ShapeType`), undo/redo, обрізка, вставка, копіювання, завантаження.
   - `HistoryWindow` + `HistoryManager` — історія. Файли `{id}_original.png`, `{id}_flattened.png`, `{id}_meta.json`; ліміт 500; ID `yyyyMMdd_HHmmss_fff`.
+    Вікно історії показує сторінки по 40 (`PageSize`, `AppendPage` при прокрутці), мініатюри декодуються паралельно (`Bitmap.DecodeToWidth`).
     Редактор зберігає через `HistoryManager.ReserveId` + `SaveScreenshotInBackground` (фонова черга; `_flattened.png` пишеться останнім і атомарно). Перед виходом/оновленням — `HistoryManager.WaitForPendingSaves`.
   - `VideoControlWindow`, `VideoRegionWindow`, `VideoRecorderManager` — запис відео. На Windows ScreenRecorderLib, на macOS ffmpeg. Інтерфейс `IVideoRecorderService`.
   - `VideoEditorWindow` — відеоплеєр (LibVLCSharp) і обрізка (ffmpeg).
@@ -45,7 +46,8 @@
 - **Ніяких кольорів Tailwind** (zinc/slate/emerald/blue-600 тощо — автор проти) і жорстко прописаних hex у вікнах: беріть токени (`{DynamicResource ...}` або `FindResource`). Винятки: кольори малювання, бренд Google Drive, завжди темна панель запису відео.
 - Глобальні стилі: `SukiBackground` прихований, `PART_Root` вікна — суцільний `AppBackgroundBrush`, `GlassCard` непрозорий (без «скла»). Акцентна кнопка — клас `Flat`; кнопки інструментів — `Basic tool`.
 - Перевіряти вигляд: headless-рендер вікон через `AppBuilder.Configure<App>().UseSkia().UseHeadless(...)` і `window.CaptureRenderedFrame()` (так робились скріншоти «було/стало»); показувати автору перед релізом.
-- Іконки: знак «видошукач + точка»; `Assets/tray*.png` (Windows), `tray-mac*.png` (Mac, шаблонна + `MacOSProperties.SetIsTemplateIcon`), `icon.ico`, `icon.icns`.
+- Іконки: **фірмовий знак автора — чорний квадрат з білим «SO»** (`Assets/tray.png`, `tray-recording.png` з червоною точкою, `icon.ico` 16–256, `icon.icns`). Однаковий на Windows і Mac. Не замінювати на інші знаки (у 2.7.0 спроба «видошукача» автору не сподобалась).
+- Назва програми для людей — «Screenshot One» (трей, заголовки, `Product`, `CFBundleName`, `--packTitle`). Технічні імена (`Screenshot_One.exe`, `Screenshot_One.app`, папки даних `Screenshot_One`, Velopack-id `ScreenShotOne`) не міняти — зламаються оновлення й дані.
 
 ## Збірка й тести
 
@@ -138,6 +140,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 
 ## Історія ключових змін
 
+- 2.7.1 — повернуто іконку «SO», назва «Screenshot One», вікно налаштувань у межах екрана, швидке відкриття й центрування історії.
 - 2.7.0 — редизайн «Хвоя і м'ята»: палітра-токени, суцільні вікна, згрупована панель редактора без прокрутки + гарячі клавіші, історія-галерея, нові налаштування, нові іконки (у т.ч. icon.icns для Mac), прибрано дубль піксельного розмиття.
 - 2.6.0 — OCR (Windows/Mac), плаваюча мініатюра, «Зберегти як» і автозбереження, нові інструменти (еліпс, лінія, піксельне розмиття, прожектор, товщина), мікрофон і пауза у відео, Cmd-скорочення на Mac.
 - 2.5.5 — захоплення й обрізка в пам'яті (Win/Mac), нативний знімок CoreGraphics на Mac, DPI/Retina-виправлення, фонове збереження історії, звільнення пам'яті в редакторі, спільний LibVLC, Mac: дозвіл «Запис екрана», LaunchAgent-автозапуск, оновлення через GitHub, архіви в автодеплої; звіт про падіння; тести поведінки.

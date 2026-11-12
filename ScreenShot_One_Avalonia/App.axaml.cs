@@ -109,7 +109,7 @@ namespace ScreenShot_One_Avalonia
 
                 Icon = LoadTrayIcon(isRecording: false),
 
-                ToolTipText = "ScreenShot_One"
+                ToolTipText = "Screenshot One"
 
             };
 
@@ -120,7 +120,6 @@ namespace ScreenShot_One_Avalonia
                     if (_trayIcon != null)
                     {
                         _trayIcon.Icon = LoadTrayIcon(isRecording);
-                        if (OperatingSystem.IsMacOS()) MacOSProperties.SetIsTemplateIcon(_trayIcon, !isRecording);
                     }
                 });
 
@@ -231,7 +230,6 @@ namespace ScreenShot_One_Avalonia
             menu.Add(exitItem);
 
             _trayIcon.Menu = menu;
-            if (OperatingSystem.IsMacOS()) MacOSProperties.SetIsTemplateIcon(_trayIcon, true);
 
             _trayIcon.IsVisible = true;
 
@@ -244,11 +242,8 @@ namespace ScreenShot_One_Avalonia
 
         {
 
-            // macOS: у звичайному стані — шаблонна іконка (чорна з прозорістю; система сама підлаштовує під світлу/темну
-            // панель меню), під час запису — кольорова з червоною точкою. Windows: м'ятний знак.
-            string assetName = OperatingSystem.IsMacOS()
-                ? (isRecording ? "tray-mac-recording.png" : "tray-mac.png")
-                : (isRecording ? "tray-recording.png" : "tray.png");
+            // Фірмовий знак «SO» (однаковий на Windows і Mac), під час запису — з червоною точкою.
+            string assetName = isRecording ? "tray-recording.png" : "tray.png";
 
             try
 

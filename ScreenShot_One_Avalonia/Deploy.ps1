@@ -1,6 +1,6 @@
 Set-Location $PSScriptRoot
 # Settings (bump version before each release)
-$Version = "2.7.0"
+$Version = "2.7.1"
 $RepoUrl = "https://github.com/Oleksandr-Rosenko/Screenshot_One"
 
 # Token lookup: env var, then .github_token file. Never hardcode the token here: this file is pushed to a public repo.
@@ -28,7 +28,7 @@ if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
 
 Write-Host "=== 2. Create Velopack package ===" -ForegroundColor Cyan
 
-vpk pack -u ScreenShotOne -v $Version -p "bin\x64\Release\net10.0-windows10.0.19041.0\win-x64\publish" -e Screenshot_One.exe
+vpk pack -u ScreenShotOne -v $Version -p "bin\x64\Release\net10.0-windows10.0.19041.0\win-x64\publish" -e Screenshot_One.exe --packTitle "Screenshot One"
 
 if ($LASTEXITCODE -ne 0) { throw "Pack failed" }
 

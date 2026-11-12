@@ -43,8 +43,9 @@
 			</Style>
 		</Grid.Styles>
 
-		<!-- Шапка: вкладки ліворуч, очищення праворуч -->
-		<Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="18,14,18,6">
+		<!-- Шапка: вкладки ліворуч, очищення праворуч. Ширина = ширині сітки карток (див. UpdateGalleryLayout),
+		     тож кнопка очищення стоїть рівно над правим краєм сітки, а весь блок — по центру вікна. -->
+		<Grid Grid.Row="0" Name="HeaderRow" ColumnDefinitions="*,Auto" Margin="0,14,0,6" HorizontalAlignment="Stretch">
 			<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 				<RadioButton Name="TabScreenshots" Classes="Chips" IsChecked="True" IsCheckedChanged="Tab_Checked">
 					<StackPanel Orientation="Horizontal" Spacing="6">
@@ -59,11 +60,9 @@
 					</StackPanel>
 				</RadioButton>
 			</StackPanel>
-			<Button Grid.Column="1" Classes="Basic danger" Click="BtnClearAll_Click" ToolTip.Tip="Видалити всі записи цієї вкладки">
-				<StackPanel Orientation="Horizontal" Spacing="6">
-					<material:MaterialIcon Kind="DeleteSweepOutline" Width="18" Height="18" Foreground="{DynamicResource MutedTextBrush}"/>
-					<TextBlock Name="TxtClearAll" Text="Очистити скріншоти" Foreground="{DynamicResource MutedTextBrush}"/>
-				</StackPanel>
+			<!-- Компактна кнопка без підпису; що саме вона очистить — у підказці -->
+			<Button Grid.Column="1" Name="BtnClearAll" Classes="Basic hbtn danger" Click="BtnClearAll_Click" ToolTip.Tip="Очистити скріншоти" VerticalAlignment="Center">
+				<material:MaterialIcon Kind="DeleteSweepOutline"/>
 			</Button>
 		</Grid>
 
@@ -80,7 +79,7 @@
 			<ListBox Name="ScreenshotsListBox" Classes="gallery" Background="Transparent" DoubleTapped="ListBox_DoubleTapped">
 				<ListBox.ItemsPanel>
 					<ItemsPanelTemplate>
-						<WrapPanel Orientation="Horizontal"/>
+						<WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
 					</ItemsPanelTemplate>
 				</ListBox.ItemsPanel>
 				<ListBox.ItemTemplate>
@@ -121,7 +120,7 @@
 			<ListBox Name="VideosListBox" IsVisible="False" Classes="gallery" Background="Transparent" DoubleTapped="ListBox_DoubleTapped">
 				<ListBox.ItemsPanel>
 					<ItemsPanelTemplate>
-						<WrapPanel Orientation="Horizontal"/>
+						<WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
 					</ItemsPanelTemplate>
 				</ListBox.ItemsPanel>
 				<ListBox.ItemTemplate>

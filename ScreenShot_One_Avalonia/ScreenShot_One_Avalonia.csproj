@@ -7,7 +7,9 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 
     <AssemblyName>Screenshot_One</AssemblyName>
-    <Version>2.7.0</Version>
+    <Product>Screenshot One</Product>
+    <AssemblyTitle>Screenshot One</AssemblyTitle>
+    <Version>2.7.1</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(TargetFramework.StartsWith('net10.0-windows'))">

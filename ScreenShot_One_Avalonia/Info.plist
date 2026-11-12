@@ -7,13 +7,13 @@
     <key>CFBundleIdentifier</key>
     <string>com.screenshotone.app</string>
     <key>CFBundleName</key>
-    <string>Screenshot_One</string>
+    <string>Screenshot One</string>
     <key>CFBundleDisplayName</key>
     <string>Screenshot One</string>
     <key>CFBundleVersion</key>
-    <string>2.7.0</string>
+    <string>2.7.1</string>
     <key>CFBundleShortVersionString</key>
-    <string>2.7.0</string>
+    <string>2.7.1</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>

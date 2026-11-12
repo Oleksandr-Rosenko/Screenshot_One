@@ -248,6 +248,28 @@ namespace ScreenShot_One_Avalonia
             SettingsManager.ApplyTheme(theme);
         }
 
+        /// <summary>
+        /// Вікно не повинне виходити за межі екрана (раніше на 1080p з масштабом 150% шапка з кнопкою
+        /// «закрити» опинялась за верхнім краєм). Висота обмежується робочою областю екрана, решта прокручується.
+        /// </summary>
+        protected override void OnOpened(EventArgs e)
+        {
+            base.OnOpened(e);
+            try
+            {
+                var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+                if (screen == null) return;
+                var area = screen.WorkingArea;
+                double scaling = screen.Scaling > 0 ? screen.Scaling : 1.0;
+                double maxHeight = area.Height / scaling - 40;
+                if (Height > maxHeight) Height = Math.Max(MinHeight, maxHeight);
+
+                int w = (int)(Width * scaling), h = (int)(Height * scaling);
+                Position = new Avalonia.PixelPoint(area.X + (area.Width - w) / 2, area.Y + Math.Max(0, (area.Height - h) / 2));
+            }
+            catch (Exception ex) { AppLog.Warn(ex); }
+        }
+
         protected override void OnClosing(WindowClosingEventArgs e)
         {
             if (!_isSaved)
