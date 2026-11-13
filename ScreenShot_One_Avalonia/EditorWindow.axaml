@@ -240,6 +240,32 @@
 				<Button Name="BtnOcr" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_OcrTip}" Click="BtnOcr_Click">
 					<material:MaterialIcon Kind="TextRecognition"/>
 				</Button>
+				<Button Name="BtnFrame" Classes="Basic tool" ToolTip.Tip="{DynamicResource Frame_Tip}" Click="BtnFrame_Click">
+					<material:MaterialIcon Kind="ImageFrame"/>
+				</Button>
+				<Popup Name="FramePopup" Placement="Bottom" PlacementTarget="{Binding ElementName=BtnFrame}" IsLightDismissEnabled="True">
+					<Border Padding="14" CornerRadius="12" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1">
+						<StackPanel Spacing="10" Width="260">
+							<Grid ColumnDefinitions="*,Auto">
+								<TextBlock Text="{DynamicResource Frame_Enable}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+								<ToggleSwitch Grid.Column="1" Name="TglFrame" OnContent="" OffContent="" IsCheckedChanged="Frame_Changed"/>
+							</Grid>
+							<TextBlock Text="{DynamicResource Frame_Background}" Classes="shortcut"/>
+							<WrapPanel Name="FrameSwatches"/>
+							<TextBlock Text="{DynamicResource Frame_Padding}" Classes="shortcut"/>
+							<Slider Name="SldFramePadding" Minimum="0" Maximum="120" TickFrequency="4" IsSnapToTickEnabled="True" ValueChanged="Frame_ValueChanged"/>
+							<TextBlock Text="{DynamicResource Frame_Radius}" Classes="shortcut"/>
+							<Slider Name="SldFrameRadius" Minimum="0" Maximum="32" TickFrequency="2" IsSnapToTickEnabled="True" ValueChanged="Frame_ValueChanged"/>
+							<Grid ColumnDefinitions="*,Auto">
+								<TextBlock Text="{DynamicResource Frame_Shadow}" VerticalAlignment="Center"/>
+								<ToggleSwitch Grid.Column="1" Name="TglFrameShadow" OnContent="" OffContent="" IsCheckedChanged="Frame_Changed"/>
+							</Grid>
+						</StackPanel>
+					</Border>
+				</Popup>
+				<Button Name="BtnPin" Classes="Basic tool" ToolTip.Tip="{DynamicResource Pin_Tip}" Click="BtnPin_Click">
+					<material:MaterialIcon Kind="PinOutline"/>
+				</Button>
 				<Button Name="BtnSaveAs" Classes="Basic tool" ToolTip.Tip="{DynamicResource Editor_SaveAs}" Click="BtnSaveAs_Click">
 					<material:MaterialIcon Kind="ContentSaveOutline"/>
 				</Button>
@@ -283,6 +309,10 @@
 					<ScaleTransform ScaleX="1" ScaleY="1" />
 				</LayoutTransformControl.LayoutTransform>
 
+				<!-- Фон і рамка (попередній перегляд; при експорті те саме робить FrameStyle.Apply) -->
+				<Border Name="FrameOuter">
+				<Border Name="FrameCard">
+				<Border Name="FrameClip">
 				<Grid>
 					<Canvas Name="DrawingCanvas" Background="Transparent" PointerPressed="DrawingCanvas_PointerPressed" PointerMoved="DrawingCanvas_PointerMoved" PointerReleased="DrawingCanvas_PointerReleased">
 						<Image Name="ScreenshotImage" />
@@ -304,6 +334,9 @@
 
 					</Grid>
 				</Grid>
+				</Border>
+				</Border>
+				</Border>
 			</LayoutTransformControl>
 		</ScrollViewer>
 

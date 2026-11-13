@@ -203,6 +203,10 @@ namespace ScreenShot_One_Avalonia
             await System.Threading.Tasks.Task.Delay(1000);
             string? shown = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => KeystrokeOverlay.LastShown);
             AppLog.Write($"[SelfTest] клавіші: «{shown}» = {shown == "Ctrl + C"}");
+
+            // Знімок вікна: список вікон інших програм (CI запускає Блокнот)
+            var windows = WindowLocator.GetWindows();
+            AppLog.Write($"[SelfTest] вікна інших програм: {windows.Count} — {windows.Count > 0}");
             await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(KeystrokeOverlay.Stop);
         }
 

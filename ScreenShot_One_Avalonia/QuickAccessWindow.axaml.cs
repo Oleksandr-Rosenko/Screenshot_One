@@ -185,6 +185,14 @@ namespace ScreenShot_One_Avalonia
 
         private void BtnEdit_Click(object? sender, RoutedEventArgs e) => OpenEditor();
 
+        /// <summary>Закріпити знімок поверх усіх вікон (стікер) і прибрати мініатюру.</summary>
+        private void BtnPin_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            try { PinnedImageWindow.Pin(_bitmap); }
+            catch (Exception ex) { AppLog.Error(ex, "Мініатюра: стікер"); }
+            Close();
+        }
+
         private async void BtnCopy_Click(object? sender, RoutedEventArgs e)
         {
             try

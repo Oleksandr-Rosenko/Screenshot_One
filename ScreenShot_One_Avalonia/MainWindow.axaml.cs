@@ -20,6 +20,10 @@ namespace ScreenShot_One_Avalonia
         // true — режим «Розпізнати текст»: виділена зона йде в OCR, а не в редактор
         private readonly bool _ocrMode;
 
+        // Знімок окремого вікна (2.10.0): межі вікон на момент «заморожування» екрана і вікно під курсором
+        private System.Collections.Generic.List<PixelRect> _windows = new();
+        private Rect? _hoverWindow;
+
         public MainWindow() : this(ocrMode: false) { }
 
         public MainWindow(bool ocrMode)
@@ -49,6 +53,10 @@ namespace ScreenShot_One_Avalonia
             }
 
             this.KeyDown += (s, e) => { if (e.Key == Key.Escape) this.Close(); };
+            // Підказка «клікніть по вікну…» — по центру вгорі
+            this.Opened += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                Canvas.SetLeft(WindowHint, Math.Max(0, (Bounds.Width - WindowHint.Bounds.Width) / 2)),
+                Avalonia.Threading.DispatcherPriority.Loaded);
         }
 
         private void FreezeScreen()
@@ -60,6 +68,7 @@ namespace ScreenShot_One_Avalonia
                 _currentScreenBounds = currentScreen?.Bounds ?? new PixelRect(0, 0, 1920, 1080);
 
                 _avaloniaBackground = ScreenCaptureService.Instance.CaptureRect(_currentScreenBounds, currentScreen?.Scaling ?? 1.0);
+                _windows = WindowLocator.GetWindows();
             }
             catch (Exception ex)
             {
@@ -123,6 +132,7 @@ namespace ScreenShot_One_Avalonia
 
             _isDragging = true;
             _startPoint = e.GetPosition(OverlayCanvas);
+            WindowHint.IsVisible = false;
 
             SelectionRectangle.IsVisible = true;
             Canvas.SetLeft(SelectionRectangle, _startPoint.X);
@@ -141,7 +151,11 @@ namespace ScreenShot_One_Avalonia
             UpdateCrosshair(currentPoint);
             UpdateMagnifier(currentPoint);
 
-            if (!_isDragging) return;
+            if (!_isDragging)
+            {
+                HighlightWindowAt(currentPoint);
+                return;
+            }
 
             var x = Math.Min(currentPoint.X, _startPoint.X);
             var y = Math.Min(currentPoint.Y, _startPoint.Y);
@@ -154,6 +168,37 @@ namespace ScreenShot_One_Avalonia
             SelectionRectangle.Height = height;
 
             UpdateCutout(x, y, width, height);
+        }
+
+        /// <summary>Підсвічує вікно під курсором (до початку виділення).</summary>
+        private void HighlightWindowAt(Point local)
+        {
+            _hoverWindow = null;
+            var hit = WindowLocator.HitTest(_windows, this.PointToScreen(local));
+            if (hit is PixelRect r)
+            {
+                // Межі вікна → координати оверлея, обрізані по екрану
+                var tl = this.PointToClient(new PixelPoint(r.X, r.Y));
+                var br = this.PointToClient(new PixelPoint(r.Right, r.Bottom));
+                double x = Math.Max(0, tl.X), y = Math.Max(0, tl.Y);
+                double w = Math.Min(Bounds.Width, br.X) - x, h = Math.Min(Bounds.Height, br.Y) - y;
+                if (w > 5 && h > 5) _hoverWindow = new Rect(x, y, w, h);
+            }
+
+            if (_hoverWindow is Rect hr)
+            {
+                SelectionRectangle.IsVisible = true;
+                Canvas.SetLeft(SelectionRectangle, hr.X);
+                Canvas.SetTop(SelectionRectangle, hr.Y);
+                SelectionRectangle.Width = hr.Width;
+                SelectionRectangle.Height = hr.Height;
+                UpdateCutout(hr.X, hr.Y, hr.Width, hr.Height);
+            }
+            else
+            {
+                SelectionRectangle.IsVisible = false;
+                OverlayPath.Data = null;
+            }
         }
 
         private void UpdateCutout(double x, double y, double w, double h)
@@ -179,8 +224,17 @@ namespace ScreenShot_One_Avalonia
 
             if (wpfWidth <= 5 || wpfHeight <= 5)
             {
-                this.Close();
-                return;
+                // Клік без перетягування — знімок вікна під курсором
+                if (_hoverWindow is Rect win)
+                {
+                    wpfX = win.X; wpfY = win.Y; wpfWidth = win.Width; wpfHeight = win.Height;
+                    AppLog.Write($"[Window] знімок вікна {wpfWidth:0}×{wpfHeight:0}");
+                }
+                else
+                {
+                    this.Close();
+                    return;
+                }
             }
 
             var screenPointLeft = this.PointToScreen(new Avalonia.Point(wpfX, wpfY));

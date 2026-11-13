@@ -26,6 +26,12 @@
                    Fill="Transparent"
                    IsVisible="False"/>
 
+		<!-- Підказка вгорі (зникає, щойно почалось виділення) -->
+		<Border Name="WindowHint" Canvas.Top="24" Background="#E6111816" CornerRadius="10" Padding="14,8" IsHitTestVisible="False" ZIndex="90"
+		        BorderBrush="#5962C9A0" BorderThickness="1">
+			<TextBlock Text="{DynamicResource Capture_Hint}" Foreground="#E2EDEA" FontSize="13"/>
+		</Border>
+
 		<Border Name="MagnifierBorder" Width="150" Height="150" CornerRadius="75"
                 BorderBrush="#88FFFFFF" BorderThickness="2"
                 IsVisible="False" ClipToBounds="True" Background="#111111" ZIndex="100">

@@ -42,6 +42,7 @@ jobs:
         run: |
           $exe = Get-ChildItem ScreenShot_One_Avalonia/bin -Recurse -Filter Screenshot_One.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           Write-Host "Exe: $($exe.FullName)"
+          Start-Process notepad   # вікно іншої програми для самоперевірки «знімок вікна»
           $env:SO_SELFTEST_TRAY = "1"
           $env:SO_SELFTEST_KEYS = "1"
           $p = Start-Process $exe.FullName -PassThru
@@ -55,6 +56,7 @@ jobs:
           if (-not (Select-String -Path $log -Pattern 'SelfTest\].*2,5.*True' -Quiet)) { throw "Tray panel self-test (left click) failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\].*→.*True' -Quiet)) { throw "Tray panel self-test (right click) failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] клавіші.*True' -Quiet)) { throw "Keystroke overlay self-test failed" }
+          if (-not (Select-String -Path $log -Pattern 'SelfTest\] вікна.*True' -Quiet)) { throw "Window list self-test failed" }
 
   macos:
     name: Build (macOS)

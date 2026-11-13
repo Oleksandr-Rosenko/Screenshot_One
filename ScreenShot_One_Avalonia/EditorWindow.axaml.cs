@@ -102,6 +102,7 @@ namespace ScreenShot_One_Avalonia
         {
             InitializeComponent();
             BuildInlineToolButtons();
+            InitFrameUi();
             // Кнопки обрізки живуть поза полотном — переставляємо їх при прокрутці й зміні розміру вікна
             MainScrollViewer.ScrollChanged += (_, _) => PositionCropControls();
             CropControlsLayer.SizeChanged += (_, _) => PositionCropControls();
@@ -177,7 +178,9 @@ namespace ScreenShot_One_Avalonia
             double h = MainScrollViewer.Bounds.Height;
             if (w > 0 && h > 0)
             {
-                _minScale = Math.Min(w / DrawingCanvas.Width, h / DrawingCanvas.Height) * 0.98;
+                // З рамкою (фон і відступи) на екран має вміститись і вона
+                double pad = SettingsManager.Current.FrameEnabled ? 2 * SettingsManager.Current.FramePadding : 0;
+                _minScale = Math.Min(w / (DrawingCanvas.Width + pad), h / (DrawingCanvas.Height + pad)) * 0.98;
                 if (_minScale > 1.0) _minScale = 1.0;
                 _currentScale = _minScale;
                 UpdateZoom();
@@ -868,7 +871,7 @@ namespace ScreenShot_One_Avalonia
             // Раніше CroppedBitmap тримав живим повнорозмірний рендер усього полотна — на КОЖНУ область розмиття.
             // Тепер копіюємо лише потрібний фрагмент, а повний рендер одразу звільняємо.
             Bitmap? cropped;
-            using (var rtb = CreateRenderedBitmap())
+            using (var rtb = CreateCanvasBitmap())
             {
                 cropped = BitmapPixels.Crop(rtb, new PixelRect(ix, iy, iw, ih));
             }
@@ -1465,7 +1468,7 @@ namespace ScreenShot_One_Avalonia
                 if (double.IsNaN(cropX) || cropX < 0) cropX = 0;
                 if (double.IsNaN(cropY) || cropY < 0) cropY = 0;
 
-                var rtb = CreateRenderedBitmap();
+                var rtb = CreateCanvasBitmap();
                 int maxW = rtb.PixelSize.Width;
                 int maxH = rtb.PixelSize.Height;
 
@@ -1709,7 +1712,7 @@ namespace ScreenShot_One_Avalonia
             if (iw <= 0 || ih <= 0) return;
 
             Bitmap? cropped;
-            using (var rtb = CreateRenderedBitmap())
+            using (var rtb = CreateCanvasBitmap())
             {
                 cropped = BitmapPixels.Crop(rtb, new PixelRect(ix, iy, iw, ih));
             }
@@ -2098,7 +2101,98 @@ namespace ScreenShot_One_Avalonia
 
         }
 
+        /// <summary>Закріпити поточний результат (з фігурами) поверх усіх вікон — стікер.</summary>
+        private void BtnPin_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                using var rtb = CreateRenderedBitmap();
+                PinnedImageWindow.Pin(rtb);
+            }
+            catch (Exception ex) { AppLog.Error(ex, "Редактор: стікер"); }
+        }
+
+        /// <summary>Результат для експорту (копія, файл, історія, хмара, стікер): полотно + фон і рамка, якщо ввімкнено.</summary>
         private RenderTargetBitmap CreateRenderedBitmap()
+        {
+            var canvas = CreateCanvasBitmap();
+            try
+            {
+                var framed = FrameStyle.Apply(canvas);
+                if (framed == null) return canvas;
+                canvas.Dispose();
+                return framed;
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "Фон і рамка");
+                return canvas;
+            }
+        }
+
+        // ---- Фон і рамка (2.10.0) ----
+        private bool _frameUiReady;
+
+        private void InitFrameUi()
+        {
+            var s = SettingsManager.Current;
+            for (int i = 0; i < FrameStyle.Presets.Length; i++)
+            {
+                int index = i;
+                var b = new Button { Width = 30, Height = 30, Margin = new Thickness(3), CornerRadius = new CornerRadius(15), Background = FrameStyle.BrushFor(i), BorderThickness = new Thickness(2), Padding = new Thickness(0) };
+                b.Click += (_, _) => { SettingsManager.Current.FramePreset = index; SettingsManager.Current.FrameEnabled = true; TglFrame.IsChecked = true; SaveFrameSettings(); };
+                FrameSwatches.Children.Add(b);
+            }
+            TglFrame.IsChecked = s.FrameEnabled;
+            TglFrameShadow.IsChecked = s.FrameShadow;
+            SldFramePadding.Value = s.FramePadding;
+            SldFrameRadius.Value = s.FrameRadius;
+            _frameUiReady = true;
+            ApplyFramePreview();
+        }
+
+        private void BtnFrame_Click(object? sender, RoutedEventArgs e)
+        {
+            ColorPalettePopup.IsOpen = false;
+            FramePopup.IsOpen = !FramePopup.IsOpen;
+        }
+
+        private void Frame_Changed(object? sender, RoutedEventArgs e) => SaveFrameSettings();
+        private void Frame_ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e) => SaveFrameSettings();
+
+        private void SaveFrameSettings()
+        {
+            if (!_frameUiReady) return;
+            var s = SettingsManager.Current;
+            s.FrameEnabled = TglFrame.IsChecked == true;
+            s.FrameShadow = TglFrameShadow.IsChecked == true;
+            s.FramePadding = (int)SldFramePadding.Value;
+            s.FrameRadius = (int)SldFrameRadius.Value;
+            try { SettingsManager.Save(); } catch (Exception ex) { AppLog.Warn(ex); }
+            ApplyFramePreview();
+            Avalonia.Threading.Dispatcher.UIThread.Post(FitToScreen, Avalonia.Threading.DispatcherPriority.Loaded);
+        }
+
+        /// <summary>Попередній перегляд у редакторі — ті самі параметри, що й FrameStyle.Apply.</summary>
+        private void ApplyFramePreview()
+        {
+            var s = SettingsManager.Current;
+            bool on = s.FrameEnabled;
+            FrameOuter.Background = on ? FrameStyle.BrushFor(s.FramePreset) : null;
+            FrameOuter.Padding = new Thickness(on ? s.FramePadding : 0);
+            var radius = new CornerRadius(on ? s.FrameRadius : 0);
+            FrameCard.CornerRadius = radius;
+            FrameCard.BoxShadow = on && s.FrameShadow ? FrameStyle.Shadow : default;
+            FrameClip.CornerRadius = radius;
+            FrameClip.ClipToBounds = on;
+            BtnFrame.Classes.Set("active", on);
+            for (int i = 0; i < FrameSwatches.Children.Count; i++)
+                if (FrameSwatches.Children[i] is Button b)
+                    b.BorderBrush = on && i == s.FramePreset ? AccentBrush : Brushes.Transparent;
+        }
+
+        /// <summary>Лише полотно зі знімком і фігурами — для обрізки, розмиття, OCR.</summary>
+        private RenderTargetBitmap CreateCanvasBitmap()
         {
             // Зум реалізовано через батьківський LayoutTransformControl, а RenderTargetBitmap.Render(DrawingCanvas)
             // трансформацій предків не враховує — тож перемикати зум на 1.0 і двічі перебудовувати розмітку
@@ -2298,7 +2392,7 @@ namespace ScreenShot_One_Avalonia
                 ToastNotification.IsVisible = true;
 
                 string text;
-                using (var rtb = CreateRenderedBitmap())
+                using (var rtb = CreateCanvasBitmap())
                 {
                     text = await OcrService.RecognizeAsync(rtb);
                 }

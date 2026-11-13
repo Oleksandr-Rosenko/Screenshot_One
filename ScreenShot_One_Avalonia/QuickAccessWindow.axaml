@@ -16,7 +16,7 @@
 			</Border>
 
 			<!-- Кнопки-іконки з підказками (раніше підписи не вміщались і обрізались) -->
-			<Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+			<Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
 				<Button Name="BtnEdit" Grid.Column="0" Classes="Basic tool" Click="BtnEdit_Click" ToolTip.Tip="{DynamicResource Quick_Edit}">
 					<material:MaterialIcon Kind="PencilOutline"/>
 				</Button>
@@ -26,7 +26,10 @@
 				<Button Name="BtnSaveFile" Grid.Column="2" Classes="Basic tool" Click="BtnSaveFile_Click" ToolTip.Tip="{DynamicResource Quick_SaveToFolder}">
 					<material:MaterialIcon Kind="ContentSaveOutline"/>
 				</Button>
-				<Button Name="BtnDismiss" Grid.Column="4" Classes="Basic tool" Click="BtnDismiss_Click" ToolTip.Tip="{DynamicResource Common_Close}">
+				<Button Name="BtnPin" Grid.Column="3" Classes="Basic tool" Click="BtnPin_Click" ToolTip.Tip="{DynamicResource Pin_Tip}">
+					<material:MaterialIcon Kind="PinOutline"/>
+				</Button>
+				<Button Name="BtnDismiss" Grid.Column="5" Classes="Basic tool" Click="BtnDismiss_Click" ToolTip.Tip="{DynamicResource Common_Close}">
 					<material:MaterialIcon Kind="Close"/>
 				</Button>
 			</Grid>

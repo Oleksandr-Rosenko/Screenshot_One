@@ -1,8 +1,9 @@
-• New screen recording panel: compact and in the app's style — “Screen / Region”, “Clicks”, “Audio”, “Microphone”, “Keys” buttons and a big “Record” button. While recording, only the timer, pause and “Stop” remain.
-• Pressed keys shown in the video (the “Keys” button on the recording panel): “Ctrl + C”, “Enter” and so on appear at the bottom of the frame. On Mac the system will ask for the “Input Monitoring” permission.
-• Export video as GIF in the video editor (the “GIF” button).
+• Capture a single window: in selection mode hover over a window — it gets highlighted, a click captures just that window. Dragging still selects an area.
+• “Sticker”: pin a screenshot on top of all windows (the pin button in the editor and on the thumbnail). Drag it with the mouse, wheel to zoom, Ctrl/Cmd + wheel for transparency, double-click or Esc to close.
+• Beautiful background and frame in the editor: gradient or color, padding, rounded corners and shadow — visible right in the editor and included in copies and files.
 
 Changes in previous versions:
+• 2.9.0: new screen recording panel, pressed keys shown in the video, video export to GIF.
 • 2.8.5: right-clicking the tray icon also opens the panel; release notes in the app's language.
 • 2.8.4: the Screenshot One panel is the same on Windows and Mac; on Windows it no longer closes right after opening.
 • 2.8.3: macOS 14+ — screenshots via the modern ScreenCaptureKit.

@@ -64,6 +64,13 @@ namespace ScreenShot_One_Avalonia
         // Версія схеми налаштувань — для разових міграцій (див. SettingsManager.Migrate)
         public int SettingsVersion { get; set; } = 0;
 
+        // Фон і рамка навколо скріншота (редактор, 2.10.0)
+        public bool FrameEnabled { get; set; } = false;
+        public int FramePreset { get; set; } = 0;
+        public int FramePadding { get; set; } = 48;
+        public int FrameRadius { get; set; } = 12;
+        public bool FrameShadow { get; set; } = true;
+
         // Показувати натиснуті клавіші поверх відео під час запису
         public bool ShowKeystrokes { get; set; } = false;
 
