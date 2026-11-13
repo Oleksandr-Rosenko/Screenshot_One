@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using LibVLCSharp.Shared;
 
@@ -14,9 +16,40 @@ namespace ScreenShot_One_Avalonia
     {
         private static readonly Lazy<LibVLC> _instance = new Lazy<LibVLC>(() =>
         {
-            Core.Initialize();
-            return new LibVLC();
+            try
+            {
+                string? macDir = MacLibVlcDirectory();
+                if (macDir != null)
+                {
+                    // Плагіни VLC лежать поруч: lib/vlc/plugins
+                    string plugins = Path.Combine(macDir, "vlc", "plugins");
+                    if (Directory.Exists(plugins)) Environment.SetEnvironmentVariable("VLC_PLUGIN_PATH", plugins);
+                }
+                Core.Initialize(macDir);
+                var vlc = new LibVLC();
+                AppLog.Write($"[VLC] готовий: {vlc.Version}{(macDir != null ? $" ({macDir})" : "")}");
+                return vlc;
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "[VLC] не вдалося ініціалізувати LibVLC");
+                throw;
+            }
         }, isThreadSafe: true);
+
+        /// <summary>
+        /// macOS: каталог з libvlc.dylib для поточної архітектури. LibVLCSharp 3.10 сам шукає лише libvlc/osx-x64/lib,
+        /// тож на Apple Silicon (libvlc/osx-arm64/lib) плеєр не стартував і відеоредактор вічно показував «Обробка…».
+        /// </summary>
+        public static string? MacLibVlcDirectory()
+        {
+            if (!OperatingSystem.IsMacOS()) return null;
+            string rid = RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "osx-arm64" : "osx-x64";
+            string dir = Path.Combine(AppContext.BaseDirectory, "libvlc", rid, "lib");
+            if (File.Exists(Path.Combine(dir, "libvlc.dylib"))) return dir;
+            AppLog.Write($"[VLC] libvlc.dylib не знайдено в {Path.Combine(AppContext.BaseDirectory, "libvlc")}");
+            return null;
+        }
 
         public static LibVLC Instance => _instance.Value;
 

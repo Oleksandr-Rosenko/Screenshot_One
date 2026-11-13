@@ -46,8 +46,12 @@ jobs:
           $env:SO_SELFTEST_TRAY = "1"
           $env:SO_SELFTEST_KEYS = "1"
           $env:SO_SELFTEST_CAPTURE = "1"
+          # Тестове відео для самоперевірки відеоредактора (кнопка «Обрізати»)
+          $video = Join-Path $env:RUNNER_TEMP "selftest.mp4"
+          & ScreenShot_One_Avalonia/ffmpeg.exe -hide_banner -loglevel error -f lavfi -i testsrc=duration=5:size=640x360:rate=30 -pix_fmt yuv420p $video
+          $env:SO_SELFTEST_VEDITOR = $video
           $p = Start-Process $exe.FullName -PassThru
-          Start-Sleep -Seconds 30
+          Start-Sleep -Seconds 45
           $alive = -not $p.HasExited
           if ($alive) { Stop-Process -Id $p.Id -Force }
           $log = Join-Path $env:LOCALAPPDATA "Screenshot_One/logs/app.log"
@@ -60,6 +64,8 @@ jobs:
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] вікна.*True' -Quiet)) { throw "Window list self-test failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] оверлей.*True' -Quiet)) { throw "Selection overlay self-test failed" }
           if (Select-String -Path $log -Pattern '\[Capture\].*картинка немає' -Quiet) { throw "Screen capture returned no image" }
+          if (-not (Select-String -Path $log -Pattern 'SelfTest\] відео завантажено.*True' -Quiet)) { throw "Video editor did not load the video" }
+          if (-not (Select-String -Path $log -Pattern 'SelfTest\] кнопка обрізки.*True' -Quiet)) { throw "Trim button self-test failed" }
 
   macos:
     name: Build (macOS)
@@ -157,7 +163,9 @@ jobs:
           # Довідково: утиліта знімка з установленого бандла (код 4 — немає дозволу «Запис екрана»)
           /Applications/Screenshot_One.app/Contents/MacOS/capture-helper --list --timeout 30; echo "capture-helper --list exit code: $?"
           pkill -x Screenshot_One; sleep 2
-          SO_SELFTEST_TRAY=1 SO_SELFTEST_CAPTURE=1 /Applications/Screenshot_One.app/Contents/MacOS/Screenshot_One > "$RUNNER_TEMP/app.out" 2>&1 &
+          # Тестове відео для відеоредактора (вбудованим ffmpeg)
+          /Applications/Screenshot_One.app/Contents/MacOS/ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=duration=5:size=640x360:rate=30 -pix_fmt yuv420p "$RUNNER_TEMP/selftest.mp4"
+          SO_SELFTEST_TRAY=1 SO_SELFTEST_CAPTURE=1 SO_SELFTEST_VEDITOR="$RUNNER_TEMP/selftest.mp4" /Applications/Screenshot_One.app/Contents/MacOS/Screenshot_One > "$RUNNER_TEMP/app.out" 2>&1 &
           PID=$!
           sleep 25
           if kill -0 $PID 2>/dev/null; then echo "APP ALIVE after 25s"; ALIVE=1; kill $PID; else echo "APP DIED"; ALIVE=0; fi
@@ -176,3 +184,8 @@ jobs:
           grep -a "\[Capture\]" "$LOG" || true
           grep -a "SelfTest\] оверлей" "$LOG"
           grep -aq "SelfTest\] оверлей.*True" "$LOG" || exit 1
+          # Відеоредактор: LibVLC знайдено (на Apple Silicon — libvlc/osx-arm64) і відео завантажилось
+          grep -a "\[VLC\]" "$LOG"
+          grep -a "SelfTest\] відео" "$LOG"
+          grep -aq "\[VLC\] готовий" "$LOG" || exit 1
+          grep -aq "SelfTest\] відео завантажено.*True" "$LOG" || exit 1

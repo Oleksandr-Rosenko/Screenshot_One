@@ -65,6 +65,9 @@ namespace ScreenShot_One_Avalonia
                     RunTraySelfTestAsync().FireAndForget("Самоперевірка панелі трею");
                 if (OperatingSystem.IsWindows() && Environment.GetEnvironmentVariable("SO_SELFTEST_KEYS") == "1")
                     RunKeysSelfTestAsync().FireAndForget("Самоперевірка показу клавіш");
+                // Відеоредактор (Windows): кнопка «Обрізати» натискається з першого разу (шлях до тестового відео в змінній)
+                if (Environment.GetEnvironmentVariable("SO_SELFTEST_VEDITOR") is { Length: > 0 } testVideo)
+                    RunVideoEditorSelfTestAsync(testVideo).FireAndForget("Самоперевірка відеоредактора");
                 // Оверлей виділення має накривати весь екран (на Mac — без «рідного» повноекранного режиму)
                 if (Environment.GetEnvironmentVariable("SO_SELFTEST_CAPTURE") == "1")
                     RunCaptureOverlaySelfTestAsync().FireAndForget("Самоперевірка оверлея виділення");
@@ -211,6 +214,62 @@ namespace ScreenShot_One_Avalonia
             var windows = WindowLocator.GetWindows();
             AppLog.Write($"[SelfTest] вікна інших програм: {windows.Count} — {windows.Count > 0}");
             await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(KeystrokeOverlay.Stop);
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetCursorPos(int x, int y);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern void mouse_event(uint flags, int dx, int dy, uint data, UIntPtr extra);
+
+        /// <summary>
+        /// Самоперевірка відеоредактора (SO_SELFTEST_VEDITOR=шлях до відео, Windows): справжні кліки мишею по «Обрізати»
+        /// після паузи, за яку з'являється підказка. Спершу зі старим розміщенням підказки (біля курсора), потім з новим (над кнопкою).
+        /// </summary>
+        private static async System.Threading.Tasks.Task RunVideoEditorSelfTestAsync(string videoPath)
+        {
+            // Windows — після інших самоперевірок; Mac (лише завантаження відео) — раніше, бо CI там чекає 25 с
+            await System.Threading.Tasks.Task.Delay(OperatingSystem.IsWindows() ? 21000 : 10000);
+            VideoEditorWindow? w = null;
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { w = new VideoEditorWindow(videoPath); w.Show(); });
+            await System.Threading.Tasks.Task.Delay(3000);
+            bool loaded = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => w!.FindControl<TextBlock>("TxtLoading")?.IsVisible == false);
+            AppLog.Write($"[SelfTest] відео завантажено в редактор: {loaded}");
+            if (!OperatingSystem.IsWindows())
+            {
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => w!.Close());
+                return;
+            }
+
+            async System.Threading.Tasks.Task<int> ClicksAsync(Avalonia.Controls.PlacementMode? placement)
+            {
+                int ok = 0;
+                for (int i = 0; i < 3; i++)
+                {
+                    var (pt, before) = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        var b = w!.FindControl<Avalonia.Controls.Primitives.ToggleButton>("BtnTrimMode")!;
+                        if (placement is { } p) ToolTip.SetPlacement(b, p); else b.ClearValue(ToolTip.PlacementProperty);
+                        var c = b.TranslatePoint(new Point(b.Bounds.Width / 2, b.Bounds.Height / 2), w) ?? default;
+                        return (w.PointToScreen(c), b.IsChecked == true);
+                    });
+                    SetCursorPos(pt.X + 1, pt.Y + 1);
+                    await System.Threading.Tasks.Task.Delay(100);
+                    SetCursorPos(pt.X, pt.Y);
+                    await System.Threading.Tasks.Task.Delay(1500); // за цей час з'являється підказка
+                    mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero); // LEFTDOWN
+                    mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero); // LEFTUP
+                    await System.Threading.Tasks.Task.Delay(700);
+                    bool after = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                        w!.FindControl<Avalonia.Controls.Primitives.ToggleButton>("BtnTrimMode")!.IsChecked == true);
+                    if (after != before) ok++;
+                }
+                return ok;
+            }
+
+            int oldPlacement = await ClicksAsync(Avalonia.Controls.PlacementMode.Pointer);
+            int newPlacement = await ClicksAsync(null);
+            AppLog.Write($"[SelfTest] кнопка обрізки: підказка біля курсора {oldPlacement}/3, над кнопкою {newPlacement}/3 — {newPlacement == 3}");
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => w!.Close());
         }
 
         /// <summary>Самоперевірка оверлея виділення (SO_SELFTEST_CAPTURE=1): відкриваємо його й звіряємо з екраном.</summary>

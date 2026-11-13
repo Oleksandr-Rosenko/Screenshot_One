@@ -8,6 +8,12 @@
         WindowState="Maximized">
 
 	<suki:SukiWindow.Styles>
+		<!-- Нижня панель біля краю екрана: підказка «під курсором» не влазила, перевертались і накривала курсор —
+		     кнопка (особливо «Обрізати») мерехтіла й не натискалась з першого разу. Підказки — над кнопкою. -->
+		<Style Selector="StackPanel.bottombar :is(Button)">
+			<Setter Property="ToolTip.Placement" Value="Top"/>
+			<Setter Property="ToolTip.VerticalOffset" Value="-6"/>
+		</Style>
 		<Style Selector="TextBlock.MonoTime">
 			<Setter Property="FontFamily" Value="Cascadia Code, Consolas, Menlo, Monaco, monospace"/>
 		</Style>
@@ -60,7 +66,7 @@
 			</suki:GlassCard>
 
 			<!-- BOTTOM CONTROLS & TIMELINE -->
-			<StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="10,0,10,12">
+			<StackPanel DockPanel.Dock="Bottom" Classes="bottombar" Spacing="6" Margin="10,0,10,12">
 
 				<!-- EXPANDABLE TRIM PANEL -->
 				<suki:GlassCard Name="TrimPanel" IsVisible="False" Margin="0,0,0,4" Padding="16,12" CornerRadius="14">

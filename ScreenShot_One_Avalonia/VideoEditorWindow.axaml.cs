@@ -39,6 +39,7 @@ namespace ScreenShot_One_Avalonia
 
         private bool _isClosedCleanly = false;
         private bool _isNewRecording = false;
+        private Exception? _playerInitError;
         private bool _isVideoKept = false;
         private bool _isVideoLoaded = false;
 
@@ -123,7 +124,9 @@ namespace ScreenShot_One_Avalonia
             }
             catch (Exception ex)
             {
-                _ = ShowErrorDialog(Loc.T("VEditor_ErrPlayerInit"), ex);
+                // Діалог покажемо після відкриття вікна (до показу він губився, а редактор вічно «вантажив»)
+                _playerInitError = ex;
+                AppLog.Error(ex, "Відеоредактор: плеєр не ініціалізовано");
             }
 
             this.Opened += async (s, e) =>
@@ -164,7 +167,13 @@ namespace ScreenShot_One_Avalonia
 
                     await WaitForFileUnlock(_sourceFile);
 
-                    if (_libVLC == null || _mediaPlayer == null || _isClosedCleanly) return;
+                    if (_libVLC == null || _mediaPlayer == null)
+                    {
+                        TxtLoading.Text = Loc.T("VEditor_LoadError");
+                        if (_playerInitError != null) await ShowErrorDialog(Loc.T("VEditor_ErrPlayerInit"), _playerInitError);
+                        return;
+                    }
+                    if (_isClosedCleanly) return;
 
                     var media = new LibVLCSharp.Shared.Media(_libVLC, _sourceFile, FromType.FromPath);
                     VlcShared.ReplaceMedia(_mediaPlayer, media);
