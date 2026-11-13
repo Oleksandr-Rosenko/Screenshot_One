@@ -43,8 +43,9 @@ jobs:
           $exe = Get-ChildItem ScreenShot_One_Avalonia/bin -Recurse -Filter Screenshot_One.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           Write-Host "Exe: $($exe.FullName)"
           $env:SO_SELFTEST_TRAY = "1"
+          $env:SO_SELFTEST_KEYS = "1"
           $p = Start-Process $exe.FullName -PassThru
-          Start-Sleep -Seconds 25
+          Start-Sleep -Seconds 30
           $alive = -not $p.HasExited
           if ($alive) { Stop-Process -Id $p.Id -Force }
           $log = Join-Path $env:LOCALAPPDATA "Screenshot_One/logs/app.log"
@@ -53,6 +54,7 @@ jobs:
           if (-not $alive) { throw "App exited early (code $($p.ExitCode))" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\].*2,5.*True' -Quiet)) { throw "Tray panel self-test (left click) failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\].*→.*True' -Quiet)) { throw "Tray panel self-test (right click) failed" }
+          if (-not (Select-String -Path $log -Pattern 'SelfTest\] клавіші.*True' -Quiet)) { throw "Keystroke overlay self-test failed" }
 
   macos:
     name: Build (macOS)

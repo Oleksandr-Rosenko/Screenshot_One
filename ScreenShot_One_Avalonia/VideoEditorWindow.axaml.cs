@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using Avalonia.Platform.Storage;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -1187,6 +1188,53 @@ namespace ScreenShot_One_Avalonia
                 ShowToast(Loc.T("VEditor_UploadError"));
                 BtnSave.IsEnabled = true;
                 BtnUpload.IsEnabled = true;
+            }
+        }
+
+        /// <summary>Експорт поточного відео в GIF (2.9.0): вибір файлу → ffmpeg з власною палітрою.</summary>
+        private async void BtnGif_Click(object? sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_sourceFile) || !File.Exists(_sourceFile)) return;
+            if (GifExport.FindFfmpeg() == null)
+            {
+                await MessageBoxManager.GetMessageBoxStandard(Loc.T("Common_Error"), Loc.T("VEditor_GifNoFfmpeg")).ShowWindowDialogAsync(this);
+                return;
+            }
+            try
+            {
+                var options = new Avalonia.Platform.Storage.FilePickerSaveOptions
+                {
+                    Title = Loc.T("VEditor_GifTip"),
+                    SuggestedFileName = Path.GetFileNameWithoutExtension(_sourceFile) + ".gif",
+                    DefaultExtension = "gif",
+                    FileTypeChoices = new[] { new Avalonia.Platform.Storage.FilePickerFileType("GIF") { Patterns = new[] { "*.gif" }, MimeTypes = new[] { "image/gif" } } },
+                    ShowOverwritePrompt = true
+                };
+                try
+                {
+                    Directory.CreateDirectory(ImageExport.SaveFolder);
+                    var start = await StorageProvider.TryGetFolderFromPathAsync(ImageExport.SaveFolder);
+                    if (start != null) options.SuggestedStartLocation = start;
+                }
+                catch (Exception ex) { AppLog.Warn(ex); }
+
+                var file = await StorageProvider.SaveFilePickerAsync(options);
+                string? path = file?.TryGetLocalPath();
+                if (string.IsNullOrEmpty(path)) return;
+
+                BtnGif.IsEnabled = false;
+                ShowToast(Loc.T("VEditor_GifCreating"));
+                await GifExport.ExportAsync(_sourceFile, path);
+                ShowToast(Loc.F("Editor_Saved", Path.GetFileName(path)));
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "Експорт GIF");
+                await MessageBoxManager.GetMessageBoxStandard(Loc.T("Common_Error"), Loc.F("VEditor_GifFailed", ex.Message)).ShowWindowDialogAsync(this);
+            }
+            finally
+            {
+                BtnGif.IsEnabled = true;
             }
         }
 

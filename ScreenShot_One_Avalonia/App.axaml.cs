@@ -63,6 +63,8 @@ namespace ScreenShot_One_Avalonia
                 // чи панель відкрилась і не закрилась одразу
                 if (Environment.GetEnvironmentVariable("SO_SELFTEST_TRAY") == "1")
                     RunTraySelfTestAsync().FireAndForget("Самоперевірка панелі трею");
+                if (OperatingSystem.IsWindows() && Environment.GetEnvironmentVariable("SO_SELFTEST_KEYS") == "1")
+                    RunKeysSelfTestAsync().FireAndForget("Самоперевірка показу клавіш");
 
                 // Прогріваємо VLC у фоні, щоб перше відкриття відеоредактора не підвисало
                 _ = System.Threading.Tasks.Task.Run(async () =>
@@ -181,6 +183,27 @@ namespace ScreenShot_One_Avalonia
             SettingsManager.UnregisterAll();
             HistoryManager.WaitForPendingSaves(TimeSpan.FromSeconds(5));
             if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) desktop.Shutdown();
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+
+        /// <summary>Самоперевірка показу клавіш (SO_SELFTEST_KEYS=1, Windows): програма сама «натискає» Ctrl+C.</summary>
+        private static async System.Threading.Tasks.Task RunKeysSelfTestAsync()
+        {
+            await System.Threading.Tasks.Task.Delay(15000);
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                KeystrokeOverlay.Start(ScreenService.GetPrimaryScreen()?.Bounds ?? new PixelRect(0, 0, 1920, 1080)));
+            await System.Threading.Tasks.Task.Delay(500);
+            const uint KEYUP = 0x2;
+            keybd_event(0x11, 0, 0, UIntPtr.Zero);     // Ctrl
+            keybd_event(0x43, 0, 0, UIntPtr.Zero);     // C
+            keybd_event(0x43, 0, KEYUP, UIntPtr.Zero);
+            keybd_event(0x11, 0, KEYUP, UIntPtr.Zero);
+            await System.Threading.Tasks.Task.Delay(1000);
+            string? shown = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => KeystrokeOverlay.LastShown);
+            AppLog.Write($"[SelfTest] клавіші: «{shown}» = {shown == "Ctrl + C"}");
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(KeystrokeOverlay.Stop);
         }
 
         public static bool IsTrayMenuWindow(Window w) => w.Name?.StartsWith("AvaloniaTrayPopupRoot_", StringComparison.Ordinal) == true;

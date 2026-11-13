@@ -3,52 +3,224 @@
         xmlns:local="clr-namespace:ScreenShot_One_Avalonia"
         xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="ScreenShot_One_Avalonia.VideoControlWindow"
-        Title="{DynamicResource Common_RecordVideo}" Height="70" Width="1000"
+        Title="{DynamicResource Common_RecordVideo}" SizeToContent="WidthAndHeight"
         WindowDecorations="None" Background="Transparent" TransparencyLevelHint="Transparent"
-        Topmost="True" ShowInTaskbar="False">
+        Topmost="True" ShowInTaskbar="False" CanResize="False">
 
-	<!-- Панель плаває поверх екрана, тому завжди темна — у хвойних тонах палітри -->
-	<Border Background="#F2111816" CornerRadius="35" Padding="15,10" PointerPressed="Border_PointerPressed" BorderBrush="#40CFE0DB" BorderThickness="1" Margin="5">
-		<StackPanel Orientation="Horizontal" Spacing="15" VerticalAlignment="Center" HorizontalAlignment="Center">
+	<!-- Панель запису (2.9.0): компактна «пігулка». Плаває поверх будь-якого вікна, тому завжди темна,
+	     у хвойних тонах палітри (виняток із правила токенів, див. CLAUDE.md). -->
+	<Window.Styles>
+		<!-- Фон кнопок малює власний Border.face усередині: шаблон SukiUI стискає свій шар до вмісту
+		     й не передає заокруглення, тож підсвітка виходила квадратиком лише під іконкою -->
+		<Style Selector="ToggleButton.opt, ToggleButton.seg, Button.round, Button.rec">
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="MinWidth" Value="0"/>
+			<Setter Property="MinHeight" Value="0"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+			<Setter Property="VerticalContentAlignment" Value="Stretch"/>
+		</Style>
+		<Style Selector="ToggleButton.opt /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.seg /template/ ContentPresenter#PART_ContentPresenter, Button.round /template/ ContentPresenter#PART_ContentPresenter, Button.rec /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
+		</Style>
+		<Style Selector="Border.face">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
 
-			<Button Name="BtnRecordToggle" Click="BtnRecordToggle_Click" Background="Transparent" Width="40" Height="40" CornerRadius="20" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="{DynamicResource Video_StartStop}">
-				<Border Name="RecordIcon" Width="16" Height="16" Background="Red" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-			</Button>
+		<!-- Перемикачі: кліки, звук, мікрофон, клавіші -->
+		<Style Selector="ToggleButton.opt Border.face">
+			<Setter Property="Width" Value="38"/>
+			<Setter Property="Height" Value="38"/>
+			<Setter Property="CornerRadius" Value="19"/>
+		</Style>
+		<Style Selector="ToggleButton.opt material|MaterialIcon">
+			<Setter Property="Width" Value="20"/>
+			<Setter Property="Height" Value="20"/>
+			<Setter Property="Foreground" Value="#6F837E"/>
+		</Style>
+		<Style Selector="ToggleButton.opt:pointerover Border.face">
+			<Setter Property="Background" Value="#1ACFE0DB"/>
+		</Style>
+		<Style Selector="ToggleButton.opt:checked Border.face">
+			<Setter Property="Background" Value="#2962C9A0"/>
+		</Style>
+		<Style Selector="ToggleButton.opt:checked material|MaterialIcon">
+			<Setter Property="Foreground" Value="#62C9A0"/>
+		</Style>
 
-			<Button Name="BtnPause" Click="BtnPause_Click" IsVisible="False" Background="Transparent" Width="36" Height="36" CornerRadius="18" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="{DynamicResource Video_PauseResume}">
-				<TextBlock Name="TxtPauseIcon" Text="⏸" Foreground="#E2EDEA" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-			</Button>
+		<!-- Перемикач режиму «Екран / Зона» -->
+		<Style Selector="ToggleButton.seg Border.face">
+			<Setter Property="Height" Value="34"/>
+			<Setter Property="Padding" Value="12,0,14,0"/>
+			<Setter Property="CornerRadius" Value="17"/>
+		</Style>
+		<Style Selector="ToggleButton.seg material|MaterialIcon">
+			<Setter Property="Width" Value="18"/>
+			<Setter Property="Height" Value="18"/>
+			<Setter Property="Foreground" Value="#9FB3AD"/>
+		</Style>
+		<Style Selector="ToggleButton.seg TextBlock">
+			<Setter Property="Foreground" Value="#9FB3AD"/>
+		</Style>
+		<Style Selector="ToggleButton.seg:pointerover Border.face">
+			<Setter Property="Background" Value="#14CFE0DB"/>
+		</Style>
+		<Style Selector="ToggleButton.seg:checked Border.face">
+			<Setter Property="Background" Value="#62C9A0"/>
+		</Style>
+		<Style Selector="ToggleButton.seg:checked material|MaterialIcon">
+			<Setter Property="Foreground" Value="#0B1A14"/>
+		</Style>
+		<Style Selector="ToggleButton.seg:checked TextBlock">
+			<Setter Property="Foreground" Value="#0B1A14"/>
+		</Style>
 
-			<TextBlock Name="TxtTimer" Text="00:00" Foreground="#E2EDEA" FontFamily="Cascadia Mono, Consolas, Menlo, monospace" FontSize="18" VerticalAlignment="Center" FontWeight="Bold" Width="60"/>
+		<!-- Кругла кнопка (пауза, закрити) -->
+		<Style Selector="Button.round Border.face">
+			<Setter Property="Width" Value="38"/>
+			<Setter Property="Height" Value="38"/>
+			<Setter Property="CornerRadius" Value="19"/>
+		</Style>
+		<Style Selector="Button.round:pointerover Border.face">
+			<Setter Property="Background" Value="#1ACFE0DB"/>
+		</Style>
+		<Style Selector="Button.round material|MaterialIcon">
+			<Setter Property="Width" Value="20"/>
+			<Setter Property="Height" Value="20"/>
+			<Setter Property="Foreground" Value="#CFE0DB"/>
+		</Style>
 
-			<ComboBox Name="ComboRecordArea" SelectedIndex="0" Width="165" VerticalAlignment="Center">
-				<ComboBoxItem Content="{DynamicResource Video_FullScreen}"/>
-				<ComboBoxItem Content="{DynamicResource Video_Region}"/>
-			</ComboBox>
+		<!-- Червона кнопка «Запис» / «Стоп» -->
+		<Style Selector="Button.rec Border.face">
+			<Setter Property="Height" Value="38"/>
+			<Setter Property="Padding" Value="14,0,16,0"/>
+			<Setter Property="CornerRadius" Value="19"/>
+			<Setter Property="Background" Value="#E5484D"/>
+		</Style>
+		<Style Selector="Button.rec:pointerover Border.face">
+			<Setter Property="Background" Value="#F05A5F"/>
+		</Style>
+		<Style Selector="Button.rec:disabled Border.face">
+			<Setter Property="Background" Value="#7A3134"/>
+		</Style>
+		<Style Selector="Button.rec TextBlock">
+			<Setter Property="Foreground" Value="White"/>
+		</Style>
 
-			<ComboBox Name="ComboMonitor" Width="150" VerticalAlignment="Center">
-				<ComboBox.ItemTemplate>
-					<DataTemplate x:DataType="local:MonitorInfo">
-						<TextBlock Text="{Binding DisplayName}"/>
-					</DataTemplate>
-				</ComboBox.ItemTemplate>
-			</ComboBox>
+		<!-- Пульсуюча точка під час запису -->
+		<Style Selector="Ellipse.pulse">
+			<Style.Animations>
+				<Animation Duration="0:0:1.4" IterationCount="Infinite">
+					<KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+					<KeyFrame Cue="50%"><Setter Property="Opacity" Value="0.25"/></KeyFrame>
+					<KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+				</Animation>
+			</Style.Animations>
+		</Style>
+		<Style Selector="Border.divider">
+			<Setter Property="Width" Value="1"/>
+			<Setter Property="Height" Value="24"/>
+			<Setter Property="Margin" Value="4,0"/>
+			<Setter Property="Background" Value="#2E3D3A"/>
+		</Style>
+	</Window.Styles>
 
-			<CheckBox Name="ChkShowMouse" IsChecked="True" Foreground="#E2EDEA" VerticalAlignment="Center" ToolTip.Tip="{DynamicResource Video_ShowClicksTip}">
-				<StackPanel Orientation="Horizontal" Spacing="5"><material:MaterialIcon Kind="CursorDefaultClickOutline" Width="16" Height="16" Foreground="#CFE0DB"/><TextBlock Text="{DynamicResource Video_Clicks}"/></StackPanel>
-			</CheckBox>
+	<Border Name="RootBorder" Background="#F7111816" CornerRadius="28" Padding="8" Margin="8"
+	        BorderBrush="#33CFE0DB" BorderThickness="1" BoxShadow="0 8 24 0 #66000000"
+	        PointerPressed="Border_PointerPressed">
+		<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
 
-			<CheckBox Name="ChkRecordAudio" IsChecked="True" Foreground="#E2EDEA" VerticalAlignment="Center" ToolTip.Tip="{DynamicResource Video_SystemAudioTip}">
-				<StackPanel Orientation="Horizontal" Spacing="5"><material:MaterialIcon Kind="VolumeHigh" Width="16" Height="16" Foreground="#CFE0DB"/><TextBlock Text="{DynamicResource Video_Audio}"/></StackPanel>
-			</CheckBox>
+			<!-- Ручка для перетягування -->
+			<material:MaterialIcon Kind="DragVertical" Width="18" Height="18" Foreground="#4B5D59" VerticalAlignment="Center" Margin="2,0,0,0"/>
 
-			<CheckBox Name="ChkRecordMic" IsChecked="False" Foreground="#E2EDEA" VerticalAlignment="Center" ToolTip.Tip="{DynamicResource Video_MicTip}">
-				<StackPanel Orientation="Horizontal" Spacing="5"><material:MaterialIcon Kind="Microphone" Width="16" Height="16" Foreground="#CFE0DB"/><TextBlock Text="{DynamicResource Video_Mic}"/></StackPanel>
-			</CheckBox>
+			<!-- ===== До запису: налаштування ===== -->
+			<StackPanel Name="SetupPanel" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+				<Border Background="#1C2725" CornerRadius="19" Padding="2">
+					<StackPanel Orientation="Horizontal" Spacing="2">
+						<ToggleButton Name="TglFullScreen" Classes="seg" IsChecked="True" Click="Mode_Click" ToolTip.Tip="{DynamicResource Video_FullScreen}">
+<Border Classes="face"><Panel HorizontalAlignment="Center" VerticalAlignment="Center">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<material:MaterialIcon Kind="Monitor"/>
+								<TextBlock Text="{DynamicResource Video_ModeScreen}" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold"/>
+							</StackPanel>
+						</Panel></Border>
+</ToggleButton>
+						<ToggleButton Name="TglRegion" Classes="seg" Click="Mode_Click" ToolTip.Tip="{DynamicResource Video_Region}">
+<Border Classes="face"><Panel HorizontalAlignment="Center" VerticalAlignment="Center">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<material:MaterialIcon Kind="SelectionDrag"/>
+								<TextBlock Text="{DynamicResource Video_ModeRegion}" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold"/>
+							</StackPanel>
+						</Panel></Border>
+</ToggleButton>
+					</StackPanel>
+				</Border>
 
-			<Separator Classes="Vertical" Height="30" Margin="5,0"/>
+				<!-- Монітор — лише коли їх кілька -->
+				<ComboBox Name="ComboMonitor" Width="150" VerticalAlignment="Center" Margin="4,0,0,0" IsVisible="False"
+				          ToolTip.Tip="{DynamicResource Video_MonitorTip}">
+					<ComboBox.ItemTemplate>
+						<DataTemplate x:DataType="local:MonitorInfo">
+							<TextBlock Text="{Binding DisplayName}"/>
+						</DataTemplate>
+					</ComboBox.ItemTemplate>
+				</ComboBox>
 
-			<Button Name="BtnClose" Click="BtnClose_Click" Content="✕" Background="Transparent" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Width="30" Height="30" CornerRadius="15" Foreground="#869C96" FontSize="16" VerticalAlignment="Center" ToolTip.Tip="{DynamicResource Common_Close}"/>
+				<Border Classes="divider"/>
+
+				<ToggleButton Name="TglClicks" Classes="opt" IsChecked="True" ToolTip.Tip="{DynamicResource Video_ShowClicksTip}">
+<Border Classes="face"><Panel HorizontalAlignment="Center" VerticalAlignment="Center">
+					<material:MaterialIcon Kind="CursorDefaultClickOutline"/>
+				</Panel></Border>
+</ToggleButton>
+				<ToggleButton Name="TglAudio" Classes="opt" IsChecked="True" ToolTip.Tip="{DynamicResource Video_SystemAudioTip}">
+<Border Classes="face"><Panel HorizontalAlignment="Center" VerticalAlignment="Center">
+					<material:MaterialIcon Kind="VolumeHigh"/>
+				</Panel></Border>
+</ToggleButton>
+				<ToggleButton Name="TglMic" Classes="opt" ToolTip.Tip="{DynamicResource Video_MicTip}">
+<Border Classes="face"><Panel HorizontalAlignment="Center" VerticalAlignment="Center">
+					<material:MaterialIcon Kind="Microphone"/>
+				</Panel></Border>
+</ToggleButton>
+				<ToggleButton Name="TglKeys" Classes="opt" ToolTip.Tip="{DynamicResource Video_KeysTip}">
+<Border Classes="face"><Panel HorizontalAlignment="Center" VerticalAlignment="Center">
+					<material:MaterialIcon Kind="KeyboardOutline"/>
+				</Panel></Border>
+</ToggleButton>
+
+				<Border Classes="divider"/>
+			</StackPanel>
+
+			<!-- ===== Під час запису: точка, таймер, пауза ===== -->
+			<StackPanel Name="RecordingPanel" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="False" Margin="6,0,2,0">
+				<Ellipse Name="RecDot" Classes="pulse" Width="10" Height="10" Fill="#E5484D" VerticalAlignment="Center"/>
+				<TextBlock Name="TxtTimer" Text="00:00" Foreground="#E2EDEA" FontFamily="Cascadia Mono, Consolas, Menlo, monospace"
+				           FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" MinWidth="52"/>
+				<Button Name="BtnPause" Classes="round" Click="BtnPause_Click" ToolTip.Tip="{DynamicResource Video_PauseResume}">
+<Border Classes="face"><Panel HorizontalAlignment="Center" VerticalAlignment="Center">
+					<material:MaterialIcon Name="IcoPause" Kind="Pause"/>
+				</Panel></Border>
+</Button>
+			</StackPanel>
+
+			<!-- Головна кнопка: «Запис» → «Стоп» -->
+			<Button Name="BtnRecordToggle" Classes="rec" Click="BtnRecordToggle_Click" ToolTip.Tip="{DynamicResource Video_StartStop}">
+<Border Classes="face"><Panel HorizontalAlignment="Center" VerticalAlignment="Center">
+				<StackPanel Orientation="Horizontal" Spacing="8">
+					<Border Name="RecordIcon" Width="12" Height="12" CornerRadius="6" Background="White" VerticalAlignment="Center"/>
+					<TextBlock Name="TxtRecordLabel" Text="{DynamicResource Video_Record}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="14"/>
+				</StackPanel>
+			</Panel></Border>
+</Button>
+
+			<Button Name="BtnClose" Classes="round" Click="BtnClose_Click" ToolTip.Tip="{DynamicResource Common_Close}">
+<Border Classes="face"><Panel HorizontalAlignment="Center" VerticalAlignment="Center">
+				<material:MaterialIcon Kind="Close"/>
+			</Panel></Border>
+</Button>
 		</StackPanel>
 	</Border>
 </Window>

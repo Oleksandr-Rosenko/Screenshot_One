@@ -40,6 +40,19 @@ namespace ScreenShot_One_Avalonia
         private static Action<HotkeyAction>? _onPressed;
         private static bool _started;
 
+        /// <summary>
+        /// Показ натиснутих клавіш під час запису (2.9.0): коли true, Windows-hook повідомляє про кожне
+        /// натискання (код VK + модифікатори). Подія приходить з потоку hook — обробник має бути швидким.
+        /// </summary>
+        public static volatile bool ObserveKeys;
+        public static event Action<int, int>? KeyObserved;
+
+        internal static void RaiseKeyObserved(int vk, int modifiers)
+        {
+            try { KeyObserved?.Invoke(vk, modifiers); }
+            catch (Exception ex) { AppLog.Write($"[Hotkeys] Помилка показу клавіш: {ex.Message}"); }
+        }
+
         public static void Start(Action<HotkeyAction> onPressed)
         {
             _onPressed = onPressed;
@@ -249,6 +262,8 @@ namespace ScreenShot_One_Avalonia
                         if (IsDown(VK_CONTROL)) modifiers |= HotkeyModifiers.Ctrl;
                         if (IsDown(VK_SHIFT)) modifiers |= HotkeyModifiers.Shift;
                         if (IsDown(VK_LWIN) || IsDown(VK_RWIN)) modifiers |= HotkeyModifiers.Meta;
+
+                        if (ObserveKeys) RaiseKeyObserved(vkCode, modifiers);
 
                         var action = Match(vkCode, modifiers);
                         if (action != null)

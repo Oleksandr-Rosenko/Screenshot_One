@@ -26,7 +26,9 @@
     Вікно історії показує сторінки по 40 (`PageSize`, `AppendPage` при прокрутці), мініатюри декодуються паралельно (`Bitmap.DecodeToWidth`).
     Редактор зберігає через `HistoryManager.ReserveId` + `SaveScreenshotInBackground` (фонова черга; `_flattened.png` пишеться останнім і атомарно). Перед виходом/оновленням — `HistoryManager.WaitForPendingSaves`.
   - `VideoControlWindow`, `VideoRegionWindow`, `VideoRecorderManager` — запис відео. На Windows ScreenRecorderLib, на macOS ffmpeg. Інтерфейс `IVideoRecorderService`.
-  - `VideoEditorWindow` — відеоплеєр (LibVLCSharp) і обрізка (ffmpeg).
+  - Панель запису `VideoControlWindow` (2.9.0): «пігулка» — перемикач «Екран / Зона» (`TglFullScreen`/`TglRegion`), монітор (лише коли їх кілька), перемикачі `TglClicks`/`TglAudio`/`TglMic`/`TglKeys`, червона кнопка «Запис/Стоп»; під час запису — `RecordingPanel` (точка, таймер, пауза). Завжди темна. Фон кнопок малює власний `Border.face` (шаблон SukiUI стискає свій шар до вмісту).
+  - Показ клавіш (`Keystrokes.cs`, 2.9.0): `KeystrokeFormatter` (Windows VK / Mac keycode → «Ctrl + C», «⌘C»), `KeystrokeOverlay` — вікно з «чипами» внизу області запису (потрапляє у відео, не бере фокус; на Windows click-through). Windows — `HotkeyService.ObserveKeys` + подія `KeyObserved` з low-level hook; Mac — `MacKeyTap` (CGEventTap, лише читання; дозвіл «Моніторинг введення», `CGRequestListenEventAccess`). Самоперевірка `SO_SELFTEST_KEYS=1` (Windows): програма сама натискає Ctrl+C.
+  - `VideoEditorWindow` — відеоплеєр (LibVLCSharp) і обрізка (ffmpeg). Кнопка «GIF» — `GifExport` (palettegen/paletteuse, 15 кадр/с, ширина до 960).
   - `ScreenCaptureService` (`IScreenCaptureService`: Windows/Mac/Linux), `ScreenService`, `PlatformHelper` — платформна логіка.
     Windows: GDI `CopyFromScreen` + пряме копіювання пікселів (`LockBits`). Mac (з 2.8.3), по черзі: macOS 14+ — ScreenCaptureKit через Swift-утиліту `MacHelpers/capture.swift` → `Contents/MacOS/capture-helper` (`MacScreenCaptureKit`); далі `MacCoreGraphics` (CoreGraphics `CGDisplayCreateImage`, застарілий з macOS 14); далі `/usr/sbin/screencapture`.
     `capture-helper`: `--display N` / `--all` / `--rect X,Y,W,H` (ТОЧКИ, глобальні координати) / `--list` / `--selftest`; вихід `--out файл.png` або `-`, а програма бере `--raw` — сирі BGRA у stdout (заголовок `SOC1`, `MacScreenCaptureKit.ParseRaw`), без PNG. Прямокутник Avalonia (пікселі) ділиться на `Screen.Scaling`, `--scale` дає рівно стільки ж пікселів — розмір і DPI (96 × масштаб) як у CoreGraphics. Коди виходу: 1 — аргументи, 2 — знімок, 3 — запис, 4 — немає дозволу «Запис екрана», 5 — тайм-аут. Після 2 збоїв поспіль (крім коду 4) утиліта в сесії більше не запускається. Збирається з ціллю macOS 14 (сама програма — 10.15+); CI компілює під arm64 і x64 і запускає `--selftest` (код 4 на раннері — пропуск).
@@ -149,10 +151,10 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 Зроблено в 2.6.0: «Зберегти як» + автозбереження, мікрофон і пауза, плаваюча мініатюра, нові фігури + товщина, OCR.
 Далі — по черзі:
 1. Знімок окремого вікна (клік по вікну; опційно тінь / прозорий фон).
-2. Експорт відео в GIF (ffmpeg уже є: palettegen/paletteuse).
+2. ~~Експорт відео в GIF~~ — зроблено в 2.9.0.
 3. Закріпити скріншот поверх усіх вікон («стікер»).
 4. Красивий фон / рамка (відступи, градієнт, тінь, закруглені кути).
-5. Показ натиснутих клавіш під час запису.
+5. ~~Показ натиснутих клавіш під час запису~~ — зроблено в 2.9.0.
 6. Пошук і теги в історії.
 7. Більше місць для завантаження: Dropbox, OneDrive, власний сервер.
 8. Ховати іконки робочого столу під час знімка.
@@ -162,6 +164,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 
 ## Історія ключових змін
 
+- 2.9.0 — нова панель запису відео, показ натиснутих клавіш на відео, експорт у GIF.
 - 2.8.5 — правий клік по треєві теж відкриває панель (Windows); нотатки до релізу трьома мовами, вікно оновлення показує їх мовою програми.
 - 2.8.4 — панель трею на Mac (власний NSStatusItem) і виправлення миттєвого закриття на Windows; самоперевірка панелі в CI на обох ОС.
 - 2.8.3 — знімок екрана на macOS 14+ через ScreenCaptureKit (`capture-helper`), CoreGraphics і screencapture — запасні.

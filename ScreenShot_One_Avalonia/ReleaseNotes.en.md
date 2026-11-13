@@ -1,7 +1,9 @@
-• Right-clicking the “SO” tray icon now opens the Screenshot One panel too (it used to show the old list).
-• The release notes in the update window are shown in the app's language: Ukrainian, English or Russian.
+• New screen recording panel: compact and in the app's style — “Screen / Region”, “Clicks”, “Audio”, “Microphone”, “Keys” buttons and a big “Record” button. While recording, only the timer, pause and “Stop” remain.
+• Pressed keys shown in the video (the “Keys” button on the recording panel): “Ctrl + C”, “Enter” and so on appear at the bottom of the frame. On Mac the system will ask for the “Input Monitoring” permission.
+• Export video as GIF in the video editor (the “GIF” button).
 
 Changes in previous versions:
+• 2.8.5: right-clicking the tray icon also opens the panel; release notes in the app's language.
 • 2.8.4: the Screenshot One panel is the same on Windows and Mac; on Windows it no longer closes right after opening.
 • 2.8.3: macOS 14+ — screenshots via the modern ScreenCaptureKit.
 • 2.8.2: macOS — fixed a crash right after launch; Windows — tray panel with large buttons on icon click.

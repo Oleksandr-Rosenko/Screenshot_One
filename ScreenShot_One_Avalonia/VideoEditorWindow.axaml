@@ -42,6 +42,13 @@
 							</StackPanel>
 						</Button>
 
+						<Button Name="BtnGif" Classes="Basic" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1.5" CornerRadius="8" Padding="12,6" ToolTip.Tip="{DynamicResource VEditor_GifTip}" Click="BtnGif_Click">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<material:MaterialIcon Kind="FileGifBox" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/>
+								<TextBlock Text="GIF" VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource SukiText}"/>
+							</StackPanel>
+						</Button>
+
 						<Button Name="BtnSave" Classes="Flat" CornerRadius="8" Padding="16,6" ToolTip.Tip="{DynamicResource VEditor_SaveVideo}" Click="BtnSave_Click">
 							<StackPanel Orientation="Horizontal" Spacing="6">
 								<material:MaterialIcon Kind="ContentSave" Width="20" Height="20" Foreground="{DynamicResource OnAccentBrush}"/>

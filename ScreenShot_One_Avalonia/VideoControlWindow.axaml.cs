@@ -46,13 +46,14 @@ namespace ScreenShot_One_Avalonia
 
             LoadMonitors();
 
-            ChkRecordMic.IsChecked = SettingsManager.Current.RecordMicrophone;
+            TglMic.IsChecked = SettingsManager.Current.RecordMicrophone;
+            TglKeys.IsChecked = SettingsManager.Current.ShowKeystrokes;
 
             // На Mac системний звук без віртуального аудіопристрою недоступний — лишаємо лише мікрофон
             if (OperatingSystem.IsMacOS())
             {
-                ChkRecordAudio.IsChecked = false;
-                ChkRecordAudio.IsVisible = false;
+                TglAudio.IsChecked = false;
+                TglAudio.IsVisible = false;
             }
 
             VideoRecorderManager.OnRecordingFailed += OnRecordingFailed;
@@ -60,6 +61,7 @@ namespace ScreenShot_One_Avalonia
 
         protected override void OnClosed(EventArgs e)
         {
+            KeystrokeOverlay.Stop();
             VideoRecorderManager.OnRecordingFailed -= OnRecordingFailed;
             base.OnClosed(e);
         }
@@ -71,6 +73,7 @@ namespace ScreenShot_One_Avalonia
             {
                 if (!_ownsRecording) return;
                 _ownsRecording = false;
+                KeystrokeOverlay.Stop();
                 SetRecordingStateUI(false);
                 CloseRegionWindow();
                 await ShowErrorAsync(Loc.T("Video_Stopped"), error);
@@ -92,6 +95,26 @@ namespace ScreenShot_One_Avalonia
             return box.ShowWindowDialogAsync(this);
         }
 
+        /// <summary>Перемикач «Екран / Зона»: завжди вибраний рівно один режим.</summary>
+        private void Mode_Click(object? sender, RoutedEventArgs e)
+        {
+            bool region = sender == TglRegion;
+            TglRegion.IsChecked = region;
+            TglFullScreen.IsChecked = !region;
+        }
+
+        /// <summary>Тримає панель по центру тієї ж точки, коли вона міняє ширину (налаштування ↔ запис).</summary>
+        private void KeepCentered(double oldWidth)
+        {
+            if (oldWidth <= 0) return;
+            Dispatcher.UIThread.Post(() =>
+            {
+                double scale = RenderScaling > 0 ? RenderScaling : 1.0;
+                int dx = (int)((oldWidth - Bounds.Width) * scale / 2);
+                Position = new PixelPoint(Position.X + dx, Position.Y);
+            }, DispatcherPriority.Loaded);
+        }
+
         protected override void OnOpened(EventArgs e)
         {
             base.OnOpened(e);
@@ -102,14 +125,15 @@ namespace ScreenShot_One_Avalonia
                 if (handle.HasValue) SetWindowDisplayAffinity(handle.Value, 0x00000011);
             }
 
-            var screen = this.Screens.Primary;
-            if (screen != null)
+            // Унизу по центру головного екрана (розмір відомий лише після розмітки)
+            Dispatcher.UIThread.Post(() =>
             {
-                int screenWidth = screen.Bounds.Width;
-                int screenHeight = screen.Bounds.Height;
-                int windowWidth = (int)(this.Width * screen.Scaling);
-                this.Position = new PixelPoint(screen.Bounds.X + (screenWidth - windowWidth) / 2, screen.Bounds.Y + screenHeight - (int)(140 * screen.Scaling));
-            }
+                var screen = this.Screens.Primary;
+                if (screen == null) return;
+                var area = screen.WorkingArea;
+                int w = (int)(Bounds.Width * screen.Scaling), h = (int)(Bounds.Height * screen.Scaling);
+                Position = new PixelPoint(area.X + (area.Width - w) / 2, area.Bottom - h - (int)(24 * screen.Scaling));
+            }, DispatcherPriority.Loaded);
         }
 
         private void Timer_Tick(object? sender, EventArgs e)
@@ -133,7 +157,8 @@ namespace ScreenShot_One_Avalonia
                     {
                         _startTime = DateTime.Now;
                         _timer.Start();
-                        TxtPauseIcon.Text = "⏸";
+                        IcoPause.Kind = Material.Icons.MaterialIconKind.Pause;
+                        RecDot.Classes.Set("pulse", true);
                         TxtTimer.Foreground = TimerBrush;
                     }
                     else
@@ -148,7 +173,8 @@ namespace ScreenShot_One_Avalonia
                         _elapsedBeforePause += DateTime.Now - _startTime;
                         _timer.Stop();
                         TxtTimer.Text = FormatElapsed(_elapsedBeforePause);
-                        TxtPauseIcon.Text = "▶";
+                        IcoPause.Kind = Material.Icons.MaterialIconKind.Play;
+                        RecDot.Classes.Set("pulse", false);
                         TxtTimer.Foreground = PausedBrush;
                     }
                     else
@@ -171,6 +197,7 @@ namespace ScreenShot_One_Avalonia
                 var monitorList = VideoRecorderManager.GetDisplays();
                 ComboMonitor.ItemsSource = monitorList;
                 if (monitorList.Count > 0) ComboMonitor.SelectedIndex = 0;
+                ComboMonitor.IsVisible = monitorList.Count > 1; // вибір монітора — лише коли є з чого вибирати
             }
             catch (Exception logEx) { AppLog.Warn(logEx); }
         }
@@ -191,7 +218,7 @@ namespace ScreenShot_One_Avalonia
             Control? current = control;
             while (current != null)
             {
-                if (current is Button || current is ComboBox || current is CheckBox || current is ComboBoxItem)
+                if (current is Button || current is ComboBox || current is Avalonia.Controls.Primitives.ToggleButton || current is ComboBoxItem)
                     return true;
                 current = current.Parent as Control;
             }
@@ -210,10 +237,10 @@ namespace ScreenShot_One_Avalonia
 
             try
             {
-                bool showClicks = ChkShowMouse.IsChecked == true;
-                bool recordAudio = ChkRecordAudio.IsChecked == true;
-                bool recordMic = ChkRecordMic.IsChecked == true;
-                bool isRegion = ComboRecordArea.SelectedIndex == 1;
+                bool showClicks = TglClicks.IsChecked == true;
+                bool recordAudio = TglAudio.IsChecked == true;
+                bool recordMic = TglMic.IsChecked == true;
+                bool isRegion = TglRegion.IsChecked == true;
 
                 var selectedMonitor = ComboMonitor.SelectedItem as MonitorInfo;
                 string deviceName = selectedMonitor != null ? selectedMonitor.DeviceName : (this.Screens.Primary?.ToString() ?? "Primary");
@@ -257,10 +284,12 @@ namespace ScreenShot_One_Avalonia
             BtnRecordToggle.IsEnabled = false;
             try
             {
-                // Запам'ятовуємо вибір мікрофона для наступних записів
-                if (SettingsManager.Current.RecordMicrophone != recordMic)
+                // Запам'ятовуємо вибір мікрофона й показу клавіш для наступних записів
+                bool showKeys = TglKeys.IsChecked == true;
+                if (SettingsManager.Current.RecordMicrophone != recordMic || SettingsManager.Current.ShowKeystrokes != showKeys)
                 {
                     SettingsManager.Current.RecordMicrophone = recordMic;
+                    SettingsManager.Current.ShowKeystrokes = showKeys;
                     try { SettingsManager.Save(); } catch (Exception ex) { AppLog.Warn(ex); }
                 }
 
@@ -277,6 +306,15 @@ namespace ScreenShot_One_Avalonia
 
                 _ownsRecording = true;
                 SetRecordingStateUI(true);
+
+                // Натиснуті клавіші — унизу області запису (зона або весь вибраний монітор)
+                if (showKeys)
+                {
+                    PixelRect area = left.HasValue && top.HasValue && right.HasValue && bottom.HasValue
+                        ? new PixelRect(left.Value, top.Value, right.Value - left.Value, bottom.Value - top.Value)
+                        : (ScreenService.FindScreenByDeviceName(Screens, deviceName) ?? Screens.Primary)?.Bounds ?? new PixelRect(0, 0, 1920, 1080);
+                    try { KeystrokeOverlay.Start(area); } catch (Exception ex) { AppLog.Error(ex, "Показ клавіш"); }
+                }
                 this.Topmost = false;
                 this.Topmost = true;
                 this.Activate();
@@ -295,6 +333,7 @@ namespace ScreenShot_One_Avalonia
         private async Task StopAndOpenEditorAsync(bool closeWindow)
         {
             _ownsRecording = false;
+            KeystrokeOverlay.Stop();
             _isBusy = true;
             BtnRecordToggle.IsEnabled = false;
             _timer.Stop();
@@ -328,25 +367,28 @@ namespace ScreenShot_One_Avalonia
 
         private void SetRecordingStateUI(bool isRecording)
         {
+            double oldWidth = Bounds.Width;
+            SetupPanel.IsVisible = !isRecording;
+            RecordingPanel.IsVisible = isRecording;
             if (isRecording)
             {
-                RecordIcon.Background = Brushes.White;
+                // Кнопка стає «Стоп»: білий квадрат замість кола
                 RecordIcon.CornerRadius = new CornerRadius(2);
-                RecordIcon.Width = 12; RecordIcon.Height = 12;
+                TxtRecordLabel.Text = Loc.T("Video_Stop");
                 _elapsedBeforePause = TimeSpan.Zero;
                 _startTime = DateTime.Now; TxtTimer.Text = "00:00"; _timer.Start();
-                BtnPause.IsVisible = true; TxtPauseIcon.Text = "⏸"; TxtTimer.Foreground = TimerBrush;
-                ChkRecordMic.IsEnabled = false; ChkRecordAudio.IsEnabled = false;
+                IcoPause.Kind = Material.Icons.MaterialIconKind.Pause;
+                RecDot.Classes.Set("pulse", true);
+                TxtTimer.Foreground = TimerBrush;
             }
             else
             {
-                RecordIcon.Background = Brushes.Red;
-                RecordIcon.CornerRadius = new CornerRadius(8);
-                RecordIcon.Width = 16; RecordIcon.Height = 16;
+                RecordIcon.CornerRadius = new CornerRadius(6);
+                TxtRecordLabel.Text = Loc.T("Video_Record");
                 _timer.Stop(); TxtTimer.Text = "00:00";
-                BtnPause.IsVisible = false; TxtTimer.Foreground = TimerBrush;
-                ChkRecordMic.IsEnabled = true; ChkRecordAudio.IsEnabled = true;
+                TxtTimer.Foreground = TimerBrush;
             }
+            KeepCentered(oldWidth);
         }
 
         private async void BtnClose_Click(object? sender, RoutedEventArgs e)

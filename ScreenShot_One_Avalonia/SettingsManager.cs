@@ -64,6 +64,9 @@ namespace ScreenShot_One_Avalonia
         // Версія схеми налаштувань — для разових міграцій (див. SettingsManager.Migrate)
         public int SettingsVersion { get; set; } = 0;
 
+        // Показувати натиснуті клавіші поверх відео під час запису
+        public bool ShowKeystrokes { get; set; } = false;
+
         // Мова інтерфейсу: "auto" — як у системі, або "uk" / "en" / "ru"
         public string Language { get; set; } = "auto";
 
