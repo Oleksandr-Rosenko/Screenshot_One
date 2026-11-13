@@ -107,7 +107,8 @@ dotnet test ScreenShot_One_Avalonia.Tests -p:Platform=x64
    - `ScreenShot_One_Avalonia/UpdateWindow.axaml.cs` → запасні рядки `"X.Y.Z"`.
 2. Оновити нотатки в **трьох** файлах: `ReleaseNotes.md`, `ReleaseNotes.en.md`, `ReleaseNotes.ru.md` — нові пункти зверху (`• ...`), старі під «Зміни попередніх версій:» / «Changes in previous versions:» / «Изменения прошлых версий:».
 3. Влити в `main`. Зміна `.csproj` у `main` запускає Release: тести → `dotnet publish` → `vpk pack/upload` → нотатки. Якщо реліз із такою версією вже є, workflow нічого не робить. Запустити вручну: Actions → Release → Run workflow (або `gh api -X POST repos/Oleksandr-Rosenko/Screenshot_One/actions/workflows/release.yml/dispatches -f ref=main`).
-4. Теги релізів — версія без `v` (`2.5.4`). Velopack-id пакета `ScreenShotOne`.
+4. Нумерація (погоджено з автором): виправлення без нових функцій — патч (`2.10.0` → `2.10.1`); наступний великий реліз з новими функціями після 2.10.x — **3.0.0**.
+5. Теги релізів — версія без `v` (`2.5.4`). Velopack-id пакета `ScreenShotOne`.
 
 Запасний спосіб — `Deploy.ps1` на Windows-машині автора (потрібні `credentials.json`, `ffmpeg.exe`, токен).
 macOS (з 2.8.1) — job `macos` у `release.yml` (`Build-MacApp.ps1 -Arch all`) докладає до того самого релізу:
