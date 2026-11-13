@@ -1,7 +1,8 @@
-• macOS: the capture selection now appears instantly over the screen, menu bar included — no more switching to a separate full-screen desktop that made the screen look like a picture.
-• macOS: while recording a screen area, the area frame no longer blocks clicks on other windows.
+• macOS: after recording, the video editor no longer shows “loading” forever — the player now starts on Apple Silicon Macs (M1–M4).
+• The “Trim” button in the video editor works on the first click and no longer flickers: bottom bar tooltips now appear above the buttons instead of covering the cursor.
 
 Changes in previous versions:
+• 2.10.1: macOS — area selection without switching to a separate desktop; the video area frame lets clicks through.
 • 2.10.0: single-window capture, sticker on top of windows, background and frame in the editor.
 • 2.9.0: new screen recording panel, pressed keys shown in the video, video export to GIF.
 • 2.8.5: right-clicking the tray icon also opens the panel; release notes in the app's language.
