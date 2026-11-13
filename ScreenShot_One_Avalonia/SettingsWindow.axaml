@@ -92,6 +92,55 @@
 			</Border>
 		</StackPanel>
 
+		<!-- Дозволи macOS (лише на Mac): стан і кнопка до потрібної сторінки «Конфіденційність і безпека» -->
+		<StackPanel Name="MacPermissionsSection" IsVisible="False">
+			<TextBlock Classes="sectionTitle" Text="{DynamicResource Settings_Permissions}"/>
+			<Border Classes="section">
+				<StackPanel>
+					<Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
+						<StackPanel VerticalAlignment="Center" Margin="0,6">
+							<TextBlock Classes="label" Text="{DynamicResource Perm_Screen}"/>
+							<TextBlock Classes="hint" Text="{DynamicResource Perm_ScreenHint}"/>
+						</StackPanel>
+						<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="12,0">
+							<Ellipse Name="DotScreen" Width="8" Height="8" VerticalAlignment="Center"/>
+							<TextBlock Name="TxtPermScreen" FontSize="12" VerticalAlignment="Center"/>
+						</StackPanel>
+						<Button Grid.Column="2" Name="BtnPermScreen" MinWidth="120" VerticalAlignment="Center" Click="BtnPerm_Click" Tag="Screen"/>
+					</Grid>
+					<Border Classes="divider"/>
+					<Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
+						<StackPanel VerticalAlignment="Center" Margin="0,6">
+							<TextBlock Classes="label" Text="{DynamicResource Perm_Mic}"/>
+							<TextBlock Classes="hint" Text="{DynamicResource Perm_MicHint}"/>
+						</StackPanel>
+						<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="12,0">
+							<Ellipse Name="DotMic" Width="8" Height="8" VerticalAlignment="Center"/>
+							<TextBlock Name="TxtPermMic" FontSize="12" VerticalAlignment="Center"/>
+						</StackPanel>
+						<Button Grid.Column="2" Name="BtnPermMic" MinWidth="120" VerticalAlignment="Center" Click="BtnPerm_Click" Tag="Mic"/>
+					</Grid>
+					<Border Classes="divider"/>
+					<Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
+						<StackPanel VerticalAlignment="Center" Margin="0,6">
+							<TextBlock Classes="label" Text="{DynamicResource Perm_Keys}"/>
+							<TextBlock Classes="hint" Text="{DynamicResource Perm_KeysHint}"/>
+						</StackPanel>
+						<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="12,0">
+							<Ellipse Name="DotKeys" Width="8" Height="8" VerticalAlignment="Center"/>
+							<TextBlock Name="TxtPermKeys" FontSize="12" VerticalAlignment="Center"/>
+						</StackPanel>
+						<Button Grid.Column="2" Name="BtnPermKeys" MinWidth="120" VerticalAlignment="Center" Click="BtnPerm_Click" Tag="Keys"/>
+					</Grid>
+					<Border Name="PermRestartRow" Classes="divider" IsVisible="False"/>
+					<Grid Name="PermRestartPanel" Classes="row" ColumnDefinitions="*,Auto" IsVisible="False">
+						<TextBlock Classes="hint" Text="{DynamicResource Perm_RestartHint}" VerticalAlignment="Center" Margin="0,8,12,8"/>
+						<Button Grid.Column="1" Content="{DynamicResource Perm_Restart}" MinWidth="120" VerticalAlignment="Center" Click="BtnPermRestart_Click"/>
+					</Grid>
+				</StackPanel>
+			</Border>
+		</StackPanel>
+
 		<!-- Знімки та файли -->
 		<StackPanel>
 			<TextBlock Classes="sectionTitle" Text="{DynamicResource Settings_Capture}"/>
