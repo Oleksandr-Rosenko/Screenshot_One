@@ -40,7 +40,7 @@ jobs:
       - name: Launch app and self-test tray panel
         shell: pwsh
         run: |
-          $exe = Get-ChildItem ScreenShot_One_Avalonia/bin -Recurse -Filter Screenshot_One.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $exe = Get-ChildItem ScreenShot_One_Avalonia/bin -Recurse -Filter Screenshot_One.exe | Where-Object { $_.FullName -match 'Release\\net10\.0-windows' }  # саме Windows-збірка (net10.0 — заглушки знімка) | Select-Object -First 1
           Write-Host "Exe: $($exe.FullName)"
           Start-Process notepad   # вікно іншої програми для самоперевірки «знімок вікна»
           $env:SO_SELFTEST_TRAY = "1"
@@ -59,6 +59,7 @@ jobs:
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] клавіші.*True' -Quiet)) { throw "Keystroke overlay self-test failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] вікна.*True' -Quiet)) { throw "Window list self-test failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] оверлей.*True' -Quiet)) { throw "Selection overlay self-test failed" }
+          if (Select-String -Path $log -Pattern '\[Capture\].*картинка немає' -Quiet) { throw "Screen capture returned no image" }
 
   macos:
     name: Build (macOS)
