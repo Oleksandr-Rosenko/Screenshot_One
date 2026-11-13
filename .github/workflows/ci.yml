@@ -40,7 +40,7 @@ jobs:
       - name: Launch app and self-test tray panel
         shell: pwsh
         run: |
-          $exe = Get-ChildItem ScreenShot_One_Avalonia/bin -Recurse -Filter Screenshot_One.exe | Where-Object { $_.FullName -match 'Release\\net10\.0-windows' }  # саме Windows-збірка (net10.0 — заглушки знімка) | Select-Object -First 1
+          $exe = Get-ChildItem ScreenShot_One_Avalonia/bin -Recurse -Filter Screenshot_One.exe | Where-Object { $_.FullName -match 'Release\\net10\.0-windows' } | Select-Object -First 1  # саме Windows-збірка (у net10.0 знімок — заглушка)
           Write-Host "Exe: $($exe.FullName)"
           Start-Process notepad   # вікно іншої програми для самоперевірки «знімок вікна»
           $env:SO_SELFTEST_TRAY = "1"
