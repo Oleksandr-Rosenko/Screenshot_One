@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using System;
 using System.Runtime.InteropServices;
 
@@ -39,7 +40,8 @@ namespace ScreenShot_One_Avalonia
             }
             else if (OperatingSystem.IsMacOS())
             {
-                // TODO для Mac: NSWindow.ignoresMouseEvents = YES
+                try { MacWindow.SetClickThrough(window); }
+                catch (Exception ex) { AppLog.Error(ex, "Mac: вікно прозоре для миші"); }
             }
             else if (OperatingSystem.IsLinux())
             {
@@ -59,6 +61,42 @@ namespace ScreenShot_One_Avalonia
                 {
                     SetWindowDisplayAffinity(hwnd.Value, WDA_EXCLUDEFROMCAPTURE);
                 }
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                try { MacWindow.ExcludeFromCapture(window); }
+                catch (Exception ex) { AppLog.Error(ex, "Mac: виключення вікна зі знімків"); }
+            }
+        }
+
+        /// <summary>
+        /// Оверлей на весь екран (виділення зони для знімка чи відео).
+        /// Windows — FullScreen (вікно без рамки поверх панелі завдань). macOS — НЕ FullScreen: там це окремий робочий стіл
+        /// з анімацією, і «заморожений» екран виглядав як картинка; натомість вікно без рамки на весь екран над рядком меню (<see cref="MacWindow"/>).
+        /// </summary>
+        public static void SetupScreenOverlay(Window window, PixelRect bounds, double scaling)
+        {
+            window.Position = new PixelPoint(bounds.X, bounds.Y);
+            if (OperatingSystem.IsMacOS())
+            {
+                if (scaling <= 0) scaling = 1.0;
+                window.WindowState = WindowState.Normal;
+                window.CanResize = false;
+                window.Width = bounds.Width / scaling;
+                window.Height = bounds.Height / scaling;
+                window.Opened += (_, _) =>
+                {
+                    if (!OperatingSystem.IsMacOS()) return;
+                    try
+                    {
+                        if (!MacWindow.CoverScreen(window)) AppLog.Write("Mac: не вдалося розгорнути оверлей на весь екран (немає NSWindow)");
+                    }
+                    catch (Exception ex) { AppLog.Error(ex, "Mac: оверлей на весь екран"); }
+                };
+            }
+            else
+            {
+                window.WindowState = WindowState.FullScreen;
             }
         }
     }

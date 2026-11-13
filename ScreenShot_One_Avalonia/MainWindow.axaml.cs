@@ -16,6 +16,7 @@ namespace ScreenShot_One_Avalonia
 
         private Avalonia.Media.Imaging.Bitmap? _avaloniaBackground;
         private PixelRect _currentScreenBounds;
+        private double _currentScaling = 1.0;
 
         // true — режим «Розпізнати текст»: виділена зона йде в OCR, а не в редактор
         private readonly bool _ocrMode;
@@ -35,8 +36,8 @@ namespace ScreenShot_One_Avalonia
 
             this.WindowDecorations = WindowDecorations.None;
 
-            this.Position = new PixelPoint(_currentScreenBounds.X, _currentScreenBounds.Y);
-            this.WindowState = WindowState.FullScreen;
+            // Windows — FullScreen; Mac — вікно без рамки над рядком меню, без окремого робочого столу й анімації
+            PlatformHelper.SetupScreenOverlay(this, _currentScreenBounds, _currentScaling);
 
             this.Topmost = true;
             this.ShowInTaskbar = false;
@@ -66,9 +67,15 @@ namespace ScreenShot_One_Avalonia
                 var mousePos = ScreenService.GetCursorPosition();
                 var currentScreen = this.Screens.ScreenFromPoint(mousePos) ?? this.Screens.Primary ?? this.Screens.All.FirstOrDefault();
                 _currentScreenBounds = currentScreen?.Bounds ?? new PixelRect(0, 0, 1920, 1080);
+                _currentScaling = currentScreen?.Scaling ?? 1.0;
 
-                _avaloniaBackground = ScreenCaptureService.Instance.CaptureRect(_currentScreenBounds, currentScreen?.Scaling ?? 1.0);
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                _avaloniaBackground = ScreenCaptureService.Instance.CaptureRect(_currentScreenBounds, _currentScaling);
+                long captureMs = sw.ElapsedMilliseconds;
                 _windows = WindowLocator.GetWindows();
+                AppLog.Write($"[Capture] екран {_currentScreenBounds.Width}×{_currentScreenBounds.Height} (×{_currentScaling:0.##}): знімок {captureMs} мс, " +
+                             $"вікон {_windows.Count} за {sw.ElapsedMilliseconds - captureMs} мс, " +
+                             $"картинка {(_avaloniaBackground == null ? "немає" : $"{_avaloniaBackground.PixelSize.Width}×{_avaloniaBackground.PixelSize.Height}")}");
             }
             catch (Exception ex)
             {

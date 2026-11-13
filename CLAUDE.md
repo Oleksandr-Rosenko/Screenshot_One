@@ -33,6 +33,7 @@
     Windows: GDI `CopyFromScreen` + пряме копіювання пікселів (`LockBits`). Mac (з 2.8.3), по черзі: macOS 14+ — ScreenCaptureKit через Swift-утиліту `MacHelpers/capture.swift` → `Contents/MacOS/capture-helper` (`MacScreenCaptureKit`); далі `MacCoreGraphics` (CoreGraphics `CGDisplayCreateImage`, застарілий з macOS 14); далі `/usr/sbin/screencapture`.
     `capture-helper`: `--display N` / `--all` / `--rect X,Y,W,H` (ТОЧКИ, глобальні координати) / `--list` / `--selftest`; вихід `--out файл.png` або `-`, а програма бере `--raw` — сирі BGRA у stdout (заголовок `SOC1`, `MacScreenCaptureKit.ParseRaw`), без PNG. Прямокутник Avalonia (пікселі) ділиться на `Screen.Scaling`, `--scale` дає рівно стільки ж пікселів — розмір і DPI (96 × масштаб) як у CoreGraphics. Коди виходу: 1 — аргументи, 2 — знімок, 3 — запис, 4 — немає дозволу «Запис екрана», 5 — тайм-аут. Після 2 збоїв поспіль (крім коду 4) утиліта в сесії більше не запускається. Збирається з ціллю macOS 14 (сама програма — 10.15+); CI компілює під arm64 і x64 і запускає `--selftest` (код 4 на раннері — пропуск).
   - `BitmapPixels` — обрізка / копіювання / зміна DPI бітмапів у пам'яті (без PNG). DPI знімка = 96 × `Screen.Scaling`; редактор нормалізує вхід до 96 DPI (PNG з історії завжди читається з 96).
+  - Оверлеї виділення (`MainWindow`, `VideoRegionWindow`) — через `PlatformHelper.SetupScreenOverlay`: Windows — `FullScreen`; **Mac — не `FullScreen`** (там це окремий робочий стіл з анімацією, «заморожений» екран виглядав як картинка), а вікно без рамки + `MacWindow.CoverScreen` (NSWindow: рівень 1000 над рядком меню, `collectionBehavior` на всіх робочих столах, `setFrame` на рамку екрана). `MacWindow` також: click-through (`setIgnoresMouseEvents`), `setSharingType:0`. Самоперевірка `SO_SELFTEST_CAPTURE=1` (CI, обидві ОС): «[SelfTest] оверлей виділення: … True». У журналі `[Capture]` — час знімка й розмір картинки.
   - `MacPermissions` — перевірка дозволу «Запис екрана» (macOS). `MacUpdateChecker` — оновлення на Mac через GitHub API (Velopack на Mac не використовується).
   - `VlcShared` — один `LibVLC` на всю програму (прогрів у фоні); `VlcShared.ReplaceMedia` звільняє попередній `Media`.
   - `CrashReport` — `logs\last_crash.txt` при падінні + пропозиція відкрити журнал при наступному запуску.
@@ -166,6 +167,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 
 ## Історія ключових змін
 
+- 2.10.1 — Mac: оверлей виділення без «рідного» повноекранного режиму (поверх рядка меню, без анімації); рамка зони відео пропускає кліки.
 - 2.10.0 — знімок окремого вікна, стікер поверх вікон, фон і рамка в редакторі.
 - 2.9.0 — нова панель запису відео, показ натиснутих клавіш на відео, експорт у GIF.
 - 2.8.5 — правий клік по треєві теж відкриває панель (Windows); нотатки до релізу трьома мовами, вікно оновлення показує їх мовою програми.

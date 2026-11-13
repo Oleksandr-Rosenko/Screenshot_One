@@ -1,8 +1,8 @@
-• Capture a single window: in selection mode hover over a window — it gets highlighted, a click captures just that window. Dragging still selects an area.
-• “Sticker”: pin a screenshot on top of all windows (the pin button in the editor and on the thumbnail). Drag it with the mouse, wheel to zoom, Ctrl/Cmd + wheel for transparency, double-click or Esc to close.
-• Beautiful background and frame in the editor: gradient or color, padding, rounded corners and shadow — visible right in the editor and included in copies and files.
+• macOS: the capture selection now appears instantly over the screen, menu bar included — no more switching to a separate full-screen desktop that made the screen look like a picture.
+• macOS: while recording a screen area, the area frame no longer blocks clicks on other windows.
 
 Changes in previous versions:
+• 2.10.0: single-window capture, sticker on top of windows, background and frame in the editor.
 • 2.9.0: new screen recording panel, pressed keys shown in the video, video export to GIF.
 • 2.8.5: right-clicking the tray icon also opens the panel; release notes in the app's language.
 • 2.8.4: the Screenshot One panel is the same on Windows and Mac; on Windows it no longer closes right after opening.

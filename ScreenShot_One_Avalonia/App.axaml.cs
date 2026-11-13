@@ -65,6 +65,9 @@ namespace ScreenShot_One_Avalonia
                     RunTraySelfTestAsync().FireAndForget("Самоперевірка панелі трею");
                 if (OperatingSystem.IsWindows() && Environment.GetEnvironmentVariable("SO_SELFTEST_KEYS") == "1")
                     RunKeysSelfTestAsync().FireAndForget("Самоперевірка показу клавіш");
+                // Оверлей виділення має накривати весь екран (на Mac — без «рідного» повноекранного режиму)
+                if (Environment.GetEnvironmentVariable("SO_SELFTEST_CAPTURE") == "1")
+                    RunCaptureOverlaySelfTestAsync().FireAndForget("Самоперевірка оверлея виділення");
 
                 // Прогріваємо VLC у фоні, щоб перше відкриття відеоредактора не підвисало
                 _ = System.Threading.Tasks.Task.Run(async () =>
@@ -208,6 +211,37 @@ namespace ScreenShot_One_Avalonia
             var windows = WindowLocator.GetWindows();
             AppLog.Write($"[SelfTest] вікна інших програм: {windows.Count} — {windows.Count > 0}");
             await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(KeystrokeOverlay.Stop);
+        }
+
+        /// <summary>Самоперевірка оверлея виділення (SO_SELFTEST_CAPTURE=1): відкриваємо його й звіряємо з екраном.</summary>
+        private static async System.Threading.Tasks.Task RunCaptureOverlaySelfTestAsync()
+        {
+            await System.Threading.Tasks.Task.Delay(18000);
+            MainWindow? w = null;
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { w = new MainWindow(); w.Show(); });
+            await System.Threading.Tasks.Task.Delay(2000);
+            string result = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => DescribeOverlay(w!));
+            AppLog.Write($"[SelfTest] оверлей виділення: {result}");
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => w!.Close());
+        }
+
+        private static string DescribeOverlay(Window w)
+        {
+            if (OperatingSystem.IsMacOS())
+            {
+                if (MacWindow.Describe(w) is not { } d) return "немає NSWindow — False";
+                bool okMac = !d.NativeFullScreen && d.Level >= 1000 && d.Screen.Width > 0
+                    && Math.Abs(d.Frame.X - d.Screen.X) < 1 && Math.Abs(d.Frame.Y - d.Screen.Y) < 1
+                    && Math.Abs(d.Frame.Width - d.Screen.Width) < 1 && Math.Abs(d.Frame.Height - d.Screen.Height) < 1;
+                return $"рамка {d.Frame}, екран {d.Screen}, рівень {d.Level}, рідний повноекранний {d.NativeFullScreen} — {okMac}";
+            }
+            var tl = w.PointToScreen(new Point(0, 0));
+            var br = w.PointToScreen(new Point(w.Bounds.Width, w.Bounds.Height));
+            var screen = w.Screens.ScreenFromPoint(tl);
+            var b = screen?.Bounds ?? default;
+            bool ok = screen != null && Math.Abs(tl.X - b.X) <= 2 && Math.Abs(tl.Y - b.Y) <= 2
+                && Math.Abs(br.X - b.Right) <= 2 && Math.Abs(br.Y - b.Bottom) <= 2;
+            return $"вікно {tl.X},{tl.Y}–{br.X},{br.Y}, екран {b} — {ok}";
         }
 
         public static bool IsTrayMenuWindow(Window w) => w.Name?.StartsWith("AvaloniaTrayPopupRoot_", StringComparison.Ordinal) == true;

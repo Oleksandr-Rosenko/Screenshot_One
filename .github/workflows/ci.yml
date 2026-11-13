@@ -45,6 +45,7 @@ jobs:
           Start-Process notepad   # вікно іншої програми для самоперевірки «знімок вікна»
           $env:SO_SELFTEST_TRAY = "1"
           $env:SO_SELFTEST_KEYS = "1"
+          $env:SO_SELFTEST_CAPTURE = "1"
           $p = Start-Process $exe.FullName -PassThru
           Start-Sleep -Seconds 30
           $alive = -not $p.HasExited
@@ -57,6 +58,7 @@ jobs:
           if (-not (Select-String -Path $log -Pattern 'SelfTest\].*→.*True' -Quiet)) { throw "Tray panel self-test (right click) failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] клавіші.*True' -Quiet)) { throw "Keystroke overlay self-test failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] вікна.*True' -Quiet)) { throw "Window list self-test failed" }
+          if (-not (Select-String -Path $log -Pattern 'SelfTest\] оверлей.*True' -Quiet)) { throw "Selection overlay self-test failed" }
 
   macos:
     name: Build (macOS)
@@ -154,7 +156,7 @@ jobs:
           # Довідково: утиліта знімка з установленого бандла (код 4 — немає дозволу «Запис екрана»)
           /Applications/Screenshot_One.app/Contents/MacOS/capture-helper --list --timeout 30; echo "capture-helper --list exit code: $?"
           pkill -x Screenshot_One; sleep 2
-          SO_SELFTEST_TRAY=1 /Applications/Screenshot_One.app/Contents/MacOS/Screenshot_One > "$RUNNER_TEMP/app.out" 2>&1 &
+          SO_SELFTEST_TRAY=1 SO_SELFTEST_CAPTURE=1 /Applications/Screenshot_One.app/Contents/MacOS/Screenshot_One > "$RUNNER_TEMP/app.out" 2>&1 &
           PID=$!
           sleep 25
           if kill -0 $PID 2>/dev/null; then echo "APP ALIVE after 25s"; ALIVE=1; kill $PID; else echo "APP DIED"; ALIVE=0; fi
@@ -163,9 +165,13 @@ jobs:
           echo "----- last_crash.txt -----"; cat "$HOME/Library/Application Support/Screenshot_One/logs/last_crash.txt" 2>/dev/null
           echo "----- crash reports -----"
           for f in $(ls -t ~/Library/Logs/DiagnosticReports/*Screenshot* ~/Library/Logs/DiagnosticReports/*Avalonia* 2>/dev/null | head -2); do echo "== $f"; head -c 12000 "$f"; done
-          test "$ALIVE" = "1"
+          test "$ALIVE" = "1" || exit 1
           # Панель трею: власний значок у рядку меню створено, програмний клік відкрив панель
           LOG="$HOME/Library/Application Support/Screenshot_One/logs/app.log"
           grep -a "MacStatusItem" "$LOG"
           grep -a "TrayPanel" "$LOG"
-          grep -aq "SelfTest.*True" "$LOG"
+          grep -aq "SelfTest.*True" "$LOG" || exit 1
+          # Оверлей виділення: на весь екран над рядком меню, без «рідного» повноекранного режиму
+          grep -a "\[Capture\]" "$LOG" || true
+          grep -a "SelfTest\] оверлей" "$LOG"
+          grep -aq "SelfTest\] оверлей.*True" "$LOG" || exit 1

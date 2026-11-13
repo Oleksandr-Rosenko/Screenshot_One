@@ -36,11 +36,14 @@ namespace ScreenShot_One_Avalonia
                 // Раніше тут порівнювали Screen.ToString() з DeviceName — збігу не було ніколи, і зона завжди відкривалась на основному моніторі
                 var targetScreen = ScreenService.FindScreenByDeviceName(this.Screens, monitorDeviceName) ?? this.Screens.Primary ?? this.Screens.All.FirstOrDefault();
                 var bounds = targetScreen?.Bounds ?? new PixelRect(0, 0, 1920, 1080);
-                this.Position = new PixelPoint(bounds.X, bounds.Y);
+                // Windows — FullScreen; Mac — вікно без рамки над рядком меню (див. PlatformHelper.SetupScreenOverlay)
+                PlatformHelper.SetupScreenOverlay(this, bounds, targetScreen?.Scaling ?? 1.0);
             }
-            catch (Exception logEx) { AppLog.Warn(logEx); }
-
-            this.WindowState = WindowState.FullScreen;
+            catch (Exception logEx)
+            {
+                AppLog.Warn(logEx);
+                this.WindowState = WindowState.FullScreen;
+            }
 
             _cutoutGeometry = new RectangleGeometry(new Rect(0, 0, 0, 0));
             var group = new GeometryGroup { FillRule = FillRule.EvenOdd };
