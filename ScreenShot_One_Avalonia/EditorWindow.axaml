@@ -245,9 +245,9 @@
 				</Button>
 				<Popup Name="FramePopup" Placement="Bottom" PlacementTarget="{Binding ElementName=BtnFrame}" IsLightDismissEnabled="True">
 					<Border Padding="14" CornerRadius="12" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1">
-						<StackPanel Spacing="10" Width="260">
+						<StackPanel Spacing="10" Width="280">
 							<Grid ColumnDefinitions="*,Auto">
-								<TextBlock Text="{DynamicResource Frame_Enable}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+								<TextBlock Text="{DynamicResource Frame_Enable}" VerticalAlignment="Center" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,10,0"/>
 								<ToggleSwitch Grid.Column="1" Name="TglFrame" OnContent="" OffContent="" IsCheckedChanged="Frame_Changed"/>
 							</Grid>
 							<TextBlock Text="{DynamicResource Frame_Background}" Classes="shortcut"/>

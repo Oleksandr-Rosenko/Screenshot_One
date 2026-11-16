@@ -44,11 +44,10 @@ namespace ScreenShot_One_Avalonia
         public static PixelSize OutputSize(PixelSize image, int padding) =>
             new(image.Width + 2 * Math.Max(0, padding), image.Height + 2 * Math.Max(0, padding));
 
-        /// <summary>Накладає фон/рамку з налаштувань. Вимкнено — повертає null (викликач лишає оригінал).</summary>
-        public static RenderTargetBitmap? Apply(Bitmap source)
+        /// <summary>Накладає фон/рамку з налаштувань (колір, відступ, кути, тінь). Чи вмикати — вирішує редактор для свого знімка.</summary>
+        public static RenderTargetBitmap Apply(Bitmap source)
         {
             var s = SettingsManager.Current;
-            if (!s.FrameEnabled) return null;
 
             double w = source.Size.Width, h = source.Size.Height;
             int pad = Math.Clamp(s.FramePadding, 0, 400);

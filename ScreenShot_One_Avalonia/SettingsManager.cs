@@ -65,6 +65,7 @@ namespace ScreenShot_One_Avalonia
         public int SettingsVersion { get; set; } = 0;
 
         // Фон і рамка навколо скріншота (редактор, 2.10.0)
+        /// <summary>Не використовується з 3.0.1: фон вмикається лише для поточного скріншота. Лишено, щоб читались старі settings.json.</summary>
         public bool FrameEnabled { get; set; } = false;
         public int FramePreset { get; set; } = 0;
         public int FramePadding { get; set; } = 48;

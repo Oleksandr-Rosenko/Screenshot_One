@@ -1,10 +1,8 @@
-• New video trimming: one bar with two handles, a choice of “Keep selection” or “Cut selection” (a piece from the middle), “Start here” / “End here” buttons and a hint showing how long the video will be.
-• macOS: the recording panel and the area frame no longer appear in videos (recording via ScreenCaptureKit on macOS 15 and later); system audio recording added.
-• macOS: a “macOS permissions” section in Settings shows what is already allowed, and its button opens the right permission directly.
-• Closing a new recording without “Save” now asks whether to keep the video (it used to be deleted).
-• Video editor: a failed Google Drive upload no longer stops the player; the trim button uses theme colors.
+• The background around a screenshot is now enabled only for the current screenshot — every new screenshot opens without it. The chosen color, padding, corners and shadow are remembered.
+• The “Background around the screenshot” label in the menu is no longer cut off.
 
 Changes in previous versions:
+• 3.0.0: new video trimming with cutting from the middle, Mac recording without the panel and with system audio, “macOS permissions” section, a prompt before deleting a new recording.
 • 2.10.2: video editor on Apple Silicon Macs; the “Trim” button works on the first click.
 • 2.10.1: macOS — area selection without switching to a separate desktop; the video area frame lets clicks through.
 • 2.10.0: single-window capture, sticker on top of windows, background and frame in the editor.

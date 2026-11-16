@@ -39,7 +39,7 @@
   - `VlcShared` — один `LibVLC` на всю програму (прогрів у фоні, у журналі «[VLC] готовий»); `VlcShared.ReplaceMedia` звільняє попередній `Media`. На Mac шлях до libvlc задаємо самі (`libvlc/<osx-arm64|osx-x64>/lib` + `VLC_PLUGIN_PATH`).
   - `CrashReport` — `logs\last_crash.txt` при падінні + пропозиція відкрити журнал при наступному запуску.
   - `PinnedImageWindow` (2.10.0) — «стікер» поверх усіх вікон: `PinnedImageWindow.Pin(bitmap)` (копія через `BitmapPixels.Crop`), з редактора (`BtnPin`) і мініатюри. Перетягування, коліщатко — масштаб, Ctrl/Cmd+коліщатко — прозорість, Esc/подвійний клік — закрити.
-  - `FrameStyle` (2.10.0) — фон і рамка в редакторі: `AppSettings.Frame*`, попап `FramePopup`, перегляд — обгортки `FrameOuter`/`FrameCard`/`FrameClip` навколо полотна. **Експорт** (`CreateRenderedBitmap`: копія, файл, історія, хмара, стікер) накладає рамку через `FrameStyle.Apply`; **обрізка, розмиття, OCR** беруть чисте полотно `CreateCanvasBitmap`.
+  - `FrameStyle` (2.10.0) — фон і рамка в редакторі. З 3.0.1 фон вмикається лише для поточного скріншота (`EditorWindow._frameEnabled`, кожен новий знімок — без фону); `AppSettings.Frame*` пам'ятають лише вигляд (колір, відступ, кути, тінь), `FrameEnabled` не використовується; попап `FramePopup`, перегляд — обгортки `FrameOuter`/`FrameCard`/`FrameClip` навколо полотна. **Експорт** (`CreateRenderedBitmap`: копія, файл, історія, хмара, стікер) накладає рамку через `FrameStyle.Apply`; **обрізка, розмиття, OCR** беруть чисте полотно `CreateCanvasBitmap`.
   - `CaptureRouter` — куди йде знімок: редактор або `QuickAccessWindow` (плаваюча мініатюра; налаштування `AfterCapture`).
   - `ImageExport` — збереження PNG/JPG, папка (`SaveFolder`, за замовчуванням «Зображення/Screenshot One»), автозбереження, тимчасові файли для перетягування.
   - `ClipboardHelper` — копіювання зображення (Windows — WinForms у STA-потоці) і тексту.
@@ -169,6 +169,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 
 ## Історія ключових змін
 
+- 3.0.1 — фон навколо скріншота лише для поточного знімка (не «липне» до всіх наступних).
 - 3.0.0 — нова обрізка відео (смуга з ручками, вирізання з середини), запис на Mac без панелі (ScreenCaptureKit) і з системним звуком, розділ «Дозволи macOS», запит перед видаленням нового запису. CI: `SO_SELFTEST_RECORD` (панель не у відео), вирізання з середини, `SO_SELFTEST_FLICKER` (`FlickerProbe`: нерухомий курсор на кожній кнопці — входи/виходи, підказки, зміни пікселів).
 - 2.10.2 — Mac: LibVLC з `libvlc/osx-arm64` (LibVLCSharp 3.10 сам шукає лише osx-x64 — на Apple Silicon відеоредактор вічно «вантажив»; `VlcShared.MacLibVlcDirectory`); підказки нижньої панелі відеоредактора над кнопками (`StackPanel.bottombar`), бо біля краю екрана накривали курсор. Самоперевірка `SO_SELFTEST_VEDITOR=відео` (Windows — кліки мишею по «Обрізати», Mac — завантаження).
 - 2.10.1 — Mac: оверлей виділення без «рідного» повноекранного режиму (поверх рядка меню, без анімації); рамка зони відео пропускає кліки.

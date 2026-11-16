@@ -179,7 +179,7 @@ namespace ScreenShot_One_Avalonia
             if (w > 0 && h > 0)
             {
                 // З рамкою (фон і відступи) на екран має вміститись і вона
-                double pad = SettingsManager.Current.FrameEnabled ? 2 * SettingsManager.Current.FramePadding : 0;
+                double pad = _frameEnabled ? 2 * SettingsManager.Current.FramePadding : 0;
                 _minScale = Math.Min(w / (DrawingCanvas.Width + pad), h / (DrawingCanvas.Height + pad)) * 0.98;
                 if (_minScale > 1.0) _minScale = 1.0;
                 _currentScale = _minScale;
@@ -2118,7 +2118,7 @@ namespace ScreenShot_One_Avalonia
             var canvas = CreateCanvasBitmap();
             try
             {
-                var framed = FrameStyle.Apply(canvas);
+                var framed = _frameEnabled ? FrameStyle.Apply(canvas) : null;
                 if (framed == null) return canvas;
                 canvas.Dispose();
                 return framed;
@@ -2132,6 +2132,9 @@ namespace ScreenShot_One_Avalonia
 
         // ---- Фон і рамка (2.10.0) ----
         private bool _frameUiReady;
+        // Фон — лише для цього скріншота: кожен новий знімок відкривається без фону (3.0.1).
+        // Запам'ятовуються тільки вигляд фону (колір, відступ, кути, тінь), а не те, чи він увімкнений.
+        private bool _frameEnabled;
 
         private void InitFrameUi()
         {
@@ -2140,10 +2143,10 @@ namespace ScreenShot_One_Avalonia
             {
                 int index = i;
                 var b = new Button { Width = 30, Height = 30, Margin = new Thickness(3), CornerRadius = new CornerRadius(15), Background = FrameStyle.BrushFor(i), BorderThickness = new Thickness(2), Padding = new Thickness(0) };
-                b.Click += (_, _) => { SettingsManager.Current.FramePreset = index; SettingsManager.Current.FrameEnabled = true; TglFrame.IsChecked = true; SaveFrameSettings(); };
+                b.Click += (_, _) => { SettingsManager.Current.FramePreset = index; TglFrame.IsChecked = true; SaveFrameSettings(); };
                 FrameSwatches.Children.Add(b);
             }
-            TglFrame.IsChecked = s.FrameEnabled;
+            TglFrame.IsChecked = false;
             TglFrameShadow.IsChecked = s.FrameShadow;
             SldFramePadding.Value = s.FramePadding;
             SldFrameRadius.Value = s.FrameRadius;
@@ -2164,7 +2167,7 @@ namespace ScreenShot_One_Avalonia
         {
             if (!_frameUiReady) return;
             var s = SettingsManager.Current;
-            s.FrameEnabled = TglFrame.IsChecked == true;
+            _frameEnabled = TglFrame.IsChecked == true;
             s.FrameShadow = TglFrameShadow.IsChecked == true;
             s.FramePadding = (int)SldFramePadding.Value;
             s.FrameRadius = (int)SldFrameRadius.Value;
@@ -2177,7 +2180,7 @@ namespace ScreenShot_One_Avalonia
         private void ApplyFramePreview()
         {
             var s = SettingsManager.Current;
-            bool on = s.FrameEnabled;
+            bool on = _frameEnabled;
             FrameOuter.Background = on ? FrameStyle.BrushFor(s.FramePreset) : null;
             FrameOuter.Padding = new Thickness(on ? s.FramePadding : 0);
             var radius = new CornerRadius(on ? s.FrameRadius : 0);
