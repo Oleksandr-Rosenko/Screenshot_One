@@ -52,8 +52,8 @@ namespace ScreenShot_One_Avalonia
             TglMic.IsChecked = SettingsManager.Current.RecordMicrophone;
             TglKeys.IsChecked = SettingsManager.Current.ShowKeystrokes;
 
-            // На Mac системний звук без віртуального аудіопристрою недоступний — лишаємо лише мікрофон
-            if (OperatingSystem.IsMacOS())
+            // Mac: системний звук пише лише ScreenCaptureKit (macOS 15+); через ffmpeg без віртуального пристрою — ні
+            if (OperatingSystem.IsMacOS() && !(OperatingSystem.IsMacOSVersionAtLeast(15) && MacScreenCaptureKit.HelperPath != null))
             {
                 TglAudio.IsChecked = false;
                 TglAudio.IsVisible = false;
@@ -296,10 +296,20 @@ namespace ScreenShot_One_Avalonia
                     try { SettingsManager.Save(); } catch (Exception ex) { AppLog.Warn(ex); }
                 }
 
+                PixelRect keysArea = left.HasValue && top.HasValue && right.HasValue && bottom.HasValue
+                    ? new PixelRect(left.Value, top.Value, right.Value - left.Value, bottom.Value - top.Value)
+                    : (ScreenService.FindScreenByDeviceName(Screens, deviceName) ?? Screens.Primary)?.Bounds ?? new PixelRect(0, 0, 1920, 1080);
+                // Mac: вікно клавіш має існувати до старту запису — ScreenCaptureKit виключає вікна програми, крім названих
+                if (showKeys && OperatingSystem.IsMacOS())
+                {
+                    try { KeystrokeOverlay.Start(keysArea); } catch (Exception ex) { AppLog.Error(ex, "Показ клавіш"); }
+                }
+
                 var result = await VideoRecorderManager.StartRecordingAsync(showClicks, recordAudio, deviceName, left, top, right, bottom, recordMic);
 
                 if (!result.Success)
                 {
+                    KeystrokeOverlay.Stop();
                     // Раніше тут інтерфейс однаково показував «йде запис», навіть якщо запис не стартував
                     SetRecordingStateUI(false);
                     CloseRegionWindow();
@@ -310,13 +320,10 @@ namespace ScreenShot_One_Avalonia
                 _ownsRecording = true;
                 SetRecordingStateUI(true);
 
-                // Натиснуті клавіші — унизу області запису (зона або весь вибраний монітор)
-                if (showKeys)
+                // Натиснуті клавіші — унизу області запису (зона або весь вибраний монітор); на Mac вікно вже створене
+                if (showKeys && !OperatingSystem.IsMacOS())
                 {
-                    PixelRect area = left.HasValue && top.HasValue && right.HasValue && bottom.HasValue
-                        ? new PixelRect(left.Value, top.Value, right.Value - left.Value, bottom.Value - top.Value)
-                        : (ScreenService.FindScreenByDeviceName(Screens, deviceName) ?? Screens.Primary)?.Bounds ?? new PixelRect(0, 0, 1920, 1080);
-                    try { KeystrokeOverlay.Start(area); } catch (Exception ex) { AppLog.Error(ex, "Показ клавіш"); }
+                    try { KeystrokeOverlay.Start(keysArea); } catch (Exception ex) { AppLog.Error(ex, "Показ клавіш"); }
                 }
                 this.Topmost = false;
                 this.Topmost = true;

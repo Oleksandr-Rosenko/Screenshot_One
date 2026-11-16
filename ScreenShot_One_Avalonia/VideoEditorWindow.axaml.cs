@@ -82,6 +82,26 @@ namespace ScreenShot_One_Avalonia
                 TrimStartSlider.PropertyChanged += TrimSlider_PropertyChanged;
                 TrimEndSlider.PropertyChanged += TrimSlider_PropertyChanged;
 
+                // Смуга обрізки: ручки міняють межі (через ті самі повзунки-модель), клік по смузі — перемотка
+                TrimBar.RangeChanged += (start, end, movedStart) =>
+                {
+                    if (movedStart) TrimStartSlider.Value = start;
+                    else TrimEndSlider.Value = end;
+                };
+                TrimBar.SeekRequested += percent =>
+                {
+                    if (!_isVideoLoaded || _mediaPlayer == null || _mediaPlayer.Length <= 0) return;
+                    EnsurePlayerReadyForPlayback();
+                    long ms = (long)(percent / 100.0 * _mediaPlayer.Length);
+                    _mediaPlayer.Time = ms;
+                    VideoSlider.Value = percent;
+                    TxtCurrentTime.Text = FormatTimeWithHundredths(ms);
+                };
+                VideoSlider.PropertyChanged += (_, e) =>
+                {
+                    if (e.Property == Slider.ValueProperty) TrimBar.Position = VideoSlider.Value;
+                };
+
                 // Seamless timeline scrubbing without jitter
                 VideoSlider.AddHandler(InputElement.PointerPressedEvent, (s, e) =>
                 {
@@ -140,7 +160,7 @@ namespace ScreenShot_One_Avalonia
                     {
                         TxtVideoTitle.Text = Path.GetFileName(_sourceFile);
                         UpdateButtonStyles();
-                        SetVideoSliderTrackVisibility(BtnTrimMode.IsChecked != true);
+                        SetVideoSliderTrackVisibility(true);
 
                         if (File.Exists(_sourceFile) && string.IsNullOrEmpty(_backupOriginalFile))
                         {
@@ -203,7 +223,17 @@ namespace ScreenShot_One_Avalonia
                 }
             };
 
-            this.Closing += (s, e) => { CleanUpVlcBackground(); };
+            this.Closing += (s, e) =>
+            {
+                // Новий запис закривають без «Зберегти» — питаємо, а не видаляємо мовчки (раніше відео просто зникало)
+                if (_isNewRecording && !_isVideoKept && !_closeDecided)
+                {
+                    e.Cancel = true;
+                    AskKeepRecordingAsync().FireAndForget("Зберегти запис?");
+                    return;
+                }
+                CleanUpVlcBackground();
+            };
 
             if (_mediaPlayer != null)
             {
@@ -222,6 +252,26 @@ namespace ScreenShot_One_Avalonia
                     });
                 };
             }
+        }
+
+        private bool _closeDecided;
+
+        private async Task AskKeepRecordingAsync()
+        {
+            var box = MessageBoxManager.GetMessageBoxStandard(Loc.T("VEditor_KeepTitle"), Loc.T("VEditor_KeepText"),
+                MsBox.Avalonia.Enums.ButtonEnum.YesNoCancel, MsBox.Avalonia.Enums.Icon.Question);
+            var answer = await box.ShowWindowDialogAsync(this);
+            if (answer == MsBox.Avalonia.Enums.ButtonResult.Cancel || answer == MsBox.Avalonia.Enums.ButtonResult.None) return;
+            if (answer == MsBox.Avalonia.Enums.ButtonResult.Yes) _isVideoKept = true;
+            _closeDecided = true;
+            Close();
+        }
+
+        /// <summary>Закрити без запитання (самоперевірка в CI): новий запис буде видалено.</summary>
+        internal void CloseDiscarding()
+        {
+            _closeDecided = true;
+            Close();
         }
 
         private static string FormatTimeWithHundredths(long ms)
@@ -506,6 +556,9 @@ namespace ScreenShot_One_Avalonia
             double activeVal = Math.Max(0.1, endVal - startVal);
             double rightVal = Math.Max(0, 100.0 - endVal);
 
+            TrimBar.Start = startVal;
+            TrimBar.End = endVal;
+
             TrimHighlightGrid.ColumnDefinitions[0].Width = new GridLength(startVal, GridUnitType.Star);
             TrimHighlightGrid.ColumnDefinitions[1].Width = new GridLength(activeVal, GridUnitType.Star);
             TrimHighlightGrid.ColumnDefinitions[2].Width = new GridLength(rightVal, GridUnitType.Star);
@@ -549,64 +602,21 @@ namespace ScreenShot_One_Avalonia
             try
             {
                 _isCutoutMode = isCutout;
-                bool isDark = this.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark;
+                // Активний режим — суцільна кнопка кольору дії (зелений «залишити» / червоний «вирізати»), інший — звичайний
+                var accent = ThemeBrush("AccentBrush");
+                var danger = ThemeBrush("DangerBrush");
+                var onAccent = ThemeBrush("OnAccentBrush");
+                var normal = ThemeBrush("ToolbarIconBrush");
 
-                if (IconTrimHeader != null && TxtTrimHeader != null)
-                {
-                    if (!_isCutoutMode)
-                    {
-                        IconTrimHeader.Kind = Material.Icons.MaterialIconKind.ArrowCollapseHorizontal;
-                        IconTrimHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882"));
-                        TxtTrimHeader.Text = Loc.T("VEditor_TrimHeaderKeep");
-                        TxtTrimHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882"));
+                BtnTrimModeKeep.Background = !isCutout ? accent : Brushes.Transparent;
+                IconTrimModeKeep.Foreground = !isCutout ? onAccent : normal;
+                TxtTrimModeKeep.Foreground = !isCutout ? onAccent : normal;
+                BtnTrimModeCut.Background = isCutout ? danger : Brushes.Transparent;
+                IconTrimModeCut.Foreground = isCutout ? onAccent : normal;
+                TxtTrimModeCut.Foreground = isCutout ? onAccent : normal;
 
-                        // Mode Segmented Buttons
-                        if (BtnTrimModeKeep != null)
-                        {
-                            BtnTrimModeKeep.Background = new SolidColorBrush(Color.Parse("#3AA882"));
-                            if (IconTrimModeKeep != null) IconTrimModeKeep.Foreground = Brushes.White;
-                            if (TxtTrimModeKeep != null) { TxtTrimModeKeep.FontWeight = FontWeight.Bold; TxtTrimModeKeep.Foreground = Brushes.White; }
-                        }
-                        if (BtnTrimModeCut != null)
-                        {
-                            BtnTrimModeCut.Background = Brushes.Transparent;
-                            if (IconTrimModeCut != null) IconTrimModeCut.Foreground = InactiveTrimTextBrush;
-                            if (TxtTrimModeCut != null) { TxtTrimModeCut.FontWeight = FontWeight.SemiBold; TxtTrimModeCut.Foreground = InactiveTrimTextBrush; }
-                        }
-
-                        // Badges
-                        if (TxtTrimStartLabel != null) TxtTrimStartLabel.Text = Loc.T("VEditor_StartColon");
-                        if (TxtTrimDurationLabel != null) TxtTrimDurationLabel.Text = Loc.T("VEditor_WillBeSaved");
-                        if (TxtTrimEndLabel != null) TxtTrimEndLabel.Text = Loc.T("VEditor_EndColon");
-
-                        // Sliders
-                        if (TxtTrimStartRowHeader != null) { TxtTrimStartRowHeader.Text = Loc.T("VEditor_StartFrom"); TxtTrimStartRowHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882")); }
-                        if (TrimStartSlider != null) TrimStartSlider.Foreground = new SolidColorBrush(Color.Parse("#3AA882"));
-                        if (TxtTrimEndRowHeader != null) { TxtTrimEndRowHeader.Text = Loc.T("VEditor_EndTo"); TxtTrimEndRowHeader.Foreground = new SolidColorBrush(Color.Parse("#3AA882")); }
-                        if (TrimEndSlider != null) TrimEndSlider.Foreground = new SolidColorBrush(Color.Parse("#3AA882"));
-
-                        if (TxtPreviewTrim != null) TxtPreviewTrim.Text = Loc.T("VEditor_PreviewSaved");
-                        if (TxtConfirmTrim != null) TxtConfirmTrim.Text = Loc.T("VEditor_SaveSelected");
-                        if (IconConfirmTrim != null) { IconConfirmTrim.Kind = Material.Icons.MaterialIconKind.Check; IconConfirmTrim.Foreground = ThemeBrush("OnAccentBrush"); }
-                        if (TxtBtnSave != null) TxtBtnSave.Text = Loc.T("VEditor_TrimAndSave");
-
-                        // Status Banner Styling (Compact & calm)
-                        if (TrimStatusBanner != null)
-                        {
-                            TrimStatusBanner.Background = ThemeBrush("PanelBrush");
-                            TrimStatusBanner.BorderBrush = new SolidColorBrush(Color.Parse("#E8A598"));
-                        }
-                        if (IconTrimStatusBanner != null)
-                        {
-                            IconTrimStatusBanner.Kind = Material.Icons.MaterialIconKind.ContentCut;
-                            IconTrimStatusBanner.Foreground = new SolidColorBrush(Color.Parse("#D9614C"));
-                        }
-                        if (TxtTrimStatusBanner != null)
-                        {
-                            TxtTrimStatusBanner.Foreground = ThemeBrush("ToolbarIconBrush");
-                        }
-                    }
-                }
+                TrimBar.IsCutMode = isCutout;
+                if (TxtBtnSave != null) TxtBtnSave.Text = Loc.T("VEditor_TrimAndSave");
 
                 UpdateTrimHighlight();
                 UpdateTrimTimeLabels();
@@ -624,34 +634,14 @@ namespace ScreenShot_One_Avalonia
             long totalMs = _mediaPlayer.Length;
             long startMs = (long)(TrimStartSlider.Value / 100.0 * totalMs);
             long endMs = (long)(TrimEndSlider.Value / 100.0 * totalMs);
-            long durationMs = Math.Max(0, endMs - startMs);
+            long selectedMs = Math.Max(0, endMs - startMs);
+            long resultMs = _isCutoutMode ? Math.Max(0, totalMs - selectedMs) : selectedMs;
 
-            string startStr = FormatTimeWithHundredths(startMs);
-            string endStr = FormatTimeWithHundredths(endMs);
-            string durationStr = FormatTimeWithHundredths(durationMs);
-            string totalStr = FormatTimeWithHundredths(totalMs);
-
-            if (TxtTrimStartBadge != null) TxtTrimStartBadge.Text = startStr;
-            if (TxtTrimStartVal != null) TxtTrimStartVal.Text = startStr;
-
-            if (TxtTrimEndBadge != null) TxtTrimEndBadge.Text = endStr;
-            if (TxtTrimEndVal != null) TxtTrimEndVal.Text = endStr;
-
-            if (TxtTrimDurationBadge != null) TxtTrimDurationBadge.Text = durationStr;
-
-            if (TxtTrimStatusBanner != null)
-            {
-                if (!_isCutoutMode)
-                {
-                    TxtTrimStatusBanner.Text = Loc.F("VEditor_BannerKeep", startStr, endStr, durationStr, totalStr);
-                }
-                else
-                {
-                    long keptMs = Math.Max(0, totalMs - durationMs);
-                    string keptStr = FormatTimeWithHundredths(keptMs);
-                    TxtTrimStatusBanner.Text = Loc.F("VEditor_BannerCut", startStr, endStr, durationStr, totalStr, keptStr);
-                }
-            }
+            TrimBar.DurationMs = totalMs;
+            // Простими словами: що станеться з відео після «Застосувати»
+            TxtTrimStatusBanner.Text = Loc.F(_isCutoutMode ? "VEditor_SummaryCut" : "VEditor_SummaryKeep",
+                FormatTimeWithHundredths(startMs), FormatTimeWithHundredths(endMs),
+                FormatTimeWithHundredths(resultMs), FormatTimeWithHundredths(totalMs));
         }
 
         private void TrimSlider_PropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
@@ -704,33 +694,20 @@ namespace ScreenShot_One_Avalonia
             }
         }
 
-        private void StepTrimStart(long deltaMs)
+        /// <summary>«Початок тут» / «Кінець тут»: межа виділення — на поточному кадрі.</summary>
+        private void BtnSetStartHere_Click(object? sender, RoutedEventArgs e)
         {
-            if (_mediaPlayer == null || _mediaPlayer.Length <= 0) return;
-            long currentStartMs = (long)(TrimStartSlider.Value / 100.0 * _mediaPlayer.Length);
-            long maxAllowed = (long)(TrimEndSlider.Value / 100.0 * _mediaPlayer.Length) - 100;
-            long newStartMs = Math.Clamp(currentStartMs + deltaMs, 0, Math.Max(0, maxAllowed));
-            TrimStartSlider.Value = (double)newStartMs / _mediaPlayer.Length * 100.0;
+            double v = VideoSlider.Value;
+            if (v >= TrimEndSlider.Value) TrimEndSlider.Value = 100;
+            TrimStartSlider.Value = Math.Min(v, 99.5);
         }
 
-        private void StepTrimEnd(long deltaMs)
+        private void BtnSetEndHere_Click(object? sender, RoutedEventArgs e)
         {
-            if (_mediaPlayer == null || _mediaPlayer.Length <= 0) return;
-            long currentEndMs = (long)(TrimEndSlider.Value / 100.0 * _mediaPlayer.Length);
-            long minAllowed = (long)(TrimStartSlider.Value / 100.0 * _mediaPlayer.Length) + 100;
-            long newEndMs = Math.Clamp(currentEndMs + deltaMs, Math.Min(_mediaPlayer.Length, minAllowed), _mediaPlayer.Length);
-            TrimEndSlider.Value = (double)newEndMs / _mediaPlayer.Length * 100.0;
+            double v = VideoSlider.Value;
+            if (v <= TrimStartSlider.Value) TrimStartSlider.Value = 0;
+            TrimEndSlider.Value = Math.Max(v, 0.5);
         }
-
-        private void BtnTrimStartMinus_Click(object? sender, RoutedEventArgs e) => StepTrimStart(-500);
-        private void BtnTrimStartPlus_Click(object? sender, RoutedEventArgs e) => StepTrimStart(500);
-        private void BtnTrimStartMinus100_Click(object? sender, RoutedEventArgs e) => StepTrimStart(-100);
-        private void BtnTrimStartPlus100_Click(object? sender, RoutedEventArgs e) => StepTrimStart(100);
-
-        private void BtnTrimEndMinus_Click(object? sender, RoutedEventArgs e) => StepTrimEnd(-500);
-        private void BtnTrimEndPlus_Click(object? sender, RoutedEventArgs e) => StepTrimEnd(500);
-        private void BtnTrimEndMinus100_Click(object? sender, RoutedEventArgs e) => StepTrimEnd(-100);
-        private void BtnTrimEndPlus100_Click(object? sender, RoutedEventArgs e) => StepTrimEnd(100);
 
         private void BtnRewind5_Click(object? sender, RoutedEventArgs e)
         {
@@ -842,22 +819,22 @@ namespace ScreenShot_One_Avalonia
             {
                 bool isTrim = BtnTrimMode.IsChecked == true;
                 TrimPanel.IsVisible = isTrim;
-                TrimHighlightGrid.IsVisible = isTrim;
+                // Межі обрізки показує смуга TrimBar у панелі; основна шкала лишається звичайною (для перемотки)
+                TrimHighlightGrid.IsVisible = false;
                 bool isDark = this.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark;
 
                 if (isTrim)
                 {
-                    BtnTrimMode.Background = isDark ? new SolidColorBrush(Color.Parse("#78350F")) : new SolidColorBrush(Color.Parse("#F6EBD3"));
-                    BtnTrimMode.BorderBrush = new SolidColorBrush(Color.Parse("#D9A441"));
+                    // Увімкнена обрізка — кнопка в кольорі акценту (токени теми, без жорстких кольорів)
+                    BtnTrimMode.Background = ThemeBrush("ActiveToolBrush");
+                    BtnTrimMode.BorderBrush = ThemeBrush("AccentBrush");
                     BtnTrimMode.BorderThickness = new Thickness(1.5);
                     if (TxtBtnTrimMode != null)
                     {
                         TxtBtnTrimMode.Text = Loc.T("VEditor_TrimOn");
-                        TxtBtnTrimMode.Foreground = isDark ? new SolidColorBrush(Color.Parse("#FCD34D")) : new SolidColorBrush(Color.Parse("#9A6A1F"));
+                        TxtBtnTrimMode.Foreground = ThemeBrush("AccentBrush");
                     }
 
-                    if (TimelineTrackBorder != null) TimelineTrackBorder.Height = 24;
-                    SetVideoSliderTrackVisibility(false);
 
                     SetTrimMode(false);
                     ToolTip.SetTip(BtnSave, Loc.T("VEditor_TrimSaveTip"));
@@ -1123,6 +1100,8 @@ namespace ScreenShot_One_Avalonia
 
                         _timer?.Start();
 
+                        // Обрізку застосовано — виходимо з режиму обрізки, щоб одразу було видно результат
+                        BtnTrimMode.IsChecked = false;
                         ShowToast(Loc.T("VEditor_TrimApplied"));
                     }
                 }
@@ -1166,9 +1145,13 @@ namespace ScreenShot_One_Avalonia
 
             ShowToast(Loc.T("VEditor_PreparingUpload"));
 
-            await Task.Delay(150);
-
-            CleanUpVlcBackground();
+            // Лише пауза: раніше плеєр тут повністю звільнявся, і якщо завантаження не вдалось — редактор лишався без відео
+            try
+            {
+                if (_mediaPlayer?.IsPlaying == true) _mediaPlayer.Pause();
+                MainPlayIcon.Kind = Material.Icons.MaterialIconKind.Play;
+            }
+            catch (Exception ex) { AppLog.Warn(ex); }
 
             ShowToast(Loc.T("VEditor_UploadingDrive"));
             try

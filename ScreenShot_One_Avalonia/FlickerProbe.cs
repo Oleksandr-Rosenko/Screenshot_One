@@ -65,7 +65,7 @@ namespace ScreenShot_One_Avalonia
         }
 
         /// <summary>Прямокутник відмінностей двох кадрів (null — кадри однакові) і кількість змінених пікселів.</summary>
-        private static (PixelRect? Rect, int Count) Diff(Frame a, Frame b)
+        private static (PixelRect? Rect, int Count) Diff(Frame a, Frame b, PixelRect? ignore)
         {
             if (a.Width != b.Width || a.Height != b.Height) return (new PixelRect(0, 0, a.Width, a.Height), a.Width * a.Height);
             int minX = int.MaxValue, minY = int.MaxValue, maxX = -1, maxY = -1, count = 0;
@@ -74,6 +74,7 @@ namespace ScreenShot_One_Avalonia
                 int row = y * a.Stride;
                 for (int x = 0; x < a.Width; x++)
                 {
+                    if (ignore is PixelRect ig && ig.Contains(new PixelPoint(x, y))) continue;
                     int i = row + x * 4;
                     // Невеликий допуск — щоб не ловити шум стиснення/згладжування
                     if (Math.Abs(a.Pixels[i] - b.Pixels[i]) + Math.Abs(a.Pixels[i + 1] - b.Pixels[i + 1]) + Math.Abs(a.Pixels[i + 2] - b.Pixels[i + 2]) > 24)
@@ -95,7 +96,7 @@ namespace ScreenShot_One_Avalonia
         }
 
         /// <summary>Проганяє всі видимі кнопки вікна. Повертає кількість кнопок, де помічено мерехтіння.</summary>
-        public static async Task<int> RunAsync(Window w, string label, string? shotsDir)
+        public static async Task<int> RunAsync(Window w, string label, string? shotsDir, Control? ignoreArea = null)
         {
             var (buttons, winRect, scaling) = await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -107,6 +108,14 @@ namespace ScreenShot_One_Avalonia
                 double s = w.RenderScaling > 0 ? w.RenderScaling : 1.0;
                 return (list, new PixelRect(tl.X, tl.Y, br.X - tl.X, br.Y - tl.Y), s);
             });
+            // Область, яку не порівнюємо (наприклад, відео, що грає) — у пікселях кадру вікна
+            PixelRect? ignore = await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (ignoreArea == null) return (PixelRect?)null;
+                var a = w.PointToScreen(ignoreArea.TranslatePoint(new Point(0, 0), w) ?? default);
+                var b = w.PointToScreen(ignoreArea.TranslatePoint(new Point(ignoreArea.Bounds.Width, ignoreArea.Bounds.Height), w) ?? default);
+                return new PixelRect(a.X - winRect.X - 2, a.Y - winRect.Y - 2, b.X - a.X + 4, b.Y - a.Y + 4);
+            });
 
             if (shotsDir != null) Directory.CreateDirectory(shotsDir);
             AppLog.Write($"[Flicker] {label}: кнопок {buttons.Count}, вікно {winRect}");
@@ -114,7 +123,7 @@ namespace ScreenShot_One_Avalonia
             // Базова лінія: курсор поза кнопками (у заголовку вікна) — чи змінюється щось само по собі
             MoveCursor(new PixelPoint(winRect.X + 8, winRect.Y + 4), scaling);
             await Task.Delay(800);
-            await ProbeAsync(null, $"{label} / без наведення", winRect, scaling, shotsDir, saveIndex: 0);
+            await ProbeAsync(null, $"{label} / без наведення", winRect, scaling, shotsDir, 0, ignore);
 
             int flickering = 0, index = 1;
             foreach (var b in buttons)
@@ -125,12 +134,12 @@ namespace ScreenShot_One_Avalonia
                 MoveCursor(new PixelPoint(center.X + 2, center.Y + 2), scaling);
                 await Task.Delay(60);
                 MoveCursor(center, scaling);
-                if (await ProbeAsync(b, $"{label} / {Describe(b)}", winRect, scaling, shotsDir, index++)) flickering++;
+                if (await ProbeAsync(b, $"{label} / {Describe(b)}", winRect, scaling, shotsDir, index++, ignore)) flickering++;
             }
             return flickering;
         }
 
-        private static async Task<bool> ProbeAsync(Button? b, string name, PixelRect winRect, double scaling, string? shotsDir, int saveIndex)
+        private static async Task<bool> ProbeAsync(Button? b, string name, PixelRect winRect, double scaling, string? shotsDir, int saveIndex, PixelRect? ignore)
         {
             int enters = 0, exits = 0, tipChanges = 0, tipOpenSamples = 0, samples = 0;
             bool? lastTip = null;
@@ -172,7 +181,7 @@ namespace ScreenShot_One_Avalonia
             int firstChanged = -1;
             for (int i = 1; i < frames.Count; i++)
             {
-                var (r, n) = Diff(frames[i - 1], frames[i]);
+                var (r, n) = Diff(frames[i - 1], frames[i], ignore);
                 if (r is not PixelRect rect) continue;
                 changed++;
                 maxPixels = Math.Max(maxPixels, n);

@@ -21,16 +21,7 @@ namespace ScreenShot_One_Avalonia
     {
         public static async Task RunAsync(string? shotsDir)
         {
-            if (OperatingSystem.IsMacOS())
-            {
-                // Mac: двічі — без прихування й з прихуванням (NSWindowSharingNone), щоб бачити, чи це діє на запис
-                await RecordOnceAsync(shotsDir, "без прихування", hide: false);
-                await RecordOnceAsync(shotsDir, "з прихуванням", hide: true);
-            }
-            else
-            {
-                await RecordOnceAsync(shotsDir, "звичайний", hide: true);
-            }
+            await RecordOnceAsync(shotsDir, "звичайний", hide: true);
         }
 
         private static async Task RecordOnceAsync(string? shotsDir, string label, bool hide)
@@ -43,7 +34,6 @@ namespace ScreenShot_One_Avalonia
 
                 var (panelRect, screenRect) = await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    if (OperatingSystem.IsMacOS() && !hide) MacWindow.SetSharingType(panel!, 1);
                     var root = panel!.FindControl<Border>("RootBorder")!;
                     var tl = panel.PointToScreen(root.TranslatePoint(new Point(0, 0), panel) ?? default);
                     var br = panel.PointToScreen(root.TranslatePoint(new Point(root.Bounds.Width, root.Bounds.Height), panel) ?? default);
@@ -84,7 +74,8 @@ namespace ScreenShot_One_Avalonia
                     share = DarkShare(bmp, panelRect, screenRect);
                 }
                 bool panelVisible = share > 0.3;
-                AppLog.Write($"[SelfTest] запис ({label}): файл {new FileInfo(path).Length / 1024} КБ, кадр {size}, панель {panelRect}, " +
+                string backend = OperatingSystem.IsMacOS() ? MacVideoRecorderService.LastBackend : "ScreenRecorderLib";
+                AppLog.Write($"[SelfTest] запис ({label}, {backend}): файл {new FileInfo(path).Length / 1024} КБ, кадр {size}, панель {panelRect}, " +
                              $"темних пікселів у місці панелі {(share < 0 ? "?" : share.ToString("P0"))} — панель у відео: {panelVisible}");
                 await CloseExtraWindowsAsync();
             }
@@ -121,7 +112,10 @@ namespace ScreenShot_One_Avalonia
             {
                 if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime d) return;
                 foreach (var w in d.Windows.ToList())
-                    if (w is VideoEditorWindow or VideoControlWindow) w.Close();
+                {
+                    if (w is VideoEditorWindow ve) ve.CloseDiscarding();
+                    else if (w is VideoControlWindow) w.Close();
+                }
             });
             await Task.Delay(1500);
         }

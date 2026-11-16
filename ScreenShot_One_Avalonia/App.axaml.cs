@@ -233,6 +233,7 @@ namespace ScreenShot_One_Avalonia
             await System.Threading.Tasks.Task.Delay(3000);
             bool loaded = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => w!.FindControl<TextBlock>("TxtLoading")?.IsVisible == false);
             AppLog.Write($"[SelfTest] відео завантажено в редактор: {loaded}");
+            await RunCutSelfTestAsync(w!, videoPath);
             if (!OperatingSystem.IsWindows())
             {
                 await RunFlickerProbesAsync(w!);
@@ -283,6 +284,54 @@ namespace ScreenShot_One_Avalonia
             AppLog.Write("[SelfTest] завершено");
         }
 
+        /// <summary>Вирізання шматка з середини (30–60 % → має лишитись ~70 % тривалості).</summary>
+        private static async System.Threading.Tasks.Task RunCutSelfTestAsync(VideoEditorWindow w, string videoPath)
+        {
+            try
+            {
+                double before = await VideoDurationAsync(videoPath);
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    w.FindControl<Avalonia.Controls.Primitives.ToggleButton>("BtnTrimMode")!.IsChecked = true;
+                    w.FindControl<Button>("BtnTrimModeCut")!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                    w.FindControl<Slider>("TrimStartSlider")!.Value = 30;
+                    w.FindControl<Slider>("TrimEndSlider")!.Value = 60;
+                });
+                await System.Threading.Tasks.Task.Delay(500);
+                string summary = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => w.FindControl<TextBlock>("TxtTrimStatusBanner")?.Text ?? "");
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    w.FindControl<Button>("BtnConfirmTrim")!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)));
+                // Після застосування редактор сам виходить з режиму обрізки
+                for (int i = 0; i < 60; i++)
+                {
+                    await System.Threading.Tasks.Task.Delay(500);
+                    bool done = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                        w.FindControl<Avalonia.Controls.Primitives.ToggleButton>("BtnTrimMode")!.IsChecked != true);
+                    if (done) break;
+                }
+                await System.Threading.Tasks.Task.Delay(500);
+                double after = await VideoDurationAsync(videoPath);
+                double expected = before * 0.7;
+                bool ok = before > 0 && Math.Abs(after - expected) < 0.5;
+                AppLog.Write($"[SelfTest] вирізання з середини: «{summary}»; було {before:0.00} с, стало {after:0.00} с (очікується ~{expected:0.00}) — {ok}");
+            }
+            catch (Exception ex) { AppLog.Error(ex, "Самоперевірка вирізання"); }
+        }
+
+        private static async System.Threading.Tasks.Task<double> VideoDurationAsync(string path)
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo { FileName = GifExport.FindFfmpeg() ?? "ffmpeg", UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true };
+            psi.ArgumentList.Add("-hide_banner"); psi.ArgumentList.Add("-i"); psi.ArgumentList.Add(path);
+            using var p = System.Diagnostics.Process.Start(psi);
+            if (p == null) return -1;
+            string err = await p.StandardError.ReadToEndAsync();
+            await p.WaitForExitAsync();
+            var m = System.Text.RegularExpressions.Regex.Match(err, @"Duration: (\d+):(\d+):(\d+(?:\.\d+)?)");
+            if (!m.Success) return -1;
+            return int.Parse(m.Groups[1].Value) * 3600 + int.Parse(m.Groups[2].Value) * 60
+                   + double.Parse(m.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         /// <summary>Діагностика мерехтіння (SO_SELFTEST_FLICKER=1): відеоредактор — звичайний і в режимі обрізки, редактор скріншотів.</summary>
         private static async System.Threading.Tasks.Task RunFlickerProbesAsync(VideoEditorWindow w)
         {
@@ -294,6 +343,15 @@ namespace ScreenShot_One_Avalonia
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                     w.FindControl<Avalonia.Controls.Primitives.ToggleButton>("BtnTrimMode")!.IsChecked = false);
                 total += await FlickerProbe.RunAsync(w, "відеоредактор", shots);
+
+                // Те саме під час відтворення (саме відео не порівнюємо — воно й має змінюватись)
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    w.FindControl<Button>("BtnPlayPause")!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)));
+                await System.Threading.Tasks.Task.Delay(800);
+                var player = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => (Control?)w.FindControl<Control>("VideoPlayer"));
+                total += await FlickerProbe.RunAsync(w, "відеоредактор (відтворення)", shots, player);
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    w.FindControl<Button>("BtnPlayPause")!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)));
 
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                     w.FindControl<Avalonia.Controls.Primitives.ToggleButton>("BtnTrimMode")!.IsChecked = true);

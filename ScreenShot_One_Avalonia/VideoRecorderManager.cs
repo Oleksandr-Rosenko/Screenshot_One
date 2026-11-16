@@ -1,4 +1,7 @@
+using Avalonia;
 using System;
+using System.Linq;
+using System.Globalization;
 using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -126,7 +129,7 @@ namespace ScreenShot_One_Avalonia
         internal static bool IsNonEmptyFile(string path)
         {
             try { return !string.IsNullOrEmpty(path) && File.Exists(path) && new FileInfo(path).Length > 0; }
-            catch { return false; }
+            catch (Exception ex) { AppLog.Warn(ex); return false; }
         }
     }
 
@@ -415,6 +418,13 @@ namespace ScreenShot_One_Avalonia
         private const int MaxLogLines = 20;
 
         private Process? _ffmpegProc;
+        // macOS 15+: запис через capture-helper (ScreenCaptureKit) — вікна програми не потрапляють у відео.
+        // Якщо утиліта не стартувала — до кінця сесії ffmpeg (avfoundation), як раніше.
+        private static bool _helperBroken;
+        private bool _useHelper;
+        private List<string> _helperArgs = new List<string>();
+        /// <summary>Чим пишеться поточне відео (для журналу й самоперевірки).</summary>
+        public static string LastBackend { get; private set; } = "";
         private volatile bool _isRecording = false;
         private volatile bool _isStarting = false;
         private volatile bool _isPaused = false;
@@ -519,6 +529,27 @@ namespace ScreenShot_One_Avalonia
             _segments.Clear();
             _isPaused = false;
 
+            // ScreenCaptureKit (macOS 15+): область — прямокутник у точках; вікна програми, крім показу клавіш, виключено
+            _useHelper = !_helperBroken && OperatingSystem.IsMacOSVersionAtLeast(15) && MacScreenCaptureKit.HelperPath != null;
+            if (_useHelper)
+            {
+                _helperArgs = BuildHelperArguments(screenIndex, left, top, right, bottom, showClicks, recordSystemAudio, recordMicrophone);
+                string? error = await StartSegmentAsync();
+                if (error == null)
+                {
+                    LastBackend = "ScreenCaptureKit";
+                    AppLog.Write("[MacVideoRecorder] запис через ScreenCaptureKit (capture-helper)");
+                    _isRecording = true;
+                    OnStatusChanged?.Invoke(true);
+                    return RecordingStartResult.Ok();
+                }
+                AppLog.Write("[MacVideoRecorder] capture-helper не почав запис, переходимо на ffmpeg: " + error);
+                _helperBroken = true;
+                _useHelper = false;
+                _segments.Clear();
+            }
+            LastBackend = "ffmpeg";
+
             // Системний звук macOS без віртуального аудіопристрою (BlackHole тощо) не віддає — пишемо лише мікрофон
             string?[] audioCandidates = recordMicrophone ? new string?[] { "default", "0" } : new string?[] { null };
 
@@ -541,6 +572,38 @@ namespace ScreenShot_One_Avalonia
             return RecordingStartResult.Fail(Loc.F("Video_FfmpegExited", hint, lastError));
         }
 
+        /// <summary>Аргументи capture-helper --record (без шляху до файла). Публічний для тестів.</summary>
+        public static List<string> BuildHelperArguments(int screenIndex, int? left, int? top, int? right, int? bottom,
+            bool clicks, bool systemAudio, bool mic, int? exceptWindow = null)
+        {
+            var screens = ScreenService.GetScreens()?.All;
+            PixelRect area;
+            double scaling = 1.0;
+            if (left.HasValue && top.HasValue && right.HasValue && bottom.HasValue)
+            {
+                area = new PixelRect(left.Value, top.Value, Math.Max(2, right.Value - left.Value), Math.Max(2, bottom.Value - top.Value));
+                var center = new PixelPoint(area.X + area.Width / 2, area.Y + area.Height / 2);
+                var screen = screens?.FirstOrDefault(sc => sc.Bounds.Contains(center));
+                scaling = screen?.Scaling ?? 1.0;
+            }
+            else
+            {
+                var screen = screens != null && screenIndex < screens.Count ? screens[screenIndex] : ScreenService.GetPrimaryScreen();
+                area = screen?.Bounds ?? new PixelRect(0, 0, 1920, 1080);
+                scaling = screen?.Scaling ?? 1.0;
+            }
+            var args = new List<string>();
+            // --rect у точках (як для знімків), без --scale/--raw
+            var rectArgs = MacScreenCaptureKit.RectArguments(area, scaling);
+            args.Add(rectArgs[0]); args.Add(rectArgs[1]);
+            args.Add("--cursor");
+            if (clicks) args.Add("--clicks");
+            if (systemAudio) args.Add("--audio");
+            if (mic) args.Add("--mic");
+            args.Add("--exclude-pid"); args.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+            return args;
+        }
+
         private string NextSegmentPath()
         {
             string dir = Path.GetDirectoryName(_currentVideoPath) ?? Path.GetTempPath();
@@ -552,15 +615,41 @@ namespace ScreenShot_One_Avalonia
         private async Task<string?> StartSegmentAsync()
         {
             string segmentPath = NextSegmentPath();
-            var psi = new ProcessStartInfo
+            ProcessStartInfo psi;
+            var started = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            if (_useHelper)
             {
-                FileName = _ffmpegExe!,
-                Arguments = _argsTemplate.Replace("{OUTPUT}", segmentPath),
-                UseShellExecute = false,
-                RedirectStandardInput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
+                psi = new ProcessStartInfo
+                {
+                    FileName = MacScreenCaptureKit.HelperPath!,
+                    UseShellExecute = false,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+                psi.ArgumentList.Add("--record");
+                psi.ArgumentList.Add(segmentPath);
+                foreach (var a in _helperArgs) psi.ArgumentList.Add(a);
+                // Показ клавіш має потрапити у відео, хоч це й вікно програми
+                if (KeystrokeOverlay.MacWindowNumber is int keysWindow)
+                {
+                    psi.ArgumentList.Add("--except-window");
+                    psi.ArgumentList.Add(keysWindow.ToString(CultureInfo.InvariantCulture));
+                }
+            }
+            else
+            {
+                psi = new ProcessStartInfo
+                {
+                    FileName = _ffmpegExe!,
+                    Arguments = _argsTemplate.Replace("{OUTPUT}", segmentPath),
+                    UseShellExecute = false,
+                    RedirectStandardInput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+            }
 
             lock (_logLock) _ffmpegLog.Clear();
             _isStarting = true;
@@ -571,9 +660,20 @@ namespace ScreenShot_One_Avalonia
                 proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
                 // stderr обов'язково читаємо, інакше ffmpeg зависне, коли заповниться буфер
                 proc.ErrorDataReceived += (s, e) => { if (e.Data != null) AppendLog(e.Data); };
-                proc.Exited += (s, e) => OnFfmpegExited(proc);
+                proc.Exited += (s, e) => { started.TrySetResult(false); OnFfmpegExited(proc); };
+                if (_useHelper)
+                {
+                    // Утиліта пише «RECORDING …», щойно ScreenCaptureKit почав запис
+                    proc.OutputDataReceived += (s, e) =>
+                    {
+                        if (e.Data == null) return;
+                        AppendLog(e.Data);
+                        if (e.Data.StartsWith("RECORDING", StringComparison.Ordinal)) started.TrySetResult(true);
+                    };
+                }
                 proc.Start();
                 proc.BeginErrorReadLine();
+                if (_useHelper) proc.BeginOutputReadLine();
             }
             catch (Exception ex)
             {
@@ -584,8 +684,20 @@ namespace ScreenShot_One_Avalonia
 
             _ffmpegProc = proc;
 
-            // Якщо ffmpeg одразу завершився (немає дозволу, не той пристрій тощо) — це помилка старту
-            await Task.Delay(StartupCheckDelay);
+            // Якщо ffmpeg одразу завершився (немає дозволу, не той пристрій тощо) — це помилка старту.
+            // capture-helper сам повідомляє про старт («RECORDING»); чекаємо до 8 с.
+            if (_useHelper)
+            {
+                var done = await Task.WhenAny(started.Task, Task.Delay(TimeSpan.FromSeconds(8)));
+                if (done != started.Task || !started.Task.Result)
+                {
+                    try { if (!proc.HasExited) proc.Kill(); } catch (Exception ex) { AppLog.Warn(ex); }
+                }
+            }
+            else
+            {
+                await Task.Delay(StartupCheckDelay);
+            }
             _isStarting = false;
 
             if (proc.HasExited)

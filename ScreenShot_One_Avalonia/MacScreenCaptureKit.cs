@@ -49,6 +49,9 @@ namespace ScreenShot_One_Avalonia
         /// <summary>ScreenCaptureKit-знімок можливий: macOS 14+ і утиліта лежить поруч із програмою.</summary>
         public static bool IsSupported => OperatingSystem.IsMacOSVersionAtLeast(14) && FindHelper() != null;
 
+        /// <summary>Шлях до capture-helper (або null).</summary>
+        public static string? HelperPath => FindHelper();
+
         private static string? FindHelper()
         {
             if (_helperPath != null) return _helperPath;

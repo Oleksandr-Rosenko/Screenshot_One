@@ -120,6 +120,17 @@ namespace ScreenShot_One_Avalonia
             AppLog.Write("[Keys] показ клавіш увімкнено");
         }
 
+        /// <summary>Номер вікна показу клавіш у WindowServer (Mac) — щоб запис через ScreenCaptureKit його не виключав.</summary>
+        public static int? MacWindowNumber
+        {
+            get
+            {
+                if (!OperatingSystem.IsMacOS() || _window == null) return null;
+                try { return MacWindow.WindowNumber(_window); }
+                catch (Exception ex) { AppLog.Warn(ex); return null; }
+            }
+        }
+
         public static void Stop()
         {
             HotkeyService.ObserveKeys = false;

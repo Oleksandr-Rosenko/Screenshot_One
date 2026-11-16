@@ -106,6 +106,15 @@ namespace ScreenShot_One_Avalonia
             if (ns != IntPtr.Zero) SendNUInt(ns, Sel("setSharingType:"), 0);
         }
 
+        /// <summary>Номер вікна в WindowServer (CGWindowID) або null.</summary>
+        public static int? WindowNumber(Window window)
+        {
+            IntPtr ns = GetNSWindow(window);
+            if (ns == IntPtr.Zero) return null;
+            nint n = SendRetNInt(ns, Sel("windowNumber"));
+            return n > 0 ? (int)n : null;
+        }
+
         /// <summary>Самоперевірка: 1 — вікно видно в записі (за замовчуванням macOS), 0 — приховане.</summary>
         public static void SetSharingType(Window window, nuint type)
         {
