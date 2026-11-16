@@ -52,7 +52,7 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.0" />
-    <PackageReference Include="Material.Icons.Avalonia" Version="3.1.0" />
+    <PackageReference Include="Material.Icons.Avalonia" Version="3.0.2" />
     <PackageReference Include="MessageBox.Avalonia" Version="12.0.0" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.10" />
     <PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
@@ -65,7 +65,7 @@
   <!-- Windows-specific Packages -->
   <ItemGroup Condition="$(TargetFramework.StartsWith('net10.0-windows'))">
     <PackageReference Include="ScreenRecorderLib" Version="6.6.0" />
-    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.1.03.1" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
   </ItemGroup>
 
   <!-- macOS / Cross-platform Packages -->

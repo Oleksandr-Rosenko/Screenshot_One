@@ -107,6 +107,7 @@ dotnet test ScreenShot_One_Avalonia.Tests -p:Platform=x64
    - `ScreenShot_One_Avalonia/Build-MacApp.ps1` → `$Version`;
    - `ScreenShot_One_Avalonia/Info.plist` → два рядки `<string>X.Y.Z</string>`;
    - `ScreenShot_One_Avalonia/UpdateWindow.axaml.cs` → запасні рядки `"X.Y.Z"`.
+   **Міняти лише ці рядки, не «замінити всі входження»**: номер версії збігається з версіями пакетів (Material.Icons.Avalonia 3.0.2, VideoLAN.LibVLC.Windows 3.0.23.1) — у 3.1.0 так зламались би залежності.
 2. Оновити нотатки в **трьох** файлах: `ReleaseNotes.md`, `ReleaseNotes.en.md`, `ReleaseNotes.ru.md` — нові пункти зверху (`• ...`), старі під «Зміни попередніх версій:» / «Changes in previous versions:» / «Изменения прошлых версий:».
 3. Влити в `main`. Зміна `.csproj` у `main` запускає Release: тести → `dotnet publish` → `vpk pack/upload` → нотатки. Якщо реліз із такою версією вже є, workflow нічого не робить. Запустити вручну: Actions → Release → Run workflow (або `gh api -X POST repos/Oleksandr-Rosenko/Screenshot_One/actions/workflows/release.yml/dispatches -f ref=main`).
 4. Нумерація (погоджено з автором): виправлення без нових функцій — патч (`3.0.0` → `3.0.1`); нові функції — наступна мінорна (`3.1.0`), великі зміни — мажорна.
