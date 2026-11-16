@@ -28,6 +28,7 @@
 import CoreGraphics
 import CoreVideo
 import Foundation
+import AppKit
 import AVFoundation
 import CoreMedia
 import ImageIO
@@ -342,7 +343,10 @@ final class RecordingController: NSObject, SCStreamDelegate, SCRecordingOutputDe
 
 func even(_ v: CGFloat) -> Int { max(2, Int(v.rounded()) & ~1) }
 
+// Запис стартує на головному потоці: ScreenCaptureKit під час запису створює службове NSWindow,
+// а AppKit дозволяє це лише з головного потоку (інакше NSInternalInconsistencyException).
 @available(macOS 15.0, *)
+@MainActor
 func record(_ o: Options, _ displays: [Display], to path: String) async throws {
     // Область: дисплей цілком або прямокутник (точки, глобальні координати) у межах дисплея, де його центр
     let target: Display
@@ -512,4 +516,11 @@ Task {
         fail("unexpected error: \(error)", .captureFailed)
     }
 }
-dispatchMain()
+if options.record != nil {
+    // Запис: повноцінний цикл AppKit (без значка в Dock), щоб службові вікна ScreenCaptureKit мали головний потік
+    let app = NSApplication.shared
+    app.setActivationPolicy(.accessory)
+    app.run()
+} else {
+    dispatchMain()
+}

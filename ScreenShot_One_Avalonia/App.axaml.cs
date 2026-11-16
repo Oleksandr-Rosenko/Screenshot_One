@@ -336,6 +336,7 @@ namespace ScreenShot_One_Avalonia
         private static async System.Threading.Tasks.Task RunFlickerProbesAsync(VideoEditorWindow w)
         {
             if (Environment.GetEnvironmentVariable("SO_SELFTEST_FLICKER") != "1") return;
+            await System.Threading.Tasks.Task.Delay(3500); // спершу зникає підказка-тост після вирізання
             string? shots = Environment.GetEnvironmentVariable("SO_SELFTEST_SHOTS");
             int total = 0;
             try
@@ -348,8 +349,12 @@ namespace ScreenShot_One_Avalonia
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                     w.FindControl<Button>("BtnPlayPause")!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)));
                 await System.Threading.Tasks.Task.Delay(800);
-                var player = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => (Control?)w.FindControl<Control>("VideoPlayer"));
-                total += await FlickerProbe.RunAsync(w, "відеоредактор (відтворення)", shots, player);
+                var moving = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => new Control?[]
+                {
+                    w.FindControl<Control>("VideoPlayer"), w.FindControl<Control>("TxtCurrentTime"),
+                    w.FindControl<Control>("VideoSlider"), w.FindControl<Control>("TxtTotalTime"), w.FindControl<Control>("TrimBar"),
+                });
+                total += await FlickerProbe.RunAsync(w, "відеоредактор (відтворення)", shots, moving);
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                     w.FindControl<Button>("BtnPlayPause")!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)));
 

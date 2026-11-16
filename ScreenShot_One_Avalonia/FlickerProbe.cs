@@ -65,7 +65,7 @@ namespace ScreenShot_One_Avalonia
         }
 
         /// <summary>Прямокутник відмінностей двох кадрів (null — кадри однакові) і кількість змінених пікселів.</summary>
-        private static (PixelRect? Rect, int Count) Diff(Frame a, Frame b, PixelRect? ignore)
+        private static (PixelRect? Rect, int Count) Diff(Frame a, Frame b, List<PixelRect> ignore)
         {
             if (a.Width != b.Width || a.Height != b.Height) return (new PixelRect(0, 0, a.Width, a.Height), a.Width * a.Height);
             int minX = int.MaxValue, minY = int.MaxValue, maxX = -1, maxY = -1, count = 0;
@@ -74,7 +74,7 @@ namespace ScreenShot_One_Avalonia
                 int row = y * a.Stride;
                 for (int x = 0; x < a.Width; x++)
                 {
-                    if (ignore is PixelRect ig && ig.Contains(new PixelPoint(x, y))) continue;
+                    if (ignore.Count > 0 && ignore.Exists(ig => ig.Contains(new PixelPoint(x, y)))) continue;
                     int i = row + x * 4;
                     // Невеликий допуск — щоб не ловити шум стиснення/згладжування
                     if (Math.Abs(a.Pixels[i] - b.Pixels[i]) + Math.Abs(a.Pixels[i + 1] - b.Pixels[i + 1]) + Math.Abs(a.Pixels[i + 2] - b.Pixels[i + 2]) > 24)
@@ -96,7 +96,7 @@ namespace ScreenShot_One_Avalonia
         }
 
         /// <summary>Проганяє всі видимі кнопки вікна. Повертає кількість кнопок, де помічено мерехтіння.</summary>
-        public static async Task<int> RunAsync(Window w, string label, string? shotsDir, Control? ignoreArea = null)
+        public static async Task<int> RunAsync(Window w, string label, string? shotsDir, params Control?[] ignoreAreas)
         {
             var (buttons, winRect, scaling) = await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -108,15 +108,19 @@ namespace ScreenShot_One_Avalonia
                 double s = w.RenderScaling > 0 ? w.RenderScaling : 1.0;
                 return (list, new PixelRect(tl.X, tl.Y, br.X - tl.X, br.Y - tl.Y), s);
             });
-            // Область, яку не порівнюємо (наприклад, відео, що грає) — у пікселях кадру вікна
-            PixelRect? ignore = await Dispatcher.UIThread.InvokeAsync(() =>
+            // Області, які не порівнюємо (відео, що грає, і шкала часу) — у пікселях кадру вікна
+            var ignore = await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                if (ignoreArea == null) return (PixelRect?)null;
-                var a = w.PointToScreen(ignoreArea.TranslatePoint(new Point(0, 0), w) ?? default);
-                var b = w.PointToScreen(ignoreArea.TranslatePoint(new Point(ignoreArea.Bounds.Width, ignoreArea.Bounds.Height), w) ?? default);
-                return new PixelRect(a.X - winRect.X - 2, a.Y - winRect.Y - 2, b.X - a.X + 4, b.Y - a.Y + 4);
+                var list = new List<PixelRect>();
+                foreach (var area in ignoreAreas)
+                {
+                    if (area == null || !area.IsEffectivelyVisible) continue;
+                    var a = w.PointToScreen(area.TranslatePoint(new Point(0, 0), w) ?? default);
+                    var b = w.PointToScreen(area.TranslatePoint(new Point(area.Bounds.Width, area.Bounds.Height), w) ?? default);
+                    list.Add(new PixelRect(a.X - winRect.X - 4, a.Y - winRect.Y - 4, b.X - a.X + 8, b.Y - a.Y + 8));
+                }
+                return list;
             });
-
             if (shotsDir != null) Directory.CreateDirectory(shotsDir);
             AppLog.Write($"[Flicker] {label}: кнопок {buttons.Count}, вікно {winRect}");
 
@@ -139,7 +143,7 @@ namespace ScreenShot_One_Avalonia
             return flickering;
         }
 
-        private static async Task<bool> ProbeAsync(Button? b, string name, PixelRect winRect, double scaling, string? shotsDir, int saveIndex, PixelRect? ignore)
+        private static async Task<bool> ProbeAsync(Button? b, string name, PixelRect winRect, double scaling, string? shotsDir, int saveIndex, List<PixelRect> ignore)
         {
             int enters = 0, exits = 0, tipChanges = 0, tipOpenSamples = 0, samples = 0;
             bool? lastTip = null;

@@ -15,7 +15,7 @@ namespace ScreenShot_One_Avalonia
 {
     /// <summary>
     /// Самоперевірка запису (CI, SO_SELFTEST_RECORD=1): відкриває панель запису, пише кілька секунд усього екрана,
-    /// витягує кадр і перевіряє, чи не потрапила в нього сама панель (її темний фон #111816).
+    /// витягує кадр і перевіряє, чи не потрапила в нього сама панель (на час тесту вона пурпурна).
     /// </summary>
     internal static class RecordingSelfTest
     {
@@ -35,6 +35,8 @@ namespace ScreenShot_One_Avalonia
                 var (panelRect, screenRect) = await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     var root = panel!.FindControl<Border>("RootBorder")!;
+                    // Позначка: на час тесту панель яскраво-пурпурна — у звичайному кадрі такого кольору немає
+                    root.Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(255, 0, 255));
                     var tl = panel.PointToScreen(root.TranslatePoint(new Point(0, 0), panel) ?? default);
                     var br = panel.PointToScreen(root.TranslatePoint(new Point(root.Bounds.Width, root.Bounds.Height), panel) ?? default);
                     var screen = panel.Screens.Primary;
@@ -73,16 +75,17 @@ namespace ScreenShot_One_Avalonia
                     size = $"{bmp.PixelSize.Width}×{bmp.PixelSize.Height}";
                     share = DarkShare(bmp, panelRect, screenRect);
                 }
-                bool panelVisible = share > 0.3;
+                // Невідомо (кадр не прочитався) — теж провал перевірки
+                string panelVisible = share < 0 ? "?" : (share > 0.2).ToString();
                 string backend = OperatingSystem.IsMacOS() ? MacVideoRecorderService.LastBackend : "ScreenRecorderLib";
                 AppLog.Write($"[SelfTest] запис ({label}, {backend}): файл {new FileInfo(path).Length / 1024} КБ, кадр {size}, панель {panelRect}, " +
-                             $"темних пікселів у місці панелі {(share < 0 ? "?" : share.ToString("P0"))} — панель у відео: {panelVisible}");
+                             $"пурпурних пікселів у місці панелі {(share < 0 ? "?" : share.ToString("P0"))} — панель у відео: {panelVisible}");
                 await CloseExtraWindowsAsync();
             }
             catch (Exception ex) { AppLog.Error(ex, "Самоперевірка запису"); }
         }
 
-        /// <summary>Частка пікселів кольору панелі (#111816 ± допуск) у місці панелі на кадрі відео.</summary>
+        /// <summary>Частка пурпурних пікселів (позначка панелі) у місці панелі на кадрі відео.</summary>
         private static double DarkShare(Bitmap frame, PixelRect panel, PixelRect screen)
         {
             var size = frame.PixelSize;
@@ -101,7 +104,7 @@ namespace ScreenShot_One_Avalonia
                 {
                     int i = y * stride + x * 4; // BGRA
                     total++;
-                    if (Math.Abs(buf[i] - 0x16) < 14 && Math.Abs(buf[i + 1] - 0x18) < 14 && Math.Abs(buf[i + 2] - 0x11) < 14) dark++;
+                    if (buf[i] > 190 && buf[i + 1] < 70 && buf[i + 2] > 190) dark++; // пурпурний (BGRA)
                 }
             return total == 0 ? -1 : dark / (double)total;
         }
