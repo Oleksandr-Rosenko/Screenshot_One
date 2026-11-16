@@ -30,11 +30,21 @@ function Get-Ffmpeg([string]$targetArch, [string]$destDir) {
         $zip = Join-Path $cacheDir "ffmpeg.zip"
         $url = "https://ffmpeg.martin-riedl.de/redirect/latest/macos/$ffArch/release/ffmpeg.zip"
         Write-Host "Downloading ffmpeg ($ffArch): $url"
-        try {
-            Invoke-WebRequest -Uri $url -OutFile $zip -MaximumRetryCount 3 -RetryIntervalSec 5
-            Expand-Archive -Path $zip -DestinationPath $cacheDir -Force
-        } catch {
-            Write-Warning "ffmpeg download failed: $($_.Exception.Message). Video will need Homebrew ffmpeg."
+        # Обірване з'єднання («response ended prematurely») -MaximumRetryCount не повторює — повторюємо самі,
+        # разом із розпаковуванням (неповний архів не розпакується)
+        $ok = $false
+        for ($attempt = 1; $attempt -le 4 -and -not $ok; $attempt++) {
+            try {
+                Invoke-WebRequest -Uri $url -OutFile $zip -MaximumRetryCount 3 -RetryIntervalSec 5
+                Expand-Archive -Path $zip -DestinationPath $cacheDir -Force
+                $ok = $true
+            } catch {
+                Write-Warning "ffmpeg download attempt $attempt failed: $($_.Exception.Message)"
+                Start-Sleep -Seconds (10 * $attempt)
+            }
+        }
+        if (-not $ok) {
+            Write-Warning "ffmpeg download failed. Video will need Homebrew ffmpeg."
             return $false
         }
         $found = Get-ChildItem -Path $cacheDir -Recurse -File -Filter "ffmpeg" | Select-Object -First 1
