@@ -59,10 +59,13 @@ namespace ScreenShot_One_Avalonia
                     }
                     return (R(hidden!), R(visible!), hidden!.Screens.Primary);
                 });
-                var shot = screen != null ? ScreenCaptureService.Instance.CaptureScreen(screen) : null;
+                // Контрольне вікно на Mac іноді ще домальовується (анімація появи) — кілька спроб, поки його не видно повністю
                 double h = -1, v = -1;
-                if (shot != null)
+                for (int attempt = 0; attempt < 5 && !(v > 0.5); attempt++)
                 {
+                    if (attempt > 0) await Task.Delay(700);
+                    var shot = screen != null ? ScreenCaptureService.Instance.CaptureScreen(screen) : null;
+                    if (shot == null) continue;
                     var bounds = screen!.Bounds;
                     h = DarkShare(shot, rectHidden, bounds);
                     v = DarkShare(shot, rectVisible, bounds);
