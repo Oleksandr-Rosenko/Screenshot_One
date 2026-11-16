@@ -287,6 +287,12 @@ namespace ScreenShot_One_Avalonia
         private async Task StartRecordingAsync(bool showClicks, bool recordAudio, string deviceName,
             int? left = null, int? top = null, int? right = null, int? bottom = null, bool recordMic = false)
         {
+            // Mac пише й склеює відео через вбудований ffmpeg; якщо його немає — пояснення й сторінка завантаження
+            if (OperatingSystem.IsMacOS() && !await GifExport.EnsureAvailableAsync(this))
+            {
+                CloseRegionWindow();
+                return;
+            }
             _isBusy = true;
             BtnRecordToggle.IsEnabled = false;
             try

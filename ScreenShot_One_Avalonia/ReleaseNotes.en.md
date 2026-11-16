@@ -1,5 +1,5 @@
 • macOS: the floating thumbnail after a capture and the recording panel no longer appear in the next screenshots (as on Windows).
-• The video editor no longer downloads ffmpeg from the internet — the bundled one is always used.
+• The video editor no longer downloads ffmpeg from the internet — the bundled one is always used. If an antivirus removed it, the app explains what happened and opens the page to reinstall.
 • Stability improvements: outdated calls updated, unused code removed, the Mac version passes full automatic checks (recording, trimming, screenshots) before publishing.
 
 Changes in previous versions:

@@ -23,6 +23,35 @@ namespace ScreenShot_One_Avalonia
             return File.Exists("ffmpeg.exe") ? Path.GetFullPath("ffmpeg.exe") : null;
         }
 
+        /// <summary>
+        /// ffmpeg на місці? Якщо ні (рідко: найчастіше його видалив чи заблокував антивірус) — пояснюємо, що сталося,
+        /// і пропонуємо відкрити сторінку завантаження: перевстановлення повертає всі файли програми.
+        /// </summary>
+        public static async Task<bool> EnsureAvailableAsync(Avalonia.Controls.Window? owner)
+        {
+            if (FindFfmpeg() != null) return true;
+            AppLog.Write("ffmpeg не знайдено поруч із програмою");
+            var box = MsBox.Avalonia.MessageBoxManager.GetMessageBoxStandard(Loc.T("Ffmpeg_MissingTitle"), Loc.T("Ffmpeg_MissingText"),
+                MsBox.Avalonia.Enums.ButtonEnum.YesNo, MsBox.Avalonia.Enums.Icon.Warning);
+            var answer = owner != null ? await box.ShowWindowDialogAsync(owner) : await box.ShowWindowAsync();
+            if (answer == MsBox.Avalonia.Enums.ButtonResult.Yes) OpenDownloadPage();
+            return false;
+        }
+
+        public const string DownloadPage = "https://github.com/Oleksandr-Rosenko/Screenshot_One/releases/latest";
+
+        private static void OpenDownloadPage()
+        {
+            try
+            {
+                if (OperatingSystem.IsMacOS())
+                    Process.Start(new ProcessStartInfo { FileName = "/usr/bin/open", ArgumentList = { DownloadPage }, UseShellExecute = false });
+                else
+                    Process.Start(new ProcessStartInfo { FileName = DownloadPage, UseShellExecute = true });
+            }
+            catch (Exception ex) { AppLog.Warn(ex); }
+        }
+
         /// <summary>Аргументи ffmpeg (публічний для тестів).</summary>
         public static string[] BuildArguments(string input, string output, int fps = DefaultFps, int maxWidth = DefaultMaxWidth)
         {

@@ -812,6 +812,12 @@ namespace ScreenShot_One_Avalonia
 
             if (BtnTrimMode.IsChecked == true && (TrimStartSlider.Value > 0.05 || TrimEndSlider.Value < 99.95))
             {
+                if (!await GifExport.EnsureAvailableAsync(this))
+                {
+                    BtnSave.IsEnabled = true;
+                    BtnUpload.IsEnabled = true;
+                    return;
+                }
                 ShowToast(Loc.T("VEditor_Trimming"));
                 if (_mediaPlayer == null)
                 {
@@ -856,7 +862,7 @@ namespace ScreenShot_One_Avalonia
                         // ffmpeg вбудований у програму (Windows — ffmpeg.exe поруч, Mac — усередині .app).
                         // Раніше за його відсутності тут мовчки завантажувався ffmpeg з інтернету (Xabe.FFmpeg.Downloader).
                         string ffmpegExecutable = GifExport.FindFfmpeg()
-                            ?? throw new FileNotFoundException(Loc.T("VEditor_NoFfmpeg"));
+                            ?? throw new FileNotFoundException(Loc.T("Ffmpeg_MissingTitle"));
 
                         // Detect audio stream to build safe encoding arguments
                         bool hasAudio = false;
@@ -1100,11 +1106,7 @@ namespace ScreenShot_One_Avalonia
         private async void BtnGif_Click(object? sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(_sourceFile) || !File.Exists(_sourceFile)) return;
-            if (GifExport.FindFfmpeg() == null)
-            {
-                await MessageBoxManager.GetMessageBoxStandard(Loc.T("Common_Error"), Loc.T("VEditor_GifNoFfmpeg")).ShowWindowDialogAsync(this);
-                return;
-            }
+            if (!await GifExport.EnsureAvailableAsync(this)) return;
             try
             {
                 var options = new Avalonia.Platform.Storage.FilePickerSaveOptions
