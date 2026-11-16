@@ -72,6 +72,7 @@ namespace ScreenShot_One_Avalonia
                 if (Environment.GetEnvironmentVariable("SO_SELFTEST_CAPTURE") == "1")
                     RunCaptureOverlaySelfTestAsync().FireAndForget("Самоперевірка оверлея виділення");
 
+                HistoryIndex.AutoTagsEnabled = SettingsManager.Current.AutoTags;
                 // Пошук в історії (3.1.0): текст на старих скріншотах розпізнається поступово у фоні
                 if (!Environment.GetEnvironmentVariables().Keys.Cast<object>().Any(k => k.ToString()!.StartsWith("SO_SELFTEST_", StringComparison.Ordinal)))
                     HistoryTextIndexer.StartBackfill(() => HistoryManager.ListImageFiles().Select(f => f.FullName).ToList());

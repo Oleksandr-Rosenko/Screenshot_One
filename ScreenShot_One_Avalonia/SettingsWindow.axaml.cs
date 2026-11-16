@@ -146,6 +146,7 @@ namespace ScreenShot_One_Avalonia
             ComboAfterCapture.SelectedIndex = SettingsManager.Current.AfterCapture == "QuickAccess" ? 1 : 0;
             ComboSaveFormat.SelectedIndex = ImageExport.PreferredExtension == "jpg" ? 1 : 0;
             ChkAutoSave.IsChecked = SettingsManager.Current.AutoSaveToFolder;
+            ChkAutoTags.IsChecked = SettingsManager.Current.AutoTags;
             _saveFolder = SettingsManager.Current.SaveFolder;
             TxtSaveFolder.Text = ImageExport.SaveFolder;
         }
@@ -389,6 +390,8 @@ namespace ScreenShot_One_Avalonia
             SettingsManager.Current.AfterCapture = ComboAfterCapture.SelectedIndex == 1 ? "QuickAccess" : "Editor";
             SettingsManager.Current.SaveFormat = ComboSaveFormat.SelectedIndex == 1 ? "jpg" : "png";
             SettingsManager.Current.AutoSaveToFolder = ChkAutoSave.IsChecked == true;
+            SettingsManager.Current.AutoTags = ChkAutoTags.IsChecked == true;
+            HistoryIndex.AutoTagsEnabled = SettingsManager.Current.AutoTags;
             // Папку за замовчуванням не записуємо явно, щоб вона й далі йшла за системною «Зображення»
             SettingsManager.Current.SaveFolder =
                 string.IsNullOrWhiteSpace(_saveFolder) || _saveFolder == ImageExport.DefaultFolder ? null : _saveFolder;

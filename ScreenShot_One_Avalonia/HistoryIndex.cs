@@ -19,6 +19,16 @@ namespace ScreenShot_One_Avalonia
         public bool TextDone { get; set; }
         public string? App { get; set; }
         public string? Title { get; set; }
+        /// <summary>Автотеги (3.2.0) — обчислюються з програми, вікна й тексту (AutoTagger).</summary>
+        public List<string> AutoTags { get; set; } = new();
+        /// <summary>Автотеги, які користувач прибрав, — більше не повертаються.</summary>
+        public List<string> RemovedAutoTags { get; set; } = new();
+        /// <summary>Версія правил, за якими пораховано AutoTags (0 — ще не рахували).</summary>
+        public int AutoTagsVersion { get; set; }
+
+        /// <summary>Усі теги, які бачить користувач: власні + автотеги (якщо автотеги ввімкнені).</summary>
+        public IEnumerable<string> AllTags() =>
+            HistoryIndex.AutoTagsEnabled ? Tags.Concat(AutoTags.Where(a => !Tags.Contains(a, StringComparer.OrdinalIgnoreCase))) : Tags;
     }
 
     /// <summary>
@@ -31,6 +41,9 @@ namespace ScreenShot_One_Avalonia
         private static Dictionary<string, HistoryInfo>? _entries;
         private static string _path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Screenshot_One", "history_index.json");
         private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
+
+        /// <summary>Автотеги ввімкнені (налаштування «Автоматичні теги»; за замовчуванням — так).</summary>
+        public static bool AutoTagsEnabled = true;
 
         /// <summary>Подія: змінились теги/текст/джерело (вікно історії оновлює фільтр і картки).</summary>
         public static event Action<string>? Changed;
@@ -88,10 +101,35 @@ namespace ScreenShot_One_Avalonia
         }
 
         public static void SetSource(string path, CaptureSource source) =>
-            Update(path, i => { i.App = source.App; i.Title = source.Title; });
+            Update(path, i => { i.App = source.App; i.Title = source.Title; RecomputeAutoTags(i); });
 
         public static void SetText(string path, string text) =>
-            Update(path, i => { i.Text = string.IsNullOrWhiteSpace(text) ? null : text; i.TextDone = true; });
+            Update(path, i => { i.Text = string.IsNullOrWhiteSpace(text) ? null : text; i.TextDone = true; RecomputeAutoTags(i); });
+
+        /// <summary>Автотеги з програми, вікна й тексту — без тих, що користувач прибрав або вже має сам.</summary>
+        private static void RecomputeAutoTags(HistoryInfo i)
+        {
+            i.AutoTags = AutoTagger.Suggest(i.App, i.Title, i.Text)
+                .Where(t => !i.RemovedAutoTags.Contains(t, StringComparer.OrdinalIgnoreCase) && !i.Tags.Contains(t, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+            i.AutoTagsVersion = AutoTagger.RulesVersion;
+        }
+
+        /// <summary>Перерахувати автотеги, якщо їх рахували за старими правилами (або ще не рахували).</summary>
+        public static void RefreshAutoTags(string path)
+        {
+            var info = Get(path);
+            if (info == null || info.AutoTagsVersion >= AutoTagger.RulesVersion) return;
+            Update(path, RecomputeAutoTags);
+        }
+
+        /// <summary>Користувач прибрав автотег — він більше не повертається для цього запису.</summary>
+        public static void RemoveAutoTag(string path, string tag) =>
+            Update(path, i =>
+            {
+                i.AutoTags.RemoveAll(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase));
+                if (!i.RemovedAutoTags.Contains(tag, StringComparer.OrdinalIgnoreCase)) i.RemovedAutoTags.Add(tag);
+            });
 
         /// <summary>Знімок змінено (нові підписи) — текст розпізнати заново.</summary>
         public static void ResetText(string path) =>
@@ -100,7 +138,8 @@ namespace ScreenShot_One_Avalonia
         public static IReadOnlyList<string> SetTags(string path, IEnumerable<string> tags)
         {
             var clean = NormalizeTags(tags);
-            Update(path, i => i.Tags = clean);
+            // Власний тег, що збігся з автотегом, — тепер «свій» (автотег не дублюємо)
+            Update(path, i => { i.Tags = clean; i.AutoTags.RemoveAll(a => clean.Contains(a, StringComparer.OrdinalIgnoreCase)); });
             return clean;
         }
 
@@ -130,7 +169,7 @@ namespace ScreenShot_One_Avalonia
         {
             lock (_lock)
             {
-                return Entries().Values.SelectMany(i => i.Tags)
+                return Entries().Values.SelectMany(i => i.AllTags())
                     .GroupBy(t => t, StringComparer.OrdinalIgnoreCase)
                     .Select(g => (g.First(), g.Count()))
                     .OrderByDescending(x => x.Item2).ThenBy(x => x.Item1, StringComparer.CurrentCultureIgnoreCase)
@@ -159,7 +198,7 @@ namespace ScreenShot_One_Avalonia
         public static bool Matches(string query, HistoryInfo? info, params string?[] extra)
         {
             if (string.IsNullOrWhiteSpace(query)) return true;
-            var tags = info?.Tags ?? new List<string>();
+            var tags = info?.AllTags().ToList() ?? new List<string>();
             string haystack = string.Join("\n", extra.Concat(new[] { info?.App, info?.Title, info?.Text }).Concat(tags)
                 .Where(s => !string.IsNullOrEmpty(s))).ToLowerInvariant();
             foreach (var word in query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
@@ -213,6 +252,7 @@ namespace ScreenShot_One_Avalonia
                 {
                     var info = HistoryIndex.Get(f);
                     if (info?.TextDone != true) Enqueue(f, urgent: false);
+                    else HistoryIndex.RefreshAutoTags(f); // автотеги для вже розпізнаних знімків (3.2.0)
                 }
             }).FireAndForget("Черга розпізнавання історії");
         }

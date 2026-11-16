@@ -1,8 +1,7 @@
-• Search in history: type a word and the app finds screenshots by the text in the image, the app or window it was taken from, the date or a tag. Text in screenshots is recognized automatically in the background.
-• Tags: tag screenshots and videos (the tag button on a card), and filter history by tag with one click. “#tag” in search looks only at tags.
-• History cards show which app a screenshot was taken from.
+• Auto tags in history: the app tags screenshots by app, window and the text in the image — up to two tags “what + where” (e.g. “error” + “jira”, “invoice” + “telegram”). Auto tags look lighter than yours and are removed with one click (a removed one won't come back). Works offline and can be turned off in Settings.
 
 Changes in previous versions:
+• 3.1.0: search in history (text in images, app, date, tags) and tags with a filter.
 • 3.0.2: automatic update checks every 4 hours; on Mac the thumbnail and recording panel no longer appear in screenshots; stability improvements.
 • 3.0.1: the background around a screenshot is enabled only for the current screenshot.
 • 3.0.0: new video trimming with cutting from the middle, Mac recording without the panel and with system audio, “macOS permissions” section, a prompt before deleting a new recording.

@@ -127,7 +127,11 @@
 								<StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="1">
 									<TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
 									<TextBlock Text="{Binding Details}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis"/>
-									<TextBlock Text="{Binding TagsLine}" IsVisible="{Binding HasTags}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+									<!-- Власні теги — акцентом, автотеги — світліше -->
+									<TextBlock FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,2,0,0">
+										<Run Text="{Binding TagsLine}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
+										<Run Text="{Binding AutoTagsLine}" Foreground="{DynamicResource MutedTextBrush}"/>
+									</TextBlock>
 								</StackPanel>
 							</Grid>
 						</Border>
@@ -172,7 +176,11 @@
 								<StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="1">
 									<TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
 									<TextBlock Text="{Binding Details}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis"/>
-									<TextBlock Text="{Binding TagsLine}" IsVisible="{Binding HasTags}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+									<!-- Власні теги — акцентом, автотеги — світліше -->
+									<TextBlock FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,2,0,0">
+										<Run Text="{Binding TagsLine}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
+										<Run Text="{Binding AutoTagsLine}" Foreground="{DynamicResource MutedTextBrush}"/>
+									</TextBlock>
 								</StackPanel>
 							</Grid>
 						</Border>

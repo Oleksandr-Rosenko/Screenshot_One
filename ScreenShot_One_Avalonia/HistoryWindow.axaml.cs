@@ -44,6 +44,20 @@ namespace ScreenShot_One_Avalonia
         }
         public bool HasTags => _tagsLine.Length > 0;
         public IReadOnlyList<string> Tags { get; private set; } = Array.Empty<string>();
+
+        // Автотеги (3.2.0) — окремим, світлішим рядком
+        private string _autoTagsLine = "";
+        public string AutoTagsLine
+        {
+            get => _autoTagsLine;
+            private set { _autoTagsLine = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AutoTagsLine))); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasAutoTags))); }
+        }
+        public bool HasAutoTags => _autoTagsLine.Length > 0;
+        public IReadOnlyList<string> AutoTags { get; private set; } = Array.Empty<string>();
+
+        /// <summary>Власні теги й автотеги разом (фільтр за тегом).</summary>
+        public bool HasTag(string tag) =>
+            Tags.Contains(tag, StringComparer.OrdinalIgnoreCase) || AutoTags.Contains(tag, StringComparer.OrdinalIgnoreCase);
         /// <summary>Програма, з якої знято (якщо відома) — показуємо на картці.</summary>
         public string? App { get; private set; }
 
@@ -52,8 +66,12 @@ namespace ScreenShot_One_Avalonia
         {
             var info = HistoryIndex.Get(Path);
             Tags = info?.Tags.ToArray() ?? Array.Empty<string>();
+            AutoTags = HistoryIndex.AutoTagsEnabled && info != null
+                ? info.AutoTags.Where(a => !Tags.Contains(a, StringComparer.OrdinalIgnoreCase)).ToArray()
+                : Array.Empty<string>();
             App = info?.App;
             TagsLine = string.Join("  ", Tags.Select(t => "#" + t));
+            AutoTagsLine = (Tags.Count > 0 && AutoTags.Count > 0 ? "  " : "") + string.Join("  ", AutoTags.Select(t => "#" + t));
         }
 
         /// <summary>Чи підходить запис під пошук: дата, назва файла, програма/вікно, текст на знімку, теги.</summary>
@@ -493,7 +511,7 @@ namespace ScreenShot_One_Avalonia
         private void ApplyFilter()
         {
             bool Pass(HistoryItem i) =>
-                (_tagFilter == null || i.Tags.Contains(_tagFilter, StringComparer.OrdinalIgnoreCase)) && i.Matches(_query);
+                (_tagFilter == null || i.HasTag(_tagFilter)) && i.Matches(_query);
             _filteredScreens = _screenshotItems.Where(Pass).ToList();
             _filteredVideos = _videoItems.Where(Pass).ToList();
 
@@ -552,6 +570,9 @@ namespace ScreenShot_One_Avalonia
             var suggestions = new WrapPanel();
             var input = new TextBox { PlaceholderText = Loc.T("History_TagAddHint"), MinWidth = 240 };
 
+            var autoTitle = new TextBlock { Text = Loc.T("History_AutoTags"), FontSize = 12, Foreground = AppTheme.Brush(this, "MutedTextBrush", Avalonia.Media.Brushes.Gray) };
+            var autoPanel = new WrapPanel();
+
             void Refresh()
             {
                 current.Children.Clear();
@@ -560,8 +581,25 @@ namespace ScreenShot_One_Avalonia
                     string tag = t;
                     current.Children.Add(Chip($"#{tag}  ✕", () => SetTags(item.Tags.Where(x => x != tag)), accent: true));
                 }
+                // Автотеги: прибрати одним кліком (більше не повернуться)
+                autoPanel.Children.Clear();
+                foreach (var t in item.AutoTags)
+                {
+                    string tag = t;
+                    var chip = Chip($"#{tag}  ✕", () =>
+                    {
+                        HistoryIndex.RemoveAutoTag(path, tag);
+                        item.RefreshInfo();
+                        Refresh();
+                        RebuildTagChips();
+                        if (_tagFilter != null || _query.Length > 0) ApplyFilter();
+                    }, accent: false);
+                    chip.Foreground = AppTheme.Brush(this, "MutedTextBrush", Avalonia.Media.Brushes.Gray);
+                    autoPanel.Children.Add(chip);
+                }
+                autoTitle.IsVisible = autoPanel.IsVisible = autoPanel.Children.Count > 0;
                 suggestions.Children.Clear();
-                foreach (var (t, _) in HistoryIndex.AllTags().Where(x => !item.Tags.Contains(x.Tag, StringComparer.OrdinalIgnoreCase)).Take(8))
+                foreach (var (t, _) in HistoryIndex.AllTags().Where(x => !item.HasTag(x.Tag)).Take(8))
                 {
                     string tag = t;
                     suggestions.Children.Add(Chip($"+ #{tag}", () => SetTags(item.Tags.Append(tag)), accent: false));
@@ -599,6 +637,8 @@ namespace ScreenShot_One_Avalonia
             var content = new StackPanel { Spacing = 8, Width = 270 };
             content.Children.Add(new TextBlock { Text = Loc.T("History_TagsTitle"), FontWeight = Avalonia.Media.FontWeight.SemiBold });
             content.Children.Add(current);
+            content.Children.Add(autoTitle);
+            content.Children.Add(autoPanel);
             content.Children.Add(input);
             content.Children.Add(suggestions);
             var card = new Border

@@ -177,6 +177,14 @@
 						</StackPanel>
 						<ToggleSwitch Grid.Column="1" Name="ChkAutoSave" OnContent="" OffContent="" VerticalAlignment="Center"/>
 					</Grid>
+					<Border Classes="divider"/>
+					<Grid Classes="row" ColumnDefinitions="*,Auto">
+						<StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,8">
+							<TextBlock Classes="label" Text="{DynamicResource Settings_AutoTags}"/>
+							<TextBlock Classes="hint" Text="{DynamicResource Settings_AutoTagsHint}"/>
+						</StackPanel>
+						<ToggleSwitch Grid.Column="1" Name="ChkAutoTags" OnContent="" OffContent="" VerticalAlignment="Center"/>
+					</Grid>
 				</StackPanel>
 			</Border>
 		</StackPanel>

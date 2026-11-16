@@ -104,7 +104,7 @@ namespace ScreenShot_One_Avalonia
                 });
                 string id = HistoryManager.ReserveId(null);
                 path = HistoryManager.FlattenedPath(id);
-                HistoryIndex.SetSource(path, new CaptureSource("SelfTestApp", "Звіт за квартал"));
+                HistoryIndex.SetSource(path, new CaptureSource("Google Chrome", "PROJ-42 Звіт за квартал - Jira"));
                 await HistoryManager.SaveScreenshotInBackground(id, true, bmp!, bmp!, new List<ShapeData>(), bmp!);
 
                 for (int i = 0; i < 60 && HistoryIndex.Get(path)?.TextDone != true; i++) await Task.Delay(500);
@@ -112,12 +112,15 @@ namespace ScreenShot_One_Avalonia
                 HistoryIndex.SetTags(path, new[] { "selftest", "звіт" });
                 info = HistoryIndex.Get(path);
                 bool byText = HistoryIndex.Matches("pineapple", info);
-                bool byApp = HistoryIndex.Matches("selftestapp", info);
+                bool byApp = HistoryIndex.Matches("chrome", info);
                 bool byTag = HistoryIndex.Matches("#звіт", info);
                 bool notOther = !HistoryIndex.Matches("banana", info);
-                bool ok = byText && byApp && byTag && notOther;
+                // Автотеги (3.2.0): на знімку рахунок (invoice), вікно — Jira → «рахунок» + «jira»
+                var auto = info?.AutoTags ?? new List<string>();
+                bool autoOk = auto.Contains(AutoTagger.TagName("invoice")) && auto.Contains("jira") && auto.Count == 2;
+                bool ok = byText && byApp && byTag && notOther && autoOk;
                 string text = (info?.Text ?? "").Replace('\n', ' ');
-                AppLog.Write($"[SelfTest] пошук в історії: розпізнано «{text}»; за текстом {byText}, за програмою {byApp}, за тегом {byTag}, чуже не знаходить {notOther} — {ok}");
+                AppLog.Write($"[SelfTest] пошук в історії: розпізнано «{text}»; за текстом {byText}, за програмою {byApp},за тегом {byTag}, чуже не знаходить {notOther}, автотеги [{string.Join(", ", auto)}] {autoOk} — {ok}");
             }
             catch (Exception ex) { AppLog.Error(ex, "Самоперевірка пошуку в історії"); }
             finally

@@ -58,6 +58,9 @@ namespace ScreenShot_One_Avalonia
         // Автоматично зберігати кожен скріншот у файл (при «Копіювати та закрити» і з мініатюри)
         public bool AutoSaveToFolder { get; set; } = false;
 
+        /// <summary>Автотеги в історії (3.2.0): за програмою, вікном і текстом на знімку.</summary>
+        public bool AutoTags { get; set; } = true;
+
         // Запам'ятований вибір «записувати мікрофон» у панелі запису відео
         public bool RecordMicrophone { get; set; } = false;
 
