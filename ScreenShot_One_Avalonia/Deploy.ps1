@@ -1,6 +1,6 @@
 Set-Location $PSScriptRoot
 # Settings (bump version before each release)
-$Version = "3.0.2"
+$Version = "3.1.0"
 $RepoUrl = "https://github.com/Oleksandr-Rosenko/Screenshot_One"
 
 # Token lookup: env var, then .github_token file. Never hardcode the token here: this file is pushed to a public repo.

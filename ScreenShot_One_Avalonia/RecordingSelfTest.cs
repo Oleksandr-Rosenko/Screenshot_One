@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -76,6 +77,53 @@ namespace ScreenShot_One_Avalonia
                 await Dispatcher.UIThread.InvokeAsync(() => { hidden!.Close(); visible!.Close(); });
             }
             catch (Exception ex) { AppLog.Error(ex, "Самоперевірка виключення вікон"); }
+        }
+
+        /// <summary>
+        /// Пошук в історії (SO_SELFTEST_HISTORY=1): картинка з текстом → історія → фонове розпізнавання → пошук
+        /// за словом із картинки, за програмою й за тегом.
+        /// </summary>
+        public static async Task RunHistorySearchAsync()
+        {
+            string? path = null;
+            try
+            {
+                Bitmap? bmp = null;
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    var rtb = new RenderTargetBitmap(new PixelSize(900, 240));
+                    using (var dc = rtb.CreateDrawingContext())
+                    {
+                        dc.FillRectangle(Avalonia.Media.Brushes.White, new Rect(0, 0, 900, 240));
+                        var ft = new Avalonia.Media.FormattedText("Quarterly invoice Pineapple 2026", System.Globalization.CultureInfo.InvariantCulture,
+                            Avalonia.Media.FlowDirection.LeftToRight, new Avalonia.Media.Typeface("Inter"), 56, Avalonia.Media.Brushes.Black);
+                        dc.DrawText(ft, new Point(30, 80));
+                    }
+                    bmp = BitmapPixels.Crop(rtb, new PixelRect(0, 0, 900, 240));
+                    rtb.Dispose();
+                });
+                string id = HistoryManager.ReserveId(null);
+                path = HistoryManager.FlattenedPath(id);
+                HistoryIndex.SetSource(path, new CaptureSource("SelfTestApp", "Звіт за квартал"));
+                await HistoryManager.SaveScreenshotInBackground(id, true, bmp!, bmp!, new List<ShapeData>(), bmp!);
+
+                for (int i = 0; i < 60 && HistoryIndex.Get(path)?.TextDone != true; i++) await Task.Delay(500);
+                var info = HistoryIndex.Get(path);
+                HistoryIndex.SetTags(path, new[] { "selftest", "звіт" });
+                info = HistoryIndex.Get(path);
+                bool byText = HistoryIndex.Matches("pineapple", info);
+                bool byApp = HistoryIndex.Matches("selftestapp", info);
+                bool byTag = HistoryIndex.Matches("#звіт", info);
+                bool notOther = !HistoryIndex.Matches("banana", info);
+                bool ok = byText && byApp && byTag && notOther;
+                string text = (info?.Text ?? "").Replace('\n', ' ');
+                AppLog.Write($"[SelfTest] пошук в історії: розпізнано «{text}»; за текстом {byText}, за програмою {byApp}, за тегом {byTag}, чуже не знаходить {notOther} — {ok}");
+            }
+            catch (Exception ex) { AppLog.Error(ex, "Самоперевірка пошуку в історії"); }
+            finally
+            {
+                if (path != null) HistoryManager.DeleteScreenshot(path);
+            }
         }
 
         private static async Task RecordOnceAsync(string? shotsDir, string label, bool hide)

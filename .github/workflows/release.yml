@@ -199,7 +199,7 @@ jobs:
           LOG="$HOME/Library/Application Support/Screenshot_One/logs/app.log"
           /Applications/Screenshot_One.app/Contents/MacOS/ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=duration=90:size=640x360:rate=30 -pix_fmt yuv420p "$RUNNER_TEMP/selftest.mp4"
           SO_SELFTEST_TRAY=1 SO_SELFTEST_CAPTURE=1 SO_SELFTEST_VEDITOR="$RUNNER_TEMP/selftest.mp4" \
-          SO_SELFTEST_RECORD=1 SO_SELFTEST_EXCLUDE=1 \
+          SO_SELFTEST_RECORD=1 SO_SELFTEST_EXCLUDE=1 SO_SELFTEST_HISTORY=1 \
             /Applications/Screenshot_One.app/Contents/MacOS/Screenshot_One > "$RUNNER_TEMP/app.out" 2>&1 &
           PID=$!
           sleep 25
@@ -219,6 +219,7 @@ jobs:
           grep -aq "SelfTest\] вирізання з середини.*True" "$LOG" || exit 1
           grep -aq "SelfTest\] запис.*панель у відео: False" "$LOG" || exit 1
           grep -aq "SelfTest\] виключення вікон.*True" "$LOG" || exit 1
+          grep -aq "SelfTest\] пошук в історії.*True" "$LOG" || exit 1
 
       - name: Upload macOS archives
         if: steps.assets.outputs.skip == 'false'

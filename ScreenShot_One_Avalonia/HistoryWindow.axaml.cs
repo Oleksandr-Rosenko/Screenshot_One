@@ -35,6 +35,30 @@ namespace ScreenShot_One_Avalonia
         }
         public bool IsVideo { get; set; }
 
+        // ---- Пошук і теги (3.1.0) ----
+        private string _tagsLine = "";
+        public string TagsLine
+        {
+            get => _tagsLine;
+            private set { _tagsLine = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TagsLine))); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasTags))); }
+        }
+        public bool HasTags => _tagsLine.Length > 0;
+        public IReadOnlyList<string> Tags { get; private set; } = Array.Empty<string>();
+        /// <summary>Програма, з якої знято (якщо відома) — показуємо на картці.</summary>
+        public string? App { get; private set; }
+
+        /// <summary>Підтягує теги з індексу історії.</summary>
+        public void RefreshInfo()
+        {
+            var info = HistoryIndex.Get(Path);
+            Tags = info?.Tags.ToArray() ?? Array.Empty<string>();
+            App = info?.App;
+            TagsLine = string.Join("  ", Tags.Select(t => "#" + t));
+        }
+
+        /// <summary>Чи підходить запис під пошук: дата, назва файла, програма/вікно, текст на знімку, теги.</summary>
+        public bool Matches(string query) => HistoryIndex.Matches(query, HistoryIndex.Get(Path), Title, DateString, FileName);
+
 
         /// <summary>Людська дата: «Сьогодні, 13:04», «Вчора, 18:20», «11 листопада, 09:15», «3 березня 2025, 10:00».</summary>
         public static string FriendlyDate(DateTime time, DateTime now)
@@ -176,6 +200,12 @@ namespace ScreenShot_One_Avalonia
         private const int PageSize = 40;
 
         private List<HistoryItem> _videoItems = new List<HistoryItem>();
+        // Після пошуку/фільтра за тегом — саме ці списки показуються сторінками
+        private List<HistoryItem> _filteredScreens = new List<HistoryItem>();
+        private List<HistoryItem> _filteredVideos = new List<HistoryItem>();
+        private string _query = "";
+        private string? _tagFilter;
+        private readonly DispatcherTimer _searchTimer = new() { Interval = TimeSpan.FromMilliseconds(220) };
 
         // Змінна для нашого нового рідного діалогового вікна
 
@@ -200,6 +230,11 @@ namespace ScreenShot_One_Avalonia
 
             ScreenshotsListBox.ItemsSource = _shownScreens;
             VideosListBox.ItemsSource = _shownVideos;
+
+            // Пошук: застосовуємо, коли користувач на мить зупинився; розпізнаний у фоні текст теж підхоплюємо
+            _searchTimer.Tick += (_, _) => { _searchTimer.Stop(); ApplyFilter(); };
+            HistoryIndex.Changed += OnIndexChanged;
+            Closed += (_, _) => { HistoryIndex.Changed -= OnIndexChanged; _searchTimer.Stop(); };
             // Наступна сторінка карток — коли до кінця лишається кілька рядів
             ScreenshotsListBox.AddHandler(ScrollViewer.ScrollChangedEvent, (_, e) => OnGalleryScrolled(e, isVideo: false));
             VideosListBox.AddHandler(ScrollViewer.ScrollChangedEvent, (_, e) => OnGalleryScrolled(e, isVideo: true));
@@ -262,6 +297,7 @@ namespace ScreenShot_One_Avalonia
                 HeaderRow.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
                 HeaderRow.Width = double.NaN;
                 HeaderRow.Margin = new Thickness(Math.Max(0, left), 14, Math.Max(0, right), 6);
+                TagChips.Margin = new Thickness(Math.Max(0, left), 0, Math.Max(0, right), 4); // теги — рівно над сіткою
             }
         }
 
@@ -290,16 +326,13 @@ namespace ScreenShot_One_Avalonia
         {
             if (EmptyScreenshotsText == null || EmptyVideosText == null) return;
 
-            if (TabScreenshots.IsChecked == true)
-            {
-                EmptyScreenshotsText.IsVisible = !_isLoading && _screenshotItems.Count == 0;
-                EmptyVideosText.IsVisible = false;
-            }
-            else
-            {
-                EmptyScreenshotsText.IsVisible = false;
-                EmptyVideosText.IsVisible = !_isLoading && _videoItems.Count == 0;
-            }
+            bool screens = TabScreenshots.IsChecked == true;
+            var all = screens ? _screenshotItems : _videoItems;
+            var filtered = screens ? _filteredScreens : _filteredVideos;
+            EmptyScreenshotsText.IsVisible = screens && !_isLoading && all.Count == 0;
+            EmptyVideosText.IsVisible = !screens && !_isLoading && all.Count == 0;
+            // Записи є, але пошук нічого не знайшов
+            NoResultsText.IsVisible = !_isLoading && all.Count > 0 && filtered.Count == 0;
         }
 
         private int _loadHistoryVersion = 0;
@@ -317,6 +350,7 @@ namespace ScreenShot_One_Avalonia
             var (newScreenshots, newVideos) = await Task.Run(() =>
             {
                 string appDataFolder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Screenshot_One");
+                HistoryIndex.Prune(); // записи пошуку про вже видалені файли
                 string appDataScreenshots = System.IO.Path.Combine(appDataFolder, "Screenshots");
                 string docsFolder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Screenshot_One");
                 string picsFolder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Screenshot_One");
@@ -362,14 +396,12 @@ namespace ScreenShot_One_Avalonia
 
             _screenshotItems = newScreenshots;
             _videoItems = newVideos;
-            // Показані колекції сповіщають сітку про кожну зміну — без перепривʼязки (WrapPanel падав на «тихих» мутаціях)
-            _shownScreens.Clear();
-            _shownVideos.Clear();
-            AppendPage(isVideo: false);
-            AppendPage(isVideo: true);
-            _isLoading = false;
+            foreach (var item in _screenshotItems) item.RefreshInfo();
+            foreach (var item in _videoItems) item.RefreshInfo();
 
-            UpdatePlaceholders();
+            _isLoading = false;
+            RebuildTagChips();
+            ApplyFilter();
             // Панель сітки створюється разом з елементами — підганяємо ширину після розмітки
             Avalonia.Threading.Dispatcher.UIThread.Post(UpdateGalleryLayout, Avalonia.Threading.DispatcherPriority.Loaded);
             // Мініатюри завантажує AppendPage — лише для показаних карток
@@ -382,7 +414,7 @@ namespace ScreenShot_One_Avalonia
         /// </summary>
         private void AppendPage(bool isVideo)
         {
-            var all = isVideo ? _videoItems : _screenshotItems;
+            var all = isVideo ? _filteredVideos : _filteredScreens;
             var shown = isVideo ? _shownVideos : _shownScreens;
             if (shown.Count >= all.Count) return;
 
@@ -424,7 +456,7 @@ namespace ScreenShot_One_Avalonia
 
                         string? details = null;
                         if (HistoryItem.ReadPngSize(item.Path) is { } size)
-                            details = $"{size.Width} × {size.Height} · {HistoryItem.FriendlySize(new FileInfo(item.Path).Length)}";
+                            details = (item.App != null ? item.App + " · " : "") + $"{size.Width} × {size.Height} · {HistoryItem.FriendlySize(new FileInfo(item.Path).Length)}";
 
                         using var fs = File.OpenRead(item.Path);
                         var bmp = Bitmap.DecodeToWidth(fs, 280);
@@ -437,6 +469,147 @@ namespace ScreenShot_One_Avalonia
                     catch (Exception logEx) { AppLog.Warn(logEx); }
                 });
             });
+        }
+
+        // ---- Пошук і теги (3.1.0) ----
+
+        private void TxtSearch_TextChanged(object? sender, TextChangedEventArgs e)
+        {
+            _query = TxtSearch.Text?.Trim() ?? "";
+            _searchTimer.Stop();
+            _searchTimer.Start();
+        }
+
+        private void OnIndexChanged(string path)
+        {
+            // Фоновий OCR дописав текст — якщо зараз шукаємо, оновлюємо результати (не частіше, ніж раз на ~0,2 с)
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_query.Length > 0 && !_searchTimer.IsEnabled) _searchTimer.Start();
+            });
+        }
+
+        /// <summary>Фільтрує записи за пошуком і тегом і показує першу сторінку.</summary>
+        private void ApplyFilter()
+        {
+            bool Pass(HistoryItem i) =>
+                (_tagFilter == null || i.Tags.Contains(_tagFilter, StringComparer.OrdinalIgnoreCase)) && i.Matches(_query);
+            _filteredScreens = _screenshotItems.Where(Pass).ToList();
+            _filteredVideos = _videoItems.Where(Pass).ToList();
+
+            // Показані колекції сповіщають сітку про кожну зміну — без перепривʼязки (WrapPanel падав на «тихих» мутаціях)
+            _shownScreens.Clear();
+            _shownVideos.Clear();
+            AppendPage(isVideo: false);
+            AppendPage(isVideo: true);
+            UpdatePlaceholders();
+            Dispatcher.UIThread.Post(UpdateGalleryLayout, DispatcherPriority.Loaded);
+        }
+
+        /// <summary>«Пігулки» тегів над галереєю: клік — показати лише записи з тегом, повторний клік — усі.</summary>
+        private void RebuildTagChips()
+        {
+            TagChips.Children.Clear();
+            var tags = HistoryIndex.AllTags();
+            if (_tagFilter != null && !tags.Any(t => string.Equals(t.Tag, _tagFilter, StringComparison.OrdinalIgnoreCase))) _tagFilter = null;
+            foreach (var (tag, count) in tags.Take(30))
+            {
+                bool active = string.Equals(tag, _tagFilter, StringComparison.OrdinalIgnoreCase);
+                var chip = new Button
+                {
+                    Content = $"#{tag}  {count}",
+                    Margin = new Thickness(0, 0, 6, 6),
+                    Padding = new Thickness(10, 3),
+                    CornerRadius = new CornerRadius(12),
+                    FontSize = 12,
+                };
+                chip.Classes.Add(active ? "Flat" : "Basic");
+                if (!active)
+                {
+                    chip.Background = AppTheme.Brush(this, "PanelBrush", Avalonia.Media.Brushes.White);
+                    chip.BorderBrush = AppTheme.Brush(this, "PanelBorderBrush", Avalonia.Media.Brushes.Gray);
+                    chip.BorderThickness = new Thickness(1);
+                }
+                chip.Click += (_, _) =>
+                {
+                    _tagFilter = active ? null : tag;
+                    RebuildTagChips();
+                    ApplyFilter();
+                };
+                TagChips.Children.Add(chip);
+            }
+            TagChips.IsVisible = TagChips.Children.Count > 0;
+        }
+
+        /// <summary>Теги запису: поточні (клік — прибрати), поле для нового (Enter), підказки з уже наявних тегів.</summary>
+        private void BtnTags_Click(object? sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button || button.Tag is not string path) return;
+            var item = _screenshotItems.Concat(_videoItems).FirstOrDefault(i => i.Path == path);
+            if (item == null) return;
+
+            var current = new WrapPanel();
+            var suggestions = new WrapPanel();
+            var input = new TextBox { PlaceholderText = Loc.T("History_TagAddHint"), MinWidth = 240 };
+
+            void Refresh()
+            {
+                current.Children.Clear();
+                foreach (var t in item.Tags)
+                {
+                    string tag = t;
+                    current.Children.Add(Chip($"#{tag}  ✕", () => SetTags(item.Tags.Where(x => x != tag)), accent: true));
+                }
+                suggestions.Children.Clear();
+                foreach (var (t, _) in HistoryIndex.AllTags().Where(x => !item.Tags.Contains(x.Tag, StringComparer.OrdinalIgnoreCase)).Take(8))
+                {
+                    string tag = t;
+                    suggestions.Children.Add(Chip($"+ #{tag}", () => SetTags(item.Tags.Append(tag)), accent: false));
+                }
+                suggestions.IsVisible = suggestions.Children.Count > 0;
+            }
+
+            void SetTags(IEnumerable<string> tags)
+            {
+                HistoryIndex.SetTags(path, tags);
+                item.RefreshInfo();
+                Refresh();
+                RebuildTagChips();
+                if (_tagFilter != null || _query.Length > 0) ApplyFilter();
+            }
+
+            Button Chip(string text, Action onClick, bool accent)
+            {
+                var b = new Button { Content = text, Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(10, 3), CornerRadius = new CornerRadius(12), FontSize = 12 };
+                b.Classes.Add(accent ? "Flat" : "Basic");
+                b.Click += (_, _) => onClick();
+                return b;
+            }
+
+            input.KeyDown += (_, ke) =>
+            {
+                if (ke.Key != Avalonia.Input.Key.Enter) return;
+                ke.Handled = true;
+                var added = (input.Text ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries);
+                if (added.Length > 0) SetTags(item.Tags.Concat(added));
+                input.Text = "";
+            };
+            Refresh();
+
+            var content = new StackPanel { Spacing = 8, Width = 270 };
+            content.Children.Add(new TextBlock { Text = Loc.T("History_TagsTitle"), FontWeight = Avalonia.Media.FontWeight.SemiBold });
+            content.Children.Add(current);
+            content.Children.Add(input);
+            content.Children.Add(suggestions);
+            var card = new Border
+            {
+                Child = content, Padding = new Thickness(14), CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1),
+                Background = AppTheme.Brush(this, "PanelBrush", Avalonia.Media.Brushes.White),
+                BorderBrush = AppTheme.Brush(this, "PanelBorderBrush", Avalonia.Media.Brushes.Gray),
+            };
+            var flyout = new Flyout { Content = card, Placement = PlacementMode.BottomEdgeAlignedRight };
+            flyout.Opened += (_, _) => Dispatcher.UIThread.Post(() => input.Focus(), DispatcherPriority.Loaded);
+            flyout.ShowAt(button);
         }
 
         // Динамічний Toast-повідомлення
@@ -524,7 +697,13 @@ namespace ScreenShot_One_Avalonia
                 {
                     try
                     {
-                        if (File.Exists(filePath)) File.Delete(filePath);
+                        // Запис програми — разом з оригіналом, фігурами й даними пошуку; інші файли — самі
+                        if (filePath.EndsWith("_flattened.png", StringComparison.OrdinalIgnoreCase)) HistoryManager.DeleteScreenshot(filePath);
+                        else
+                        {
+                            if (File.Exists(filePath)) File.Delete(filePath);
+                            HistoryIndex.Remove(filePath);
+                        }
                         LoadHistory();
                     }
                     catch (Exception logEx) { AppLog.Warn(logEx); }

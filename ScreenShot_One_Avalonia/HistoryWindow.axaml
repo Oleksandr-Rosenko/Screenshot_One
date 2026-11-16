@@ -7,7 +7,7 @@
         Title="{DynamicResource History_Title}" Height="640" Width="820"
         WindowStartupLocation="CenterScreen">
 
-	<Grid RowDefinitions="Auto,*">
+	<Grid RowDefinitions="Auto,Auto,*">
 		<Grid.Styles>
 			<!-- Простий шаблон елемента: без підкладки й відступів SukiUI (картка сама малює рамку й наведення) -->
 			<Style Selector="ListBox.gallery ListBoxItem">
@@ -45,7 +45,7 @@
 
 		<!-- Шапка: вкладки ліворуч, очищення праворуч. Ширина = ширині сітки карток (див. UpdateGalleryLayout),
 		     тож кнопка очищення стоїть рівно над правим краєм сітки, а весь блок — по центру вікна. -->
-		<Grid Grid.Row="0" Name="HeaderRow" ColumnDefinitions="*,Auto" Margin="0,14,0,6" HorizontalAlignment="Stretch">
+		<Grid Grid.Row="0" Name="HeaderRow" ColumnDefinitions="Auto,*,Auto" Margin="0,14,0,6" HorizontalAlignment="Stretch">
 			<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 				<RadioButton Name="TabScreenshots" Classes="Chips" IsChecked="True" IsCheckedChanged="Tab_Checked">
 					<StackPanel Orientation="Horizontal" Spacing="6">
@@ -60,13 +60,27 @@
 					</StackPanel>
 				</RadioButton>
 			</StackPanel>
+			<!-- Пошук (3.1.0): текст на знімку, програма й вікно, дата, теги («#тег» — лише теги) -->
+			<TextBox Grid.Column="1" Name="TxtSearch" Margin="14,0,10,0" MaxWidth="380" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+			         PlaceholderText="{DynamicResource History_SearchHint}" TextChanged="TxtSearch_TextChanged">
+				<TextBox.InnerLeftContent>
+					<material:MaterialIcon Kind="Magnify" Width="18" Height="18" Margin="8,0,0,0" Foreground="{DynamicResource MutedTextBrush}"/>
+				</TextBox.InnerLeftContent>
+			</TextBox>
 			<!-- Компактна кнопка без підпису; що саме вона очистить — у підказці -->
-			<Button Grid.Column="1" Name="BtnClearAll" Classes="Basic hbtn danger" Click="BtnClearAll_Click" ToolTip.Tip="{DynamicResource History_ClearScreenshots}" VerticalAlignment="Center">
+			<Button Grid.Column="2" Name="BtnClearAll" Classes="Basic hbtn danger" Click="BtnClearAll_Click" ToolTip.Tip="{DynamicResource History_ClearScreenshots}" VerticalAlignment="Center">
 				<material:MaterialIcon Kind="DeleteSweepOutline"/>
 			</Button>
 		</Grid>
 
-		<Grid Grid.Row="1" Margin="12,0,12,8">
+		<!-- Фільтр за тегами: «пігулки» з кількістю записів (з'являються, коли теги є) -->
+		<WrapPanel Grid.Row="1" Name="TagChips" Margin="18,0,18,4" IsVisible="False"/>
+
+		<Grid Grid.Row="2" Margin="12,0,12,8">
+			<StackPanel Name="NoResultsText" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" IsVisible="False">
+				<material:MaterialIcon Kind="MagnifyClose" Width="40" Height="40" Foreground="{DynamicResource MutedTextBrush}"/>
+				<TextBlock Text="{DynamicResource History_NoResults}" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center"/>
+			</StackPanel>
 			<StackPanel Name="EmptyScreenshotsText" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" IsVisible="False">
 				<material:MaterialIcon Kind="ImageOutline" Width="40" Height="40" Foreground="{DynamicResource MutedTextBrush}"/>
 				<TextBlock Text="{DynamicResource History_EmptyScreens}" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center"/>
@@ -101,6 +115,9 @@
 											<Button Classes="Basic hbtn" ToolTip.Tip="{DynamicResource Common_UploadToDrive}" Click="BtnUploadFromHistory_Click" Tag="{Binding Path}">
 												<material:MaterialIcon Kind="GoogleDrive" Foreground="#4285F4"/>
 											</Button>
+											<Button Classes="Basic hbtn" ToolTip.Tip="{DynamicResource History_TagsTip}" Click="BtnTags_Click" Tag="{Binding Path}">
+												<material:MaterialIcon Kind="TagOutline"/>
+											</Button>
 											<Button Classes="Basic hbtn danger" ToolTip.Tip="{DynamicResource Common_Delete}" Click="BtnDeleteFromHistory_Click" Tag="{Binding Path}">
 												<material:MaterialIcon Kind="DeleteOutline"/>
 											</Button>
@@ -110,6 +127,7 @@
 								<StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="1">
 									<TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
 									<TextBlock Text="{Binding Details}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis"/>
+									<TextBlock Text="{Binding TagsLine}" IsVisible="{Binding HasTags}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
 								</StackPanel>
 							</Grid>
 						</Border>
@@ -142,6 +160,9 @@
 											<Button Classes="Basic hbtn" ToolTip.Tip="{DynamicResource Common_UploadToDrive}" Click="BtnUploadFromHistory_Click" Tag="{Binding Path}">
 												<material:MaterialIcon Kind="GoogleDrive" Foreground="#4285F4"/>
 											</Button>
+											<Button Classes="Basic hbtn" ToolTip.Tip="{DynamicResource History_TagsTip}" Click="BtnTags_Click" Tag="{Binding Path}">
+												<material:MaterialIcon Kind="TagOutline"/>
+											</Button>
 											<Button Classes="Basic hbtn danger" ToolTip.Tip="{DynamicResource Common_Delete}" Click="BtnDeleteFromHistory_Click" Tag="{Binding Path}">
 												<material:MaterialIcon Kind="DeleteOutline"/>
 											</Button>
@@ -151,6 +172,7 @@
 								<StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="1">
 									<TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
 									<TextBlock Text="{Binding Details}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis"/>
+									<TextBlock Text="{Binding TagsLine}" IsVisible="{Binding HasTags}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
 								</StackPanel>
 							</Grid>
 						</Border>
@@ -159,11 +181,11 @@
 			</ListBox>
 		</Grid>
 
-		<Border Name="ToastNotification" Grid.RowSpan="2" Background="{DynamicResource ToastBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="10" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,30" Padding="25,15" IsVisible="False" IsHitTestVisible="False" ZIndex="50">
+		<Border Name="ToastNotification" Grid.RowSpan="3" Background="{DynamicResource ToastBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1" CornerRadius="10" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,30" Padding="25,15" IsVisible="False" IsHitTestVisible="False" ZIndex="50">
 			<TextBlock Name="ToastText" Text="{DynamicResource Common_CopiedToClipboard}" Foreground="{DynamicResource SukiText}" FontSize="16" FontWeight="SemiBold"/>
 		</Border>
 
-		<Border Name="DialogOverlay" Grid.RowSpan="2" Background="#99000000" IsVisible="False" ZIndex="100">
+		<Border Name="DialogOverlay" Grid.RowSpan="3" Background="#99000000" IsVisible="False" ZIndex="100">
 			<Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="35" CornerRadius="20" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1">
 				<StackPanel Spacing="20">
 					<TextBlock Name="DialogTitle" Text="{DynamicResource Common_Confirm}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>

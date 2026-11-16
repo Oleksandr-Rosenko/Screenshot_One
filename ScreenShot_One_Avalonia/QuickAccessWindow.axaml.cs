@@ -41,10 +41,13 @@ namespace ScreenShot_One_Avalonia
         // Для дизайнера XAML
         public QuickAccessWindow() : this(new WriteableBitmap(new PixelSize(1, 1), BitmapPixels.Dpi96)) { }
 
+        private CaptureSource? _captureSource;
+
         public QuickAccessWindow(Bitmap bitmap)
         {
             InitializeComponent();
             _bitmap = bitmap;
+            _captureSource = CaptureSource.TakePending();
             ThumbImage.Source = bitmap;
 
             _secondsLeft = Math.Max(0, SettingsManager.Current.QuickAccessAutoCloseSeconds);
@@ -120,6 +123,7 @@ namespace ScreenShot_One_Avalonia
                     string id = HistoryManager.ReserveId(null);
                     HistoryManager.SaveScreenshotInBackground(id, true, _bitmap, _bitmap, new List<ShapeData>(), _bitmap)
                         .FireAndForget("Мініатюра: збереження в історію");
+                    if (_captureSource != null) HistoryIndex.SetSource(HistoryManager.FlattenedPath(id), _captureSource);
                 }
                 catch (Exception ex)
                 {

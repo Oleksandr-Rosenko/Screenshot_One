@@ -98,9 +98,13 @@ namespace ScreenShot_One_Avalonia
 
         private bool _isSplitMode = false;
 
+        // Програма й вікно, з яких зроблено новий знімок (3.1.0, пошук в історії)
+        private readonly CaptureSource? _captureSource;
+
         public EditorWindow(Bitmap capturedImage, string? jsonPath = null, HistoryWindow? historyOwner = null, HistoryItem? sourceItem = null)
         {
             InitializeComponent();
+            if (jsonPath == null && sourceItem == null) _captureSource = CaptureSource.TakePending();
             BuildInlineToolButtons();
             InitFrameUi();
             // Кнопки обрізки живуть поза полотном — переставляємо їх при прокрутці й зміні розміру вікна
@@ -2242,6 +2246,8 @@ namespace ScreenShot_One_Avalonia
                 bool isNew = string.IsNullOrEmpty(_editingId);
                 _editingId = HistoryManager.ReserveId(_editingId);
                 var task = HistoryManager.SaveScreenshotInBackground(_editingId, isNew, _originalImage, snapshot, ExtractShapes(), snapshot);
+                // Звідки знято (програма й вікно) — для пошуку в історії
+                if (isNew && _captureSource != null) HistoryIndex.SetSource(HistoryManager.FlattenedPath(_editingId), _captureSource);
                 _isSavedToHistory = true;
                 _pendingHistorySave = task;
                 _ = ReportHistorySaveErrorAsync(task);

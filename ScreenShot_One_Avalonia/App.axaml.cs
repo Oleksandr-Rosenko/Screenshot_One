@@ -72,6 +72,10 @@ namespace ScreenShot_One_Avalonia
                 if (Environment.GetEnvironmentVariable("SO_SELFTEST_CAPTURE") == "1")
                     RunCaptureOverlaySelfTestAsync().FireAndForget("Самоперевірка оверлея виділення");
 
+                // Пошук в історії (3.1.0): текст на старих скріншотах розпізнається поступово у фоні
+                if (!Environment.GetEnvironmentVariables().Keys.Cast<object>().Any(k => k.ToString()!.StartsWith("SO_SELFTEST_", StringComparison.Ordinal)))
+                    HistoryTextIndexer.StartBackfill(() => HistoryManager.ListImageFiles().Select(f => f.FullName).ToList());
+
                 // Прогріваємо VLC у фоні, щоб перше відкриття відеоредактора не підвисало
                 _ = System.Threading.Tasks.Task.Run(async () =>
                 {
@@ -280,6 +284,8 @@ namespace ScreenShot_One_Avalonia
         /// <summary>Остання частина самоперевірок (запис відео) і мітка «завершено», на яку чекає CI.</summary>
         private static async System.Threading.Tasks.Task FinishSelfTestsAsync()
         {
+            if (Environment.GetEnvironmentVariable("SO_SELFTEST_HISTORY") == "1")
+                await RecordingSelfTest.RunHistorySearchAsync();
             if (Environment.GetEnvironmentVariable("SO_SELFTEST_EXCLUDE") == "1")
                 await RecordingSelfTest.RunExclusionAsync();
             if (Environment.GetEnvironmentVariable("SO_SELFTEST_RECORD") == "1")
@@ -624,6 +630,7 @@ namespace ScreenShot_One_Avalonia
 
         private void CaptureAndOpenFullScreen()
         {
+            CaptureSource.Remember();
             try
             {
                 var mousePos = ScreenService.GetCursorPosition();
@@ -646,6 +653,7 @@ namespace ScreenShot_One_Avalonia
         // НОВЕ: Метод для створення єдиного великого скріншота всіх моніторів
         private void CaptureAllScreensSimultaneously()
         {
+            CaptureSource.Remember();
             try
             {
                 var avaloniaBitmap = ScreenCaptureService.Instance.CaptureAllScreens();

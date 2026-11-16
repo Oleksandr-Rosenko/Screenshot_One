@@ -62,6 +62,7 @@ namespace ScreenShot_One_Avalonia
 
         private void FreezeScreen()
         {
+            CaptureSource.Remember(); // звідки знімаємо — до появи оверлея (пошук в історії)
             try
             {
                 var mousePos = ScreenService.GetCursorPosition();

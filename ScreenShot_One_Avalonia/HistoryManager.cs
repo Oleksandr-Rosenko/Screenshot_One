@@ -78,6 +78,39 @@ namespace ScreenShot_One_Avalonia
         /// <summary>Повертає ID для запису: існуючий (повторне збереження) або новий унікальний.</summary>
         public static string ReserveId(string? existingId) => string.IsNullOrEmpty(existingId) ? GenerateUniqueId() : existingId;
 
+        /// <summary>Шлях до підсумкової картинки запису (за нею історія показує картку й шукає текст).</summary>
+        public static string FlattenedPath(string id) => Path.Combine(HistoryFolderPath, $"{id}_flattened.png");
+
+        /// <summary>
+        /// Усі скріншоти, які показує історія: записи програми й картинки з папок збереження (новіші — першими).
+        /// Спільне для вікна історії й фонового розпізнавання тексту.
+        /// </summary>
+        public static List<FileInfo> ListImageFiles()
+        {
+            string appDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Screenshot_One");
+            string[] folders =
+            {
+                appDataFolder, HistoryFolderPath,
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Screenshot_One"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Screenshot_One"),
+            };
+            string[] extensions = { "*.png", "*.jpg", "*.jpeg", "*.bmp" };
+            var files = new List<string>();
+            foreach (var folder in folders)
+            {
+                if (!Directory.Exists(folder)) continue;
+                foreach (var ext in extensions)
+                {
+                    try { files.AddRange(Directory.GetFiles(folder, ext)); } catch (Exception logEx) { AppLog.Warn(logEx); }
+                }
+            }
+            return files.Distinct()
+                        .Where(f => !f.EndsWith("_original.png", StringComparison.OrdinalIgnoreCase))
+                        .Select(f => new FileInfo(f))
+                        .OrderByDescending(f => f.CreationTime)
+                        .ToList();
+        }
+
         public static string SaveScreenshot(Bitmap original, Bitmap flattened, List<ShapeData> shapes, string? existingId = null)
         {
             string id = ReserveId(existingId);
@@ -130,6 +163,10 @@ namespace ScreenShot_One_Avalonia
                     {
                         WriteFiles(id, original, flattened, shapes);
                         if (isNew) EnforceMaxLimit(500);
+                        // Пошук (3.1.0): текст на знімку — розпізнати заново (нові підписи теж шукаються)
+                        string flat = FlattenedPath(id);
+                        if (!isNew) HistoryIndex.ResetText(flat);
+                        HistoryTextIndexer.Enqueue(flat);
                     }
                     catch (Exception ex)
                     {
@@ -165,7 +202,8 @@ namespace ScreenShot_One_Avalonia
                 for (int i = 0; i < files.Length - maxCount; i++) DeleteScreenshot(files[i]);
         }
 
-        private static void DeleteScreenshot(string flattenedPath)
+        /// <summary>Видаляє запис історії разом із супутніми файлами (оригінал, фігури) і даними пошуку.</summary>
+        public static void DeleteScreenshot(string flattenedPath)
         {
             try
             {
@@ -176,6 +214,7 @@ namespace ScreenShot_One_Avalonia
                 if (File.Exists(flattenedPath)) File.Delete(flattenedPath);
                 if (File.Exists(Path.Combine(dir, $"{id}_original.png"))) File.Delete(Path.Combine(dir, $"{id}_original.png"));
                 if (File.Exists(Path.Combine(dir, $"{id}_meta.json"))) File.Delete(Path.Combine(dir, $"{id}_meta.json"));
+                HistoryIndex.Remove(flattenedPath);
             }
             catch (Exception logEx) { AppLog.Warn(logEx); }
         }
