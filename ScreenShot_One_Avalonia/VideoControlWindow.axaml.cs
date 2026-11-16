@@ -36,6 +36,9 @@ namespace ScreenShot_One_Avalonia
         private bool _isBusy; // йде старт або зупинка запису — повторні кліки ігноруємо
         private bool _ownsRecording; // запис запустило саме це вікно
 
+        /// <summary>Останній записаний файл (для самоперевірки в CI).</summary>
+        public static string? LastRecordedPath { get; private set; }
+
         public VideoControlWindow()
         {
             InitializeComponent();
@@ -343,6 +346,7 @@ namespace ScreenShot_One_Avalonia
             try
             {
                 videoPath = await VideoRecorderManager.StopRecordingAsync();
+                LastRecordedPath = videoPath;
             }
             finally
             {

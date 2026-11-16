@@ -50,13 +50,25 @@ jobs:
           $video = Join-Path $env:RUNNER_TEMP "selftest.mp4"
           & ScreenShot_One_Avalonia/ffmpeg.exe -hide_banner -loglevel error -f lavfi -i testsrc=duration=5:size=640x360:rate=30 -pix_fmt yuv420p $video
           $env:SO_SELFTEST_VEDITOR = $video
+          # Діагностика: мерехтіння кнопок і чи потрапляє панель запису у відео (кадри — в артефакт selftest-shots-windows)
+          $env:SO_SELFTEST_FLICKER = "1"
+          $env:SO_SELFTEST_RECORD = "1"
+          $env:SO_SELFTEST_SHOTS = Join-Path $env:RUNNER_TEMP "shots"
           $p = Start-Process $exe.FullName -PassThru
+          $log = Join-Path $env:LOCALAPPDATA "Screenshot_One/logs/app.log"
+          # Чекаємо мітку «[SelfTest] завершено» (до 8 хв), але не менше 45 с
           Start-Sleep -Seconds 45
+          for ($i = 0; $i -lt 87; $i++) {
+            if ((Test-Path $log) -and (Select-String -Path $log -Pattern 'SelfTest\] завершено' -Quiet)) { break }
+            if ($p.HasExited) { break }
+            Start-Sleep -Seconds 5
+          }
           $alive = -not $p.HasExited
           if ($alive) { Stop-Process -Id $p.Id -Force }
-          $log = Join-Path $env:LOCALAPPDATA "Screenshot_One/logs/app.log"
           Write-Host "----- app.log -----"
           if (Test-Path $log) { Get-Content $log -Tail 60 }
+          Write-Host "----- діагностика -----"
+          if (Test-Path $log) { Select-String -Path $log -Pattern '\[Flicker\]|SelfTest\] (запис|мерехтіння)' | ForEach-Object { $_.Line } }
           if (-not $alive) { throw "App exited early (code $($p.ExitCode))" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\].*2,5.*True' -Quiet)) { throw "Tray panel self-test (left click) failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\].*→.*True' -Quiet)) { throw "Tray panel self-test (right click) failed" }
@@ -66,6 +78,13 @@ jobs:
           if (Select-String -Path $log -Pattern '\[Capture\].*картинка немає' -Quiet) { throw "Screen capture returned no image" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] відео завантажено.*True' -Quiet)) { throw "Video editor did not load the video" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] кнопка обрізки.*True' -Quiet)) { throw "Trim button self-test failed" }
+      - name: Upload self-test shots (Windows)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest-shots-windows
+          path: ${{ runner.temp }}/shots
+          if-no-files-found: ignore
 
   macos:
     name: Build (macOS)
@@ -165,10 +184,20 @@ jobs:
           pkill -x Screenshot_One; sleep 2
           # Тестове відео для відеоредактора (вбудованим ffmpeg)
           /Applications/Screenshot_One.app/Contents/MacOS/ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=duration=5:size=640x360:rate=30 -pix_fmt yuv420p "$RUNNER_TEMP/selftest.mp4"
-          SO_SELFTEST_TRAY=1 SO_SELFTEST_CAPTURE=1 SO_SELFTEST_VEDITOR="$RUNNER_TEMP/selftest.mp4" /Applications/Screenshot_One.app/Contents/MacOS/Screenshot_One > "$RUNNER_TEMP/app.out" 2>&1 &
+          LOG="$HOME/Library/Application Support/Screenshot_One/logs/app.log"
+          SO_SELFTEST_TRAY=1 SO_SELFTEST_CAPTURE=1 SO_SELFTEST_VEDITOR="$RUNNER_TEMP/selftest.mp4" \
+          SO_SELFTEST_FLICKER=1 SO_SELFTEST_RECORD=1 SO_SELFTEST_SHOTS="$RUNNER_TEMP/shots" \
+            /Applications/Screenshot_One.app/Contents/MacOS/Screenshot_One > "$RUNNER_TEMP/app.out" 2>&1 &
           PID=$!
+          # Чекаємо мітку «[SelfTest] завершено» (до 8 хв), але не менше 25 с
           sleep 25
-          if kill -0 $PID 2>/dev/null; then echo "APP ALIVE after 25s"; ALIVE=1; kill $PID; else echo "APP DIED"; ALIVE=0; fi
+          for i in $(seq 1 90); do
+            grep -aq "SelfTest\] завершено" "$LOG" 2>/dev/null && break
+            kill -0 $PID 2>/dev/null || break
+            sleep 5
+          done
+          if kill -0 $PID 2>/dev/null; then echo "APP ALIVE"; ALIVE=1; kill $PID; else echo "APP DIED"; ALIVE=0; fi
+          echo "----- діагностика -----"; grep -aE "\[Flicker\]|SelfTest\] (запис|мерехтіння)" "$LOG"
           echo "----- stdout/stderr -----"; tail -n 80 "$RUNNER_TEMP/app.out"
           echo "----- app.log -----"; tail -n 80 "$HOME/Library/Application Support/Screenshot_One/logs/app.log" 2>/dev/null
           echo "----- last_crash.txt -----"; cat "$HOME/Library/Application Support/Screenshot_One/logs/last_crash.txt" 2>/dev/null
@@ -189,3 +218,10 @@ jobs:
           grep -a "SelfTest\] відео" "$LOG"
           grep -aq "\[VLC\] готовий" "$LOG" || exit 1
           grep -aq "SelfTest\] відео завантажено.*True" "$LOG" || exit 1
+      - name: Upload self-test shots (macOS)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest-shots-macos
+          path: ${{ runner.temp }}/shots
+          if-no-files-found: ignore

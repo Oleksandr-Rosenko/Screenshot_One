@@ -227,8 +227,7 @@ namespace ScreenShot_One_Avalonia
         /// </summary>
         private static async System.Threading.Tasks.Task RunVideoEditorSelfTestAsync(string videoPath)
         {
-            // Windows — після інших самоперевірок; Mac (лише завантаження відео) — раніше, бо CI там чекає 25 с
-            await System.Threading.Tasks.Task.Delay(OperatingSystem.IsWindows() ? 21000 : 10000);
+            await System.Threading.Tasks.Task.Delay(21000); // після інших самоперевірок (оверлей — на 18–20 с)
             VideoEditorWindow? w = null;
             await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { w = new VideoEditorWindow(videoPath); w.Show(); });
             await System.Threading.Tasks.Task.Delay(3000);
@@ -236,7 +235,9 @@ namespace ScreenShot_One_Avalonia
             AppLog.Write($"[SelfTest] відео завантажено в редактор: {loaded}");
             if (!OperatingSystem.IsWindows())
             {
+                await RunFlickerProbesAsync(w!);
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => w!.Close());
+                await FinishSelfTestsAsync();
                 return;
             }
 
@@ -269,7 +270,53 @@ namespace ScreenShot_One_Avalonia
             int oldPlacement = await ClicksAsync(Avalonia.Controls.PlacementMode.Pointer);
             int newPlacement = await ClicksAsync(null);
             AppLog.Write($"[SelfTest] кнопка обрізки: підказка біля курсора {oldPlacement}/3, над кнопкою {newPlacement}/3 — {newPlacement == 3}");
+            await RunFlickerProbesAsync(w!);
             await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => w!.Close());
+            await FinishSelfTestsAsync();
+        }
+
+        /// <summary>Остання частина самоперевірок (запис відео) і мітка «завершено», на яку чекає CI.</summary>
+        private static async System.Threading.Tasks.Task FinishSelfTestsAsync()
+        {
+            if (Environment.GetEnvironmentVariable("SO_SELFTEST_RECORD") == "1")
+                await RecordingSelfTest.RunAsync(Environment.GetEnvironmentVariable("SO_SELFTEST_SHOTS"));
+            AppLog.Write("[SelfTest] завершено");
+        }
+
+        /// <summary>Діагностика мерехтіння (SO_SELFTEST_FLICKER=1): відеоредактор — звичайний і в режимі обрізки, редактор скріншотів.</summary>
+        private static async System.Threading.Tasks.Task RunFlickerProbesAsync(VideoEditorWindow w)
+        {
+            if (Environment.GetEnvironmentVariable("SO_SELFTEST_FLICKER") != "1") return;
+            string? shots = Environment.GetEnvironmentVariable("SO_SELFTEST_SHOTS");
+            int total = 0;
+            try
+            {
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    w.FindControl<Avalonia.Controls.Primitives.ToggleButton>("BtnTrimMode")!.IsChecked = false);
+                total += await FlickerProbe.RunAsync(w, "відеоредактор", shots);
+
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    w.FindControl<Avalonia.Controls.Primitives.ToggleButton>("BtnTrimMode")!.IsChecked = true);
+                await System.Threading.Tasks.Task.Delay(600);
+                total += await FlickerProbe.RunAsync(w, "обрізка", shots);
+
+                EditorWindow? ed = null;
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    var rtb = new Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize(1000, 600));
+                    using (var dc = rtb.CreateDrawingContext())
+                        dc.FillRectangle(new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#E8EEF7")), new Rect(0, 0, 1000, 600));
+                    var bmp = BitmapPixels.Crop(rtb, new PixelRect(0, 0, 1000, 600))!;
+                    rtb.Dispose();
+                    ed = new EditorWindow(bmp);
+                    ed.Show();
+                });
+                await System.Threading.Tasks.Task.Delay(1500);
+                total += await FlickerProbe.RunAsync(ed!, "редактор скріншотів", shots);
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => ed!.Close());
+            }
+            catch (Exception ex) { AppLog.Error(ex, "Діагностика мерехтіння"); }
+            AppLog.Write($"[SelfTest] мерехтіння: кнопок з проблемою {total}");
         }
 
         /// <summary>Самоперевірка оверлея виділення (SO_SELFTEST_CAPTURE=1): відкриваємо його й звіряємо з екраном.</summary>
