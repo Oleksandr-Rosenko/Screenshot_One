@@ -172,7 +172,7 @@ namespace ScreenShot_One_Avalonia.Tests
             string xaml = File.ReadAllText(axamlPath);
             Assert.Contains("Name=\"BtnBackToHistory\"", xaml);
             Assert.Contains("Name=\"TxtVideoTitle\"", xaml);
-            Assert.Contains("Name=\"TrimHighlightGrid\"", xaml);
+            Assert.Contains("Name=\"TrimBar\"", xaml); // 3.0.0: смуга обрізки замість маски на шкалі
             Assert.Contains("Name=\"TrimPanel\"", xaml);
             Assert.Contains("Name=\"BtnPreviewTrim\"", xaml);
             Assert.Contains("Name=\"BtnRewind5\"", xaml);
@@ -615,9 +615,10 @@ namespace ScreenShot_One_Avalonia.Tests
             Assert.Contains("BtnTrimModeKeep", axaml);
             Assert.Contains("BtnTrimModeCut", axaml);
             Assert.Contains("TxtTrimHeader", axaml);
-            Assert.Contains("TrimMaskLeft", axaml);
-            Assert.Contains("TrimMaskActive", axaml);
-            Assert.Contains("TrimMaskRight", axaml);
+            // 3.0.0: смуга з ручками і «Початок тут» / «Кінець тут» замість маски на шкалі
+            Assert.Contains("local:TrimRangeBar", axaml);
+            Assert.Contains("BtnSetStartHere", axaml);
+            Assert.Contains("BtnSetEndHere", axaml);
 
             string cs = File.ReadAllText(GetSourceFilePath("VideoEditorWindow.axaml.cs"));
             Assert.Contains("_isCutoutMode", cs);

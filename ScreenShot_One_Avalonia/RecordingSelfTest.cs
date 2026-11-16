@@ -24,6 +24,57 @@ namespace ScreenShot_One_Avalonia
             await RecordOnceAsync(shotsDir, "звичайний", hide: true);
         }
 
+        /// <summary>
+        /// Виключення вікон зі скріншотів (SO_SELFTEST_EXCLUDE=1): два пурпурні вікна, одне «приховане» (як мініатюра),
+        /// друге звичайне. На знімку екрана першого не має бути, а друге — має (перевірка, що сам тест бачить вікна).
+        /// </summary>
+        public static async Task RunExclusionAsync()
+        {
+            try
+            {
+                Window? hidden = null, visible = null;
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    Window Make(int x) => new Window
+                    {
+                        Width = 220, Height = 140, CanResize = false, ShowInTaskbar = false, Topmost = true,
+                        WindowDecorations = WindowDecorations.None, WindowStartupLocation = WindowStartupLocation.Manual,
+                        Position = new PixelPoint(x, 140),
+                        Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(255, 0, 255)),
+                    };
+                    hidden = Make(120); visible = Make(460);
+                    hidden.Show(); visible.Show();
+                });
+                await Task.Delay(800);
+                await Dispatcher.UIThread.InvokeAsync(() => PlatformHelper.HideWindowFromScreenCapture(hidden!));
+                await Task.Delay(800);
+
+                var (rectHidden, rectVisible, screen) = await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    PixelRect R(Window w)
+                    {
+                        var a = w.PointToScreen(new Point(0, 0));
+                        var b = w.PointToScreen(new Point(w.Bounds.Width, w.Bounds.Height));
+                        return new PixelRect(a.X, a.Y, b.X - a.X, b.Y - a.Y);
+                    }
+                    return (R(hidden!), R(visible!), hidden!.Screens.Primary);
+                });
+                var shot = screen != null ? ScreenCaptureService.Instance.CaptureScreen(screen) : null;
+                double h = -1, v = -1;
+                if (shot != null)
+                {
+                    var bounds = screen!.Bounds;
+                    h = DarkShare(shot, rectHidden, bounds);
+                    v = DarkShare(shot, rectVisible, bounds);
+                    shot.Dispose();
+                }
+                bool ok = h >= 0 && h < 0.05 && v > 0.5;
+                AppLog.Write($"[SelfTest] виключення вікон зі знімка: приховане {(h < 0 ? "?" : h.ToString("P0"))}, звичайне {(v < 0 ? "?" : v.ToString("P0"))} — {ok}");
+                await Dispatcher.UIThread.InvokeAsync(() => { hidden!.Close(); visible!.Close(); });
+            }
+            catch (Exception ex) { AppLog.Error(ex, "Самоперевірка виключення вікон"); }
+        }
+
         private static async Task RecordOnceAsync(string? shotsDir, string label, bool hide)
         {
             try
@@ -34,12 +85,13 @@ namespace ScreenShot_One_Avalonia
 
                 var (panelRect, screenRect) = await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    var root = panel!.FindControl<Border>("RootBorder")!;
+                    var p = panel!;
+                    var root = p.FindControl<Border>("RootBorder")!;
                     // Позначка: на час тесту панель яскраво-пурпурна — у звичайному кадрі такого кольору немає
                     root.Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(255, 0, 255));
-                    var tl = panel.PointToScreen(root.TranslatePoint(new Point(0, 0), panel) ?? default);
-                    var br = panel.PointToScreen(root.TranslatePoint(new Point(root.Bounds.Width, root.Bounds.Height), panel) ?? default);
-                    var screen = panel.Screens.Primary;
+                    var tl = p.PointToScreen(root.TranslatePoint(new Point(0, 0), p) ?? default);
+                    var br = p.PointToScreen(root.TranslatePoint(new Point(root.Bounds.Width, root.Bounds.Height), p) ?? default);
+                    var screen = p.Screens.Primary;
                     return (new PixelRect(tl.X, tl.Y, br.X - tl.X, br.Y - tl.Y), screen?.Bounds ?? new PixelRect(0, 0, 1024, 768));
                 });
 

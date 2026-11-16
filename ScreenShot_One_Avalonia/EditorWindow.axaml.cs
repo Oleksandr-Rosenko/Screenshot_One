@@ -393,12 +393,13 @@ namespace ScreenShot_One_Avalonia
                             else if (System.Windows.Forms.Clipboard.ContainsFileDropList())
                             {
                                 var files = System.Windows.Forms.Clipboard.GetFileDropList();
-                                if (files.Count > 0 && File.Exists(files[0]))
+                                string? first = files.Count > 0 ? files[0] : null;
+                                if (first != null && File.Exists(first))
                                 {
-                                    string ext = Path.GetExtension(files[0]).ToLowerInvariant();
+                                    string ext = Path.GetExtension(first).ToLowerInvariant();
                                     if (ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".webp")
                                     {
-                                        winFormsBmp = new Bitmap(files[0]);
+                                        winFormsBmp = new Bitmap(first);
                                     }
                                 }
                             }
@@ -1636,7 +1637,7 @@ namespace ScreenShot_One_Avalonia
 
                 else if (child is TextBlock txt)
 
-                    shapes.Add(new ShapeData { Type = ShapeType.Text, X1 = childLeft, Y1 = childTop, TextContent = txt.Text, FontSize = txt.FontSize, ColorHex = ((ISolidColorBrush)txt.Foreground!).Color.ToString() });
+                    shapes.Add(new ShapeData { Type = ShapeType.Text, X1 = childLeft, Y1 = childTop, TextContent = txt.Text ?? "", FontSize = txt.FontSize, ColorHex = ((ISolidColorBrush)txt.Foreground!).Color.ToString() });
 
                 else if (child is Border b && b.Tag is ShapeType tBlur && (tBlur == ShapeType.Blur || tBlur == ShapeType.Pixelate))
 
@@ -1649,7 +1650,7 @@ namespace ScreenShot_One_Avalonia
                         string base64 = "";
                         using (var ms = new MemoryStream())
                         {
-                            bmp.Save(ms);
+                            bmp.Save(ms, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
                             base64 = Convert.ToBase64String(ms.ToArray());
                         }
                         shapes.Add(new ShapeData
@@ -2301,7 +2302,7 @@ namespace ScreenShot_One_Avalonia
                 if (!_isSavedToHistory) SaveToHistoryDatabase(rtb);
 
                 tempPath = Path.Combine(Path.GetTempPath(), $"upload_{Guid.NewGuid()}.png");
-                using (var fs = new FileStream(tempPath, FileMode.Create)) { rtb.Save(fs); }
+                using (var fs = new FileStream(tempPath, FileMode.Create)) { rtb.Save(fs, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); }
                 rtb.Dispose();
 
                 string webLink = await GoogleDriveManager.UploadImageAsync(tempPath);
@@ -2350,7 +2351,7 @@ namespace ScreenShot_One_Avalonia
                 if (!_isSavedToHistory) SaveToHistoryDatabase(rtb);
 
                 tempPath = Path.Combine(Path.GetTempPath(), $"upload_{Guid.NewGuid()}.png");
-                using (var fs = new FileStream(tempPath, FileMode.Create)) { rtb.Save(fs); }
+                using (var fs = new FileStream(tempPath, FileMode.Create)) { rtb.Save(fs, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); }
                 rtb.Dispose();
 
                 string webLink = await PublicCloudManager.UploadImageAsync(tempPath);

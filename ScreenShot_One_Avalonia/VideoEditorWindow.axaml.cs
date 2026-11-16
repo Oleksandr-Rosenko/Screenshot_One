@@ -15,8 +15,6 @@ using Avalonia.Controls.Primitives;
 using System.Linq;
 using LibVLCSharp.Shared;
 using LibVLCSharp.Avalonia;
-using Xabe.FFmpeg;
-using Xabe.FFmpeg.Downloader;
 using SukiUI.Controls;
 using MsBox.Avalonia;
 
@@ -48,7 +46,6 @@ namespace ScreenShot_One_Avalonia
         private DateTime _lastTrimChangeTime = DateTime.MinValue;
         private double _lastTrimValue = 0;
         private bool _isCutoutMode = false;
-        private IBrush InactiveTrimTextBrush => ThemeBrush("MutedTextBrush");
 
         private HistoryWindow? _historyOwner;
         private HistoryItem? _sourceHistoryItem;
@@ -160,7 +157,6 @@ namespace ScreenShot_One_Avalonia
                     {
                         TxtVideoTitle.Text = Path.GetFileName(_sourceFile);
                         UpdateButtonStyles();
-                        SetVideoSliderTrackVisibility(true);
 
                         if (File.Exists(_sourceFile) && string.IsNullOrEmpty(_backupOriginalFile))
                         {
@@ -510,29 +506,6 @@ namespace ScreenShot_One_Avalonia
             }
         }
 
-        private void SetVideoSliderTrackVisibility(bool isVisible)
-        {
-            try
-            {
-                if (VideoSlider == null) return;
-                if (!isVisible)
-                {
-                    if (!VideoSlider.Classes.Contains("NoTrack"))
-                        VideoSlider.Classes.Add("NoTrack");
-                }
-                else
-                {
-                    VideoSlider.Classes.Remove("NoTrack");
-                }
-
-                foreach (var repeatBtn in VideoSlider.GetVisualDescendants().OfType<RepeatButton>())
-                {
-                    repeatBtn.Opacity = isVisible ? 1.0 : 0.0;
-                }
-            }
-            catch (Exception logEx) { AppLog.Warn(logEx); }
-        }
-
         private void UpdateButtonStyles()
         {
             try
@@ -545,53 +518,13 @@ namespace ScreenShot_One_Avalonia
             catch (Exception logEx) { AppLog.Warn(logEx); }
         }
 
+        /// <summary>Межі обрізки зі «повзунків-моделі» — на смугу TrimBar.</summary>
         private void UpdateTrimHighlight()
         {
-            if (TrimHighlightGrid == null || TrimHighlightGrid.ColumnDefinitions.Count < 3) return;
-
             double startVal = Math.Clamp(TrimStartSlider.Value, 0, 100);
             double endVal = Math.Clamp(TrimEndSlider.Value, 0, 100);
-            if (startVal > endVal) startVal = endVal;
-
-            double activeVal = Math.Max(0.1, endVal - startVal);
-            double rightVal = Math.Max(0, 100.0 - endVal);
-
-            TrimBar.Start = startVal;
+            TrimBar.Start = Math.Min(startVal, endVal);
             TrimBar.End = endVal;
-
-            TrimHighlightGrid.ColumnDefinitions[0].Width = new GridLength(startVal, GridUnitType.Star);
-            TrimHighlightGrid.ColumnDefinitions[1].Width = new GridLength(activeVal, GridUnitType.Star);
-            TrimHighlightGrid.ColumnDefinitions[2].Width = new GridLength(rightVal, GridUnitType.Star);
-
-            if (TrimMaskLeft != null && TrimMaskActive != null && TrimMaskRight != null)
-            {
-                if (!_isCutoutMode)
-                {
-                    // Mode: Keep Range
-                    // Left/Right: Red-tinted / Dimmed (Cut)
-                    TrimMaskLeft.Background = new SolidColorBrush(Color.FromArgb(160, 239, 68, 68));
-                    TrimMaskRight.Background = new SolidColorBrush(Color.FromArgb(160, 239, 68, 68));
-                    if (TxtMaskLeft != null) { TxtMaskLeft.Text = Loc.T("VEditor_Removed"); TxtMaskLeft.Foreground = Brushes.White; TxtMaskLeft.IsVisible = startVal > 10; }
-                    if (TxtMaskRight != null) { TxtMaskRight.Text = Loc.T("VEditor_Removed"); TxtMaskRight.Foreground = Brushes.White; TxtMaskRight.IsVisible = rightVal > 10; }
-
-                    // Middle: Vivid Green (Keep)
-                    TrimMaskActive.Background = new SolidColorBrush(Color.Parse("#3AA882"));
-                    if (TxtMaskActive != null) { TxtMaskActive.Text = Loc.T("VEditor_Kept"); TxtMaskActive.Foreground = Brushes.White; TxtMaskActive.IsVisible = activeVal > 12; }
-                }
-                else
-                {
-                    // Mode: Cutout Middle
-                    // Left/Right: Vivid Green (Keep)
-                    TrimMaskLeft.Background = new SolidColorBrush(Color.Parse("#3AA882"));
-                    TrimMaskRight.Background = new SolidColorBrush(Color.Parse("#3AA882"));
-                    if (TxtMaskLeft != null) { TxtMaskLeft.Text = Loc.T("VEditor_Kept"); TxtMaskLeft.Foreground = Brushes.White; TxtMaskLeft.IsVisible = startVal > 10; }
-                    if (TxtMaskRight != null) { TxtMaskRight.Text = Loc.T("VEditor_Kept"); TxtMaskRight.Foreground = Brushes.White; TxtMaskRight.IsVisible = rightVal > 10; }
-
-                    // Middle: Vibrant Red (Cut)
-                    TrimMaskActive.Background = new SolidColorBrush(Color.Parse("#D9614C"));
-                    if (TxtMaskActive != null) { TxtMaskActive.Text = Loc.T("VEditor_Removed"); TxtMaskActive.Foreground = Brushes.White; TxtMaskActive.IsVisible = activeVal > 12; }
-                }
-            }
         }
 
         private void BtnTrimModeKeep_Click(object? sender, RoutedEventArgs e) => SetTrimMode(false);
@@ -820,8 +753,6 @@ namespace ScreenShot_One_Avalonia
                 bool isTrim = BtnTrimMode.IsChecked == true;
                 TrimPanel.IsVisible = isTrim;
                 // Межі обрізки показує смуга TrimBar у панелі; основна шкала лишається звичайною (для перемотки)
-                TrimHighlightGrid.IsVisible = false;
-                bool isDark = this.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark;
 
                 if (isTrim)
                 {
@@ -849,9 +780,6 @@ namespace ScreenShot_One_Avalonia
                         TxtBtnTrimMode.Text = Loc.T("VEditor_Trim");
                         TxtBtnTrimMode.Foreground = null;
                     }
-
-                    if (TimelineTrackBorder != null) TimelineTrackBorder.Height = 8;
-                    SetVideoSliderTrackVisibility(true);
 
                     TxtBtnSave.Text = Loc.T("Common_Save");
                     ToolTip.SetTip(BtnSave, Loc.T("VEditor_SaveVideo"));
@@ -925,25 +853,10 @@ namespace ScreenShot_One_Avalonia
                     {
                         await Task.Delay(100);
 
-                        string exeName = OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg";
-                        string ffmpegExecutable = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, exeName);
-
-                        // Mac: ffmpeg усередині .app або з Homebrew (програми з Finder не бачать PATH)
-                        if (!File.Exists(ffmpegExecutable) && OperatingSystem.IsMacOS() && MacVideoRecorderService.FindFfmpeg() is string macFfmpeg)
-                            ffmpegExecutable = macFfmpeg;
-
-                        if (!File.Exists(ffmpegExecutable))
-                        {
-                            if (File.Exists(exeName))
-                            {
-                                ffmpegExecutable = Path.GetFullPath(exeName);
-                            }
-                            else
-                            {
-                                await FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official);
-                                if (File.Exists(exeName)) ffmpegExecutable = Path.GetFullPath(exeName);
-                            }
-                        }
+                        // ffmpeg вбудований у програму (Windows — ffmpeg.exe поруч, Mac — усередині .app).
+                        // Раніше за його відсутності тут мовчки завантажувався ffmpeg з інтернету (Xabe.FFmpeg.Downloader).
+                        string ffmpegExecutable = GifExport.FindFfmpeg()
+                            ?? throw new FileNotFoundException(Loc.T("VEditor_NoFfmpeg"));
 
                         // Detect audio stream to build safe encoding arguments
                         bool hasAudio = false;

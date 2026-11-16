@@ -178,7 +178,7 @@ namespace ScreenShot_One_Avalonia.Tests
                 string path = Path.Combine(Path.GetTempPath(), $"sso_png_{Guid.NewGuid():N}.png");
                 try
                 {
-                    using (var bmp = MakeGradient(321, 123)) bmp.Save(path);
+                    using (var bmp = MakeGradient(321, 123)) bmp.Save(path, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
                     Assert.Equal((321, 123), HistoryItem.ReadPngSize(path));
                     File.WriteAllText(path, "not a png");
                     Assert.Null(HistoryItem.ReadPngSize(path));

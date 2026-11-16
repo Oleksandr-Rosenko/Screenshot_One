@@ -132,7 +132,7 @@ namespace ScreenShot_One_Avalonia
             string tempPath = Path.Combine(Path.GetTempPath(), $"ocr_{Guid.NewGuid():N}.png");
             try
             {
-                using (var fs = File.Create(tempPath)) bitmap.Save(fs);
+                using (var fs = File.Create(tempPath)) bitmap.Save(fs, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
 
                 var psi = new ProcessStartInfo
                 {

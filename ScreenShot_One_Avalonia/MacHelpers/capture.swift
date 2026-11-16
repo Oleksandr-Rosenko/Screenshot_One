@@ -22,6 +22,7 @@
 // Інше:
 //   --scale S          масштаб результату (пікселі на точку); за замовчуванням — найбільший серед задіяних дисплеїв
 //   --cursor           показувати курсор
+//   --exclude-window ID  не показувати це вікно (мініатюра після знімка, панель запису); можна кілька разів
 //   --timeout СЕК      аварійний тайм-аут (за замовчуванням 15)
 // Коди виходу: 0 — успіх, 1 — неправильні аргументи, 2 — знімок не вдався, 3 — не вдалося записати результат,
 //              4 — немає дозволу «Запис екрана», 5 — тайм-аут, 6 — запис не підтримується (macOS < 15).
@@ -49,7 +50,7 @@ func fail(_ message: String, _ code: ExitCode) -> Never {
     exit(code.rawValue)
 }
 
-let usage = "usage: capture-helper (--display N | --all | --rect X,Y,W,H | --list | --selftest) [--out file.png | --out - | --raw] [--scale S] [--cursor] [--timeout SEC]\n       capture-helper --record file.mp4 (--display N | --rect X,Y,W,H) [--cursor] [--clicks] [--mic] [--audio] [--fps N] [--exclude-pid PID [--except-window ID]...]"
+let usage = "usage: capture-helper (--display N | --all | --rect X,Y,W,H | --list | --selftest) [--out file.png | --out - | --raw] [--scale S] [--cursor] [--exclude-window ID]... [--timeout SEC]\n       capture-helper --record file.mp4 (--display N | --rect X,Y,W,H) [--cursor] [--clicks] [--mic] [--audio] [--fps N] [--exclude-pid PID [--except-window ID]...]"
 
 // ---- Аргументи ----
 
@@ -70,6 +71,7 @@ struct Options {
     var record: String?
     var excludePid: pid_t?
     var exceptWindows: [CGWindowID] = []
+    var excludeWindows: [CGWindowID] = []
     var clicks = false
     var mic = false
     var audio = false
@@ -119,6 +121,9 @@ func parseArgs(_ args: [String]) -> Options {
         case "--exclude-pid":
             guard let p = Int32(value(arg)), p > 0 else { fail("--exclude-pid expects a process id", .badArgs) }
             o.excludePid = p
+        case "--exclude-window":
+            guard let w = UInt32(value(arg)) else { fail("--exclude-window expects a window id", .badArgs) }
+            o.excludeWindows.append(w)
         case "--except-window":
             guard let w = UInt32(value(arg)) else { fail("--except-window expects a window id", .badArgs) }
             o.exceptWindows.append(w)
@@ -166,13 +171,17 @@ func nativeScale(of display: SCDisplay) -> CGFloat {
     return 1
 }
 
-func loadDisplays() async throws -> [Display] {
+/// Вікна, яких не має бути на знімку (з --exclude-window), — заповнюється в loadDisplays.
+var excludedWindows: [SCWindow] = []
+
+func loadDisplays(excluding ids: [CGWindowID] = []) async throws -> [Display] {
     let content: SCShareableContent
     do {
         content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
     } catch {
         throw mapCaptureError(error, "cannot list displays")
     }
+    excludedWindows = ids.isEmpty ? [] : content.windows.filter { ids.contains($0.windowID) }
     let mainID = CGMainDisplayID()
     let displays = content.displays.map { Display(sc: $0, frame: $0.frame, scale: nativeScale(of: $0)) }
     // Стабільний порядок: головний дисплей першим, далі зліва направо, згори вниз
@@ -198,7 +207,7 @@ func mapCaptureError(_ error: Error, _ context: String) -> HelperError {
 
 /// Знімає частину одного дисплея. localRect — у точках відносно самого дисплея, pixelSize — розмір результату.
 func captureRegion(_ d: Display, localRect: CGRect, pixelSize: CGSize, cursor: Bool) async throws -> CGImage {
-    let filter = SCContentFilter(display: d.sc, excludingWindows: [])
+    let filter = SCContentFilter(display: d.sc, excludingWindows: excludedWindows)
     let config = SCStreamConfiguration()
     config.sourceRect = localRect
     config.width = max(1, Int(pixelSize.width.rounded()))
@@ -453,7 +462,7 @@ func run(_ o: Options) async throws {
     guard CGPreflightScreenCaptureAccess() else {
         throw HelperError(message: "no Screen Recording permission", code: .noPermission)
     }
-    let displays = try await loadDisplays()
+    let displays = try await loadDisplays(excluding: o.excludeWindows)
     guard !displays.isEmpty else { throw HelperError(message: "no displays", code: .captureFailed) }
 
     if let path = o.record {

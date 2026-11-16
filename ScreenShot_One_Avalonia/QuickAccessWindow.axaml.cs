@@ -74,7 +74,7 @@ namespace ScreenShot_One_Avalonia
         {
             base.OnOpened(e);
 
-            // Windows: мініатюра не потрапляє в наступні скріншоти та відеозаписи
+            // Мініатюра не потрапляє в наступні скріншоти та відеозаписи (Windows — SetWindowDisplayAffinity, Mac — ScreenCaptureKit)
             if (OperatingSystem.IsWindows())
             {
                 try
@@ -83,6 +83,10 @@ namespace ScreenShot_One_Avalonia
                     if (handle.HasValue) SetWindowDisplayAffinity(handle.Value, WDA_EXCLUDEFROMCAPTURE);
                 }
                 catch (Exception ex) { AppLog.Warn(ex); }
+            }
+            else
+            {
+                PlatformHelper.HideWindowFromScreenCapture(this);
             }
 
             // Розмір відомий лише після розмітки

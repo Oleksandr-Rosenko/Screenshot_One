@@ -92,7 +92,7 @@ namespace ScreenShot_One_Avalonia
             string flattenedPath = Path.Combine(HistoryFolderPath, $"{id}_flattened.png");
             string jsonPath = Path.Combine(HistoryFolderPath, $"{id}_meta.json");
 
-            using (var fs = new FileStream(originalPath, FileMode.Create)) { original.Save(fs); }
+            using (var fs = new FileStream(originalPath, FileMode.Create)) { original.Save(fs, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); }
 
             if (shapes != null)
             {
@@ -102,7 +102,7 @@ namespace ScreenShot_One_Avalonia
             // _flattened.png — «ознака» запису для вікна історії, тому пишемо його ОСТАННІМ і атомарно
             // (через тимчасовий файл), щоб історія ніколи не побачила напівзаписаний PNG без метаданих.
             string tempPath = flattenedPath + ".tmp";
-            using (var fs = new FileStream(tempPath, FileMode.Create)) { flattened.Save(fs); }
+            using (var fs = new FileStream(tempPath, FileMode.Create)) { flattened.Save(fs, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); }
             File.Move(tempPath, flattenedPath, overwrite: true);
 
             lock (_idLock) { _reservedIds.Remove(id); }

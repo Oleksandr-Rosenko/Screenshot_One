@@ -105,6 +105,12 @@ namespace ScreenShot_One_Avalonia
                 CreateNoWindow = true,
             };
             foreach (var a in args) psi.ArgumentList.Add(a);
+            // Мініатюра після знімка, панель запису тощо — не на знімку (як SetWindowDisplayAffinity на Windows)
+            foreach (int n in OperatingSystem.IsMacOS() ? MacWindow.ExcludedWindowNumbers : Array.Empty<int>())
+            {
+                psi.ArgumentList.Add("--exclude-window");
+                psi.ArgumentList.Add(n.ToString(CultureInfo.InvariantCulture));
+            }
 
             using var proc = Process.Start(psi);
             if (proc == null) return (null, HelperExit.Crashed);

@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="ScreenShot_One_Avalonia.MainWindow"
         Title="Screen Capture Overlay"
-        SystemDecorations="None"
+        WindowDecorations="None"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
         WindowState="Maximized"

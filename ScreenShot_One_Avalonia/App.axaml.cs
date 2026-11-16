@@ -141,7 +141,9 @@ namespace ScreenShot_One_Avalonia
                     MacStatusItem.Create(ReadAsset("tray.png"), "Screenshot One");
                     VideoRecorderManager.OnStatusChanged += isRecording =>
                         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                            MacStatusItem.SetImage(ReadAsset(isRecording ? "tray-recording.png" : "tray.png")));
+                        {
+                            if (OperatingSystem.IsMacOS()) MacStatusItem.SetImage(ReadAsset(isRecording ? "tray-recording.png" : "tray.png"));
+                        });
                     return;
                 }
                 catch (Exception ex) { AppLog.Error(ex, "Mac: значок у рядку меню — повертаємось до TrayIcon"); }
@@ -251,8 +253,8 @@ namespace ScreenShot_One_Avalonia
                     {
                         var b = w!.FindControl<Avalonia.Controls.Primitives.ToggleButton>("BtnTrimMode")!;
                         if (placement is { } p) ToolTip.SetPlacement(b, p); else b.ClearValue(ToolTip.PlacementProperty);
-                        var c = b.TranslatePoint(new Point(b.Bounds.Width / 2, b.Bounds.Height / 2), w) ?? default;
-                        return (w.PointToScreen(c), b.IsChecked == true);
+                        var c = b.TranslatePoint(new Point(b.Bounds.Width / 2, b.Bounds.Height / 2), w!) ?? default;
+                        return (w!.PointToScreen(c), b.IsChecked == true);
                     });
                     SetCursorPos(pt.X + 1, pt.Y + 1);
                     await System.Threading.Tasks.Task.Delay(100);
@@ -279,6 +281,8 @@ namespace ScreenShot_One_Avalonia
         /// <summary>Остання частина самоперевірок (запис відео) і мітка «завершено», на яку чекає CI.</summary>
         private static async System.Threading.Tasks.Task FinishSelfTestsAsync()
         {
+            if (Environment.GetEnvironmentVariable("SO_SELFTEST_EXCLUDE") == "1")
+                await RecordingSelfTest.RunExclusionAsync();
             if (Environment.GetEnvironmentVariable("SO_SELFTEST_RECORD") == "1")
                 await RecordingSelfTest.RunAsync(Environment.GetEnvironmentVariable("SO_SELFTEST_SHOTS"));
             AppLog.Write("[SelfTest] завершено");

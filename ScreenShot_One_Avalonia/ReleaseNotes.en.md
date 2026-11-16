@@ -1,7 +1,9 @@
-• The background around a screenshot is now enabled only for the current screenshot — every new screenshot opens without it. The chosen color, padding, corners and shadow are remembered.
-• The “Background around the screenshot” label in the menu is no longer cut off.
+• macOS: the floating thumbnail after a capture and the recording panel no longer appear in the next screenshots (as on Windows).
+• The video editor no longer downloads ffmpeg from the internet — the bundled one is always used.
+• Stability improvements: outdated calls updated, unused code removed, the Mac version passes full automatic checks (recording, trimming, screenshots) before publishing.
 
 Changes in previous versions:
+• 3.0.1: the background around a screenshot is enabled only for the current screenshot.
 • 3.0.0: new video trimming with cutting from the middle, Mac recording without the panel and with system audio, “macOS permissions” section, a prompt before deleting a new recording.
 • 2.10.2: video editor on Apple Silicon Macs; the “Trim” button works on the first click.
 • 2.10.1: macOS — area selection without switching to a separate desktop; the video area frame lets clicks through.

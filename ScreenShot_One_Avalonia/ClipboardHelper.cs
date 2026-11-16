@@ -22,7 +22,7 @@ namespace ScreenShot_One_Avalonia
                 // Фізичний файл надійно фіксує всі пікселі
                 using (var fs = new FileStream(tempPath, FileMode.Create))
                 {
-                    bitmap.Save(fs);
+                    bitmap.Save(fs, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
                 }
 
                 if (OperatingSystem.IsWindows())

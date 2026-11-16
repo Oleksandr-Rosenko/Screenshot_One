@@ -155,38 +155,10 @@
 							<!-- Interactive Range Timeline container -->
 							<Grid Grid.Column="1" Margin="12,0" Height="30" VerticalAlignment="Center">
 								<!-- Background Track -->
-								<Border Name="TimelineTrackBorder" Height="8" CornerRadius="6" Background="{DynamicResource SukiLightBackground}" BorderBrush="{DynamicResource SukiBorderBrush}" BorderThickness="1" VerticalAlignment="Center" ClipToBounds="True">
-									<!-- Trim Mask Highlight Layer -->
-									<Grid Name="TrimHighlightGrid" Height="24" VerticalAlignment="Stretch" IsVisible="False">
-										<Grid.ColumnDefinitions>
-											<ColumnDefinition Width="0*"/>
-											<ColumnDefinition Width="100*"/>
-											<ColumnDefinition Width="0*"/>
-										</Grid.ColumnDefinitions>
-										<Border Name="TrimMaskLeft" Grid.Column="0" ClipToBounds="True">
-											<TextBlock Name="TxtMaskLeft" Text="{DynamicResource VEditor_Removed}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-										</Border>
-										<Border Name="TrimMaskActive" Grid.Column="1" ClipToBounds="True">
-											<TextBlock Name="TxtMaskActive" Text="{DynamicResource VEditor_Kept}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-										</Border>
-										<Border Name="TrimMaskRight" Grid.Column="2" ClipToBounds="True">
-											<TextBlock Name="TxtMaskRight" Text="{DynamicResource VEditor_Removed}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-										</Border>
-									</Grid>
-								</Border>
+								<Border Name="TimelineTrackBorder" Height="8" CornerRadius="6" Background="{DynamicResource SukiLightBackground}" BorderBrush="{DynamicResource SukiBorderBrush}" BorderThickness="1" VerticalAlignment="Center"/>
 
 								<!-- Main Slider with pointer scrub events -->
-								<Slider Name="VideoSlider" Minimum="0" Maximum="100" Value="0"
-								        VerticalAlignment="Center" Margin="0">
-									<Slider.Styles>
-										<Style Selector="Slider.NoTrack /template/ RepeatButton">
-											<Setter Property="Opacity" Value="0"/>
-										</Style>
-										<Style Selector="Slider.NoTrack /template/ Border#PART_TrackBackground">
-											<Setter Property="Opacity" Value="0"/>
-										</Style>
-									</Slider.Styles>
-								</Slider>
+								<Slider Name="VideoSlider" Minimum="0" Maximum="100" Value="0" VerticalAlignment="Center" Margin="0"/>
 							</Grid>
 
 							<TextBlock Grid.Column="2" Name="TxtTotalTime" Classes="MonoTime" Text="00:00.00" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SukiTextLow}"/>

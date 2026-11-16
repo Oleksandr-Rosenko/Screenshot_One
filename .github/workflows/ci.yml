@@ -5,6 +5,11 @@ on:
     branches: [main, master, 'claude/**']
   pull_request:
   workflow_dispatch:
+    inputs:
+      flicker:
+        description: 'Діагностика мерехтіння кнопок (~3 хв на кожній ОС)'
+        type: boolean
+        default: false
 
 jobs:
   windows:
@@ -51,8 +56,10 @@ jobs:
           & ScreenShot_One_Avalonia/ffmpeg.exe -hide_banner -loglevel error -f lavfi -i testsrc=duration=90:size=640x360:rate=30 -pix_fmt yuv420p $video
           $env:SO_SELFTEST_VEDITOR = $video
           # Діагностика: мерехтіння кнопок і чи потрапляє панель запису у відео (кадри — в артефакт selftest-shots-windows)
-          $env:SO_SELFTEST_FLICKER = "1"
+          # Мерехтіння — лише на запит (Actions → CI → Run workflow → flicker)
+          if ("${{ inputs.flicker }}" -eq "true") { $env:SO_SELFTEST_FLICKER = "1" }
           $env:SO_SELFTEST_RECORD = "1"
+          $env:SO_SELFTEST_EXCLUDE = "1"
           $env:SO_SELFTEST_SHOTS = Join-Path $env:RUNNER_TEMP "shots"
           $p = Start-Process $exe.FullName -PassThru
           $log = Join-Path $env:LOCALAPPDATA "Screenshot_One/logs/app.log"
@@ -68,7 +75,7 @@ jobs:
           Write-Host "----- app.log -----"
           if (Test-Path $log) { Get-Content $log -Tail 60 }
           Write-Host "----- діагностика -----"
-          if (Test-Path $log) { Select-String -Path $log -Pattern '\[Flicker\]|SelfTest\] (запис|мерехтіння|вирізання)' | ForEach-Object { $_.Line } }
+          if (Test-Path $log) { Select-String -Path $log -Pattern '\[Flicker\]|SelfTest\] (запис|мерехтіння|вирізання|виключення)' | ForEach-Object { $_.Line } }
           if (-not $alive) { throw "App exited early (code $($p.ExitCode))" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\].*2,5.*True' -Quiet)) { throw "Tray panel self-test (left click) failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\].*→.*True' -Quiet)) { throw "Tray panel self-test (right click) failed" }
@@ -80,6 +87,7 @@ jobs:
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] кнопка обрізки.*True' -Quiet)) { throw "Trim button self-test failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] вирізання з середини.*True' -Quiet)) { throw "Cut-from-middle self-test failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] запис.*панель у відео: False' -Quiet)) { throw "Recording panel is visible in the video" }
+          if (-not (Select-String -Path $log -Pattern 'SelfTest\] виключення вікон.*True' -Quiet)) { throw "Window exclusion from screenshots failed" }
       - name: Upload self-test shots (Windows)
         if: always()
         uses: actions/upload-artifact@v4
@@ -190,8 +198,10 @@ jobs:
           # Тестове відео для відеоредактора (вбудованим ffmpeg)
           /Applications/Screenshot_One.app/Contents/MacOS/ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=duration=90:size=640x360:rate=30 -pix_fmt yuv420p "$RUNNER_TEMP/selftest.mp4"
           LOG="$HOME/Library/Application Support/Screenshot_One/logs/app.log"
+          # Мерехтіння — лише на запит (Actions → CI → Run workflow → flicker)
+          if [ "${{ inputs.flicker }}" = "true" ]; then export SO_SELFTEST_FLICKER=1; fi
           SO_SELFTEST_TRAY=1 SO_SELFTEST_CAPTURE=1 SO_SELFTEST_VEDITOR="$RUNNER_TEMP/selftest.mp4" \
-          SO_SELFTEST_FLICKER=1 SO_SELFTEST_RECORD=1 SO_SELFTEST_SHOTS="$RUNNER_TEMP/shots" \
+          SO_SELFTEST_RECORD=1 SO_SELFTEST_EXCLUDE=1 SO_SELFTEST_SHOTS="$RUNNER_TEMP/shots" \
             /Applications/Screenshot_One.app/Contents/MacOS/Screenshot_One > "$RUNNER_TEMP/app.out" 2>&1 &
           PID=$!
           # Чекаємо мітку «[SelfTest] завершено» (до 8 хв), але не менше 25 с
@@ -202,7 +212,7 @@ jobs:
             sleep 5
           done
           if kill -0 $PID 2>/dev/null; then echo "APP ALIVE"; ALIVE=1; kill $PID; else echo "APP DIED"; ALIVE=0; fi
-          echo "----- діагностика -----"; grep -aE "\[Flicker\]|SelfTest\] (запис|мерехтіння|вирізання)|MacVideoRecorder" "$LOG"
+          echo "----- діагностика -----"; grep -aE "\[Flicker\]|SelfTest\] (запис|мерехтіння|вирізання|виключення)|MacVideoRecorder" "$LOG"
           echo "----- stdout/stderr -----"; tail -n 80 "$RUNNER_TEMP/app.out"
           echo "----- app.log -----"; tail -n 80 "$HOME/Library/Application Support/Screenshot_One/logs/app.log" 2>/dev/null
           echo "----- last_crash.txt -----"; cat "$HOME/Library/Application Support/Screenshot_One/logs/last_crash.txt" 2>/dev/null
@@ -226,6 +236,7 @@ jobs:
           # Вирізання з середини і запис без панелі (ScreenCaptureKit, macOS 15+)
           grep -aq "SelfTest\] вирізання з середини.*True" "$LOG" || exit 1
           grep -aq "SelfTest\] запис.*панель у відео: False" "$LOG" || exit 1
+          grep -aq "SelfTest\] виключення вікон.*True" "$LOG" || exit 1
       - name: Upload self-test shots (macOS)
         if: always()
         uses: actions/upload-artifact@v4

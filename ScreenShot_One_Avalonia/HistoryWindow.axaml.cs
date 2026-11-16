@@ -136,7 +136,7 @@ namespace ScreenShot_One_Avalonia
 
             {
 
-                if (!OperatingSystem.IsWindows()) return null;
+                if (!OperatingSystem.IsWindowsVersionAtLeast(6, 1)) return null;
                 if (!File.Exists(filePath)) return null;
 
                 Guid uuid = new Guid("bcc18b79-ba16-442f-80c4-8a59c30c463b");

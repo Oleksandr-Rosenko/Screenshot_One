@@ -127,6 +127,10 @@ namespace ScreenShot_One_Avalonia
                 var handle = this.TryGetPlatformHandle()?.Handle;
                 if (handle.HasValue) SetWindowDisplayAffinity(handle.Value, 0x00000011);
             }
+            else
+            {
+                PlatformHelper.HideWindowFromScreenCapture(this); // Mac: не на скріншотах (у відео — через запис ScreenCaptureKit)
+            }
 
             // Унизу по центру головного екрана (розмір відомий лише після розмітки)
             Dispatcher.UIThread.Post(() =>

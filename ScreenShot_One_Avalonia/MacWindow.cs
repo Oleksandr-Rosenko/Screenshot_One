@@ -96,14 +96,29 @@ namespace ScreenShot_One_Avalonia
             if (ns != IntPtr.Zero) SendBool(ns, Sel("setIgnoresMouseEvents:"), clickThrough ? (byte)1 : (byte)0);
         }
 
+        private static readonly object _excludedLock = new();
+        private static readonly System.Collections.Generic.HashSet<int> _excluded = new();
+
+        /// <summary>Номери вікон, яких не має бути на знімках (capture-helper --exclude-window).</summary>
+        public static int[] ExcludedWindowNumbers
+        {
+            get { lock (_excludedLock) return System.Linq.Enumerable.ToArray(_excluded); }
+        }
+
         /// <summary>
-        /// Не показувати вікно в знімках і записі екрана (NSWindowSharingNone). Працює для CoreGraphics і ffmpeg;
-        /// ScreenCaptureKit на нових macOS цей прапорець може ігнорувати.
+        /// Не показувати вікно в знімках (мініатюра, панель запису, рамка зони): номер вікна передається
+        /// в capture-helper (ScreenCaptureKit), а NSWindowSharingNone — для запасних CoreGraphics/screencapture.
         /// </summary>
         public static void ExcludeFromCapture(Window window)
         {
             IntPtr ns = GetNSWindow(window);
-            if (ns != IntPtr.Zero) SendNUInt(ns, Sel("setSharingType:"), 0);
+            if (ns == IntPtr.Zero) return;
+            SendNUInt(ns, Sel("setSharingType:"), 0);
+            if (WindowNumber(window) is int n)
+            {
+                lock (_excludedLock) _excluded.Add(n);
+                window.Closed += (_, _) => { lock (_excludedLock) _excluded.Remove(n); };
+            }
         }
 
         /// <summary>Номер вікна в WindowServer (CGWindowID) або null.</summary>

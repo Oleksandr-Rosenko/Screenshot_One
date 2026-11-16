@@ -211,8 +211,8 @@ namespace ScreenShot_One_Avalonia
                     // Перший кадр — завжди (видно, де курсор і чи є підказка); при змінах — ще й кадр після зміни
                     string safe = string.Concat(name.Select(ch => char.IsLetterOrDigit(ch) ? ch : '_'));
                     if (safe.Length > 60) safe = safe[..60];
-                    frames[0].Bitmap?.Save(Path.Combine(shotsDir, $"{saveIndex:00}_{safe}_a.png"));
-                    if (firstChanged > 0) frames[firstChanged].Bitmap?.Save(Path.Combine(shotsDir, $"{saveIndex:00}_{safe}_b.png"));
+                    frames[0].Bitmap?.Save(Path.Combine(shotsDir, $"{saveIndex:00}_{safe}_a.png"), PngBitmapEncoderOptions.Default);
+                    if (firstChanged > 0) frames[firstChanged].Bitmap?.Save(Path.Combine(shotsDir, $"{saveIndex:00}_{safe}_b.png"), PngBitmapEncoderOptions.Default);
                 }
                 catch (Exception ex) { AppLog.Warn(ex); }
             }
