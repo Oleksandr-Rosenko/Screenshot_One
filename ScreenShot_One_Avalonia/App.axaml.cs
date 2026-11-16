@@ -81,12 +81,11 @@ namespace ScreenShot_One_Avalonia
                     WindowsShell.RefreshAfterUpdate();
                 });
 
-                // Автоматична фонова перевірка оновлень через 6 секунд після запуску
-                _ = System.Threading.Tasks.Task.Run(async () =>
-                {
-                    await System.Threading.Tasks.Task.Delay(6000);
-                    await UpdateWindow.CheckAndShowAsync(isManual: false);
-                });
+                // Автоматична перевірка оновлень: після запуску й далі кожні 4 години. Раніше — лише раз через 6 с після
+                // старту: програма тижнями живе в треї, і нові версії, що вийшли пізніше, не помічала (а одразу після входу
+                // в систему мережа часто ще не готова — і та єдина перевірка тихо падала).
+                if (!Environment.GetEnvironmentVariables().Keys.Cast<object>().Any(k => k.ToString()!.StartsWith("SO_SELFTEST_", StringComparison.Ordinal)))
+                    AutoUpdateLoopAsync().FireAndForget("Автоматична перевірка оновлень");
 
             }
 
@@ -415,6 +414,27 @@ namespace ScreenShot_One_Avalonia
             bool ok = screen != null && Math.Abs(tl.X - b.X) <= 2 && Math.Abs(tl.Y - b.Y) <= 2
                 && Math.Abs(br.X - b.Right) <= 2 && Math.Abs(br.Y - b.Bottom) <= 2;
             return $"вікно {tl.X},{tl.Y}–{br.X},{br.Y}, екран {b} — {ok}";
+        }
+
+        private static async System.Threading.Tasks.Task AutoUpdateLoopAsync()
+        {
+            await System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(20));
+            while (true)
+            {
+                // Не перебиваємо запис відео чи виділення зони — спитаємо трохи пізніше
+                bool busy = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    VideoRecorderManager.IsRecording ||
+                    (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime d &&
+                     d.Windows.Any(w => w is MainWindow || w is VideoRegionWindow)));
+                TimeSpan next;
+                if (busy) next = TimeSpan.FromMinutes(10);
+                else
+                {
+                    bool ok = await UpdateWindow.CheckAndShowAsync(isManual: false);
+                    next = ok ? TimeSpan.FromHours(4) : TimeSpan.FromMinutes(15); // немає мережі — повтор скоро
+                }
+                await System.Threading.Tasks.Task.Delay(next);
+            }
         }
 
         public static bool IsTrayMenuWindow(Window w) => w.Name?.StartsWith("AvaloniaTrayPopupRoot_", StringComparison.Ordinal) == true;

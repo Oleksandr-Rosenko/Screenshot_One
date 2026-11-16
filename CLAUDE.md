@@ -18,7 +18,7 @@
 
 - `ScreenShot_One_Avalonia/` — програма (`AssemblyName` = `Screenshot_One`). Дві цілі: `net10.0-windows10.0.19041.0` (Windows SDK — потрібен для `Windows.Media.Ocr`; запуск з Windows 10 1809) і `net10.0` (macOS). В умовах `.csproj` — `$(TargetFramework.StartsWith('net10.0-windows'))`.
   - `Program.cs` — точка входу, Velopack-хук, глобальні обробники помилок.
-  - `App.axaml.cs` — трей-меню, гарячі клавіші, `ShowSingle<T>()` (показ вікна в одному екземплярі), фонова перевірка оновлень.
+  - `App.axaml.cs` — трей-меню, гарячі клавіші, `ShowSingle<T>()` (показ вікна в одному екземплярі), фонова перевірка оновлень (`AutoUpdateLoopAsync`, з 3.0.2: через 20 с після старту й далі кожні 4 год; без мережі — повтор за 15 хв; під час запису/виділення — відкладає; при `SO_SELFTEST_*` вимкнена).
   - `MainWindow` — оверлей виділення зони для скріншота. З 2.10.0 — знімок вікна: при «заморожуванні» `WindowLocator.GetWindows()` (Windows — EnumWindows + DWM extended frame bounds, без cloaked/без заголовка/своїх; Mac — CGWindowListCopyWindowInfo, layer 0), наведення підсвічує вікно (`HighlightWindowAt`), клік без перетягування знімає його. Підказка `WindowHint` вгорі.
   - `EditorWindow` — редактор скріншотів (~1900 рядків code-behind): фігури (`ShapeType`), undo/redo, обрізка, вставка, копіювання, завантаження.
   - `HistoryWindow` + `HistoryManager` — історія. Файли `{id}_original.png`, `{id}_flattened.png`, `{id}_meta.json`; ліміт 500; ID `yyyyMMdd_HHmmss_fff`.

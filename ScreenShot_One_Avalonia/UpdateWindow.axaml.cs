@@ -468,13 +468,13 @@ namespace ScreenShot_One_Avalonia
             return "3.0.2";
         }
 
-        public static async Task CheckAndShowAsync(bool isManual = true)
+        /// <summary>Перевірка оновлень. Для автоматичної: false — не вдалась (немає мережі), варто повторити раніше.</summary>
+        public static async Task<bool> CheckAndShowAsync(bool isManual = true)
         {
             // На Mac немає інсталятора Velopack — окрема перевірка через GitHub (див. MacUpdateChecker)
             if (OperatingSystem.IsMacOS())
             {
-                await MacUpdateChecker.CheckAsync(isManual);
-                return;
+                return await MacUpdateChecker.CheckAsync(isManual);
             }
 
             if (isManual)
@@ -517,7 +517,7 @@ namespace ScreenShot_One_Avalonia
                             (DateTime.UtcNow - SettingsManager.Current.LastUpdateDismissedUtc.Value).TotalHours < 24 &&
                             SettingsManager.Current.LastDismissedVersion == newVersionStr)
                         {
-                            return; // Dismissed less than 24h ago
+                            return true; // Dismissed less than 24h ago
                         }
 
                         await Dispatcher.UIThread.InvokeAsync(() =>
@@ -536,8 +536,13 @@ namespace ScreenShot_One_Avalonia
                         });
                     }
                 }
-                catch (Exception logEx) { AppLog.Warn(logEx); }
+                catch (Exception logEx)
+                {
+                    AppLog.Warn(logEx);
+                    return false;
+                }
             }
+            return true;
         }
     }
 }

@@ -77,8 +77,13 @@ namespace ScreenShot_One_Avalonia
             return new Version(v.Major, v.Minor, Math.Max(0, v.Build));
         }
 
-        public static async Task CheckAsync(bool isManual)
+        private static bool _promptOpen;
+
+        /// <summary>Перевіряє оновлення. false — перевірка не вдалась (немає мережі тощо), варто повторити раніше.</summary>
+        public static async Task<bool> CheckAsync(bool isManual)
         {
+            // Автоматична перевірка не відкриває друге питання, поки перше ще без відповіді
+            if (!isManual && _promptOpen) return true;
             try
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -90,7 +95,7 @@ namespace ScreenShot_One_Avalonia
                 {
                     if (isManual)
                         await ShowAsync(Loc.T("Update_Title"), Loc.F("Update_MacLatest", current.ToString(3)), ButtonEnum.Ok);
-                    return;
+                    return true;
                 }
 
                 if (!isManual &&
@@ -98,7 +103,7 @@ namespace ScreenShot_One_Avalonia
                     (DateTime.UtcNow - SettingsManager.Current.LastUpdateDismissedUtc.Value).TotalHours < 24 &&
                     SettingsManager.Current.LastDismissedVersion == release.VersionText)
                 {
-                    return; // користувач відклав це оновлення менше доби тому
+                    return true; // користувач відклав це оновлення менше доби тому
                 }
 
                 string? appBundle = CurrentAppBundle();
@@ -106,9 +111,15 @@ namespace ScreenShot_One_Avalonia
                 string question = canSelfUpdate || release.PkgUrl != null
                     ? Loc.T("Update_MacInstallNow")
                     : Loc.T("Update_MacOpenRelease");
-                var answer = await ShowAsync(Loc.T("Update_MacAvailableTitle"),
-                    Loc.F("Update_MacAvailable", release.VersionText, current.ToString(3)) + question,
-                    ButtonEnum.YesNo);
+                ButtonResult answer;
+                _promptOpen = true;
+                try
+                {
+                    answer = await ShowAsync(Loc.T("Update_MacAvailableTitle"),
+                        Loc.F("Update_MacAvailable", release.VersionText, current.ToString(3)) + question,
+                        ButtonEnum.YesNo);
+                }
+                finally { _promptOpen = false; }
 
                 if (answer == ButtonResult.Yes)
                 {
@@ -122,12 +133,14 @@ namespace ScreenShot_One_Avalonia
                     SettingsManager.Current.LastDismissedVersion = release.VersionText;
                     try { SettingsManager.Save(); } catch (Exception ex) { AppLog.Warn(ex); }
                 }
+                return true;
             }
             catch (Exception ex)
             {
                 AppLog.Warn(ex);
                 if (isManual)
                     await ShowAsync(Loc.T("Update_Title"), Loc.F("Update_MacCheckFailed", ex.Message), ButtonEnum.Ok);
+                return false;
             }
         }
 
