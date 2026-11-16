@@ -186,6 +186,8 @@ namespace ScreenShot_One_Avalonia
             ["AutoTag_document"] = new[] { "документ", "document", "документ" },
             ["AutoTag_presentation"] = new[] { "презентація", "presentation", "презентация" },
             ["AutoTag_terminal"] = new[] { "термінал", "terminal", "терминал" },
+            ["AutoTag_files"] = new[] { "файли", "files", "файлы" },
+            ["AutoTag_design"] = new[] { "дизайн", "design", "дизайн" },
             ["History_Videos"] = new[] { "Відео", "Videos", "Видео" },
             ["History_ClearScreenshots"] = new[] { "Очистити скріншоти", "Clear screenshots", "Очистить скриншоты" },
             ["History_ClearVideos"] = new[] { "Очистити відео", "Clear videos", "Очистить видео" },

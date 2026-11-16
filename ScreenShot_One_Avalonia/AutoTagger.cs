@@ -10,13 +10,14 @@ namespace ScreenShot_One_Avalonia
     /// складаємо 1–2 теги «що + де». Конкретніша ознака перемагає загальну:
     ///   1) що на екрані (з тексту): помилка, рахунок, код;
     ///   2) сервіс чи сайт (із заголовка або назви програми): jira, github, youtube, figma, telegram…;
-    ///   3) тип програми (браузер, таблиці, документ…) — лише якщо сервісу не знайдено.
+    ///   3) тип програми (браузер, таблиці, документ…) — лише якщо сервісу не знайдено;
+    ///   4) інакше — коротка назва самої програми (3.2.1: раніше знімки з «невідомих» програм лишались без тегів).
     /// Без інтернету й без «магії» — прості правила, однакові на Windows і Mac.
     /// </summary>
     public static class AutoTagger
     {
         /// <summary>Версія правил: коли вони зміняться, автотеги старих записів перераховуються.</summary>
-        public const int RulesVersion = 1;
+        public const int RulesVersion = 2;
 
         // ---- 1. Зміст (текст на знімку) ----
         private static readonly (string Key, Regex Pattern)[] ContentRules =
@@ -66,7 +67,13 @@ namespace ScreenShot_One_Avalonia
             ("document", new[] { "word", "pages", "google docs", "libreoffice writer", "acrobat", "preview", "попередній перегляд" }),
             ("presentation", new[] { "powerpoint", "keynote", "google slides" }),
             ("terminal", new[] { "terminal", "iterm", "powershell", "command prompt", "cmd", "warp" }),
+            ("files", new[] { "explorer", "file explorer", "провідник", "проводник", "finder", "total commander" }),
+            ("design", new[] { "photoshop", "illustrator", "gimp", "sketch", "canva", "affinity", "paint", "krita" }),
         };
+
+        // Службові «програми», назва яких нічого не каже: робочий стіл, рамка UWP-програм тощо
+        private static readonly string[] NoNameApps = { "application frame host", "desktop window manager", "program manager", "windows shell experience host", "dock", "window server", "loginwindow" };
+        private static readonly string[] NamePrefixes = { "microsoft ", "google ", "adobe ", "apple " };
 
         /// <summary>Назва тегу мовою програми (для змісту й типу програми; сервіси — власні назви).</summary>
         public static string TagName(string key) => key switch
@@ -79,6 +86,8 @@ namespace ScreenShot_One_Avalonia
             "document" => Loc.T("AutoTag_document"),
             "presentation" => Loc.T("AutoTag_presentation"),
             "terminal" => Loc.T("AutoTag_terminal"),
+            "files" => Loc.T("AutoTag_files"),
+            "design" => Loc.T("AutoTag_design"),
             _ => key,
         };
 
@@ -94,10 +103,24 @@ namespace ScreenShot_One_Avalonia
             return code >= 4 && code * 3 >= lines.Count;
         }
 
+        /// <summary>Коротка назва програми як тег («Telegram Desktop» → «telegram desktop», «Microsoft Paint 3D» → «paint 3d»); null — якщо задовга чи службова.</summary>
+        public static string? AppTag(string? app)
+        {
+            if (string.IsNullOrWhiteSpace(app)) return null;
+            string name = Regex.Replace(app.Trim(), @"\s+", " ").ToLowerInvariant();
+            if (name.EndsWith(".exe")) name = name[..^4];
+            if (NoNameApps.Contains(name) || name.Contains("screenshot one") || name.Contains("screenshot_one")) return null;
+            foreach (var prefix in NamePrefixes)
+                if (name.StartsWith(prefix) && name.Length > prefix.Length) { name = name[prefix.Length..]; break; }
+            return name.Length <= 20 && name.Split(' ').Length <= 2 ? name : null;
+        }
+
         /// <summary>Автотеги для запису: «що» (з тексту) + «де» (сервіс, інакше тип програми); не більше двох.</summary>
         public static List<string> Suggest(string? app, string? title, string? text)
         {
             var result = new List<string>();
+            // Робочий стіл Windows («Program Manager» у Провідника) — це не «файли»
+            if (string.Equals(title?.Trim(), "Program Manager", StringComparison.OrdinalIgnoreCase)) { app = null; title = null; }
             string where = $"{title}\n{app}";
 
             // Що на екрані
@@ -116,11 +139,8 @@ namespace ScreenShot_One_Avalonia
             else if (!string.IsNullOrWhiteSpace(app))
             {
                 string? category = Categories.FirstOrDefault(c => c.Apps.Any(a => HasWord(app, a))).Key;
-                if (category != null)
-                {
-                    string name = TagName(category);
-                    if (!result.Contains(name, StringComparer.OrdinalIgnoreCase)) result.Add(name);
-                }
+                string? name = category != null ? TagName(category) : AppTag(app);
+                if (name != null && !result.Contains(name, StringComparer.OrdinalIgnoreCase)) result.Add(name);
             }
             return result.Take(2).ToList();
         }

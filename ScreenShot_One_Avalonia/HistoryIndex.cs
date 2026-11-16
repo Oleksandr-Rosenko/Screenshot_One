@@ -288,7 +288,7 @@ namespace ScreenShot_One_Avalonia
                     return;
                 }
                 catch (Exception ex) { AppLog.Warn(ex); }
-                await Task.Delay(TimeSpan.FromMilliseconds(800)); // поступово, щоб не гріти процесор
+                await Task.Delay(TimeSpan.FromMilliseconds(400)); // поступово, щоб не гріти процесор
             }
         }
     }

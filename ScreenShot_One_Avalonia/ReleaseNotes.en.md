@@ -1,6 +1,8 @@
-• Auto tags in history: the app tags screenshots by app, window and the text in the image — up to two tags “what + where” (e.g. “error” + “jira”, “invoice” + “telegram”). Auto tags look lighter than yours and are removed with one click (a removed one won't come back). Works offline and can be turned off in Settings.
+• Auto tags now appear on most screenshots: for an unknown app its name becomes the tag (e.g. “steam”); new types “files” and “design”. History cards update tags right away, without reopening the window.
+• The history window no longer disappears and reappears when you open or close the editor.
 
 Changes in previous versions:
+• 3.2.0: “what + where” auto tags in history (error, invoice, jira, telegram…), offline.
 • 3.1.0: search in history (text in images, app, date, tags) and tags with a filter.
 • 3.0.2: automatic update checks every 4 hours; on Mac the thumbnail and recording panel no longer appear in screenshots; stability improvements.
 • 3.0.1: the background around a screenshot is enabled only for the current screenshot.

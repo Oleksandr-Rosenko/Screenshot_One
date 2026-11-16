@@ -40,9 +40,25 @@ namespace ScreenShot_One_Avalonia.Tests
         public void AutoTags_NothingKnown_NoTags()
         {
             Assert.Empty(AutoTagger.Suggest(null, null, null));
-            Assert.Empty(AutoTagger.Suggest("Невідома програма", "Вікно", "Привіт"));
-            // Слово всередині іншого слова не рахується («terror» — не «error», «Wordle» — не Word)
-            Assert.Empty(AutoTagger.Suggest("Wordle", "Гра", "terror"));
+            // Службова «програма» (рамка UWP) і робочий стіл — без тегу
+            Assert.Empty(AutoTagger.Suggest("Application Frame Host", "Калькулятор", "Привіт"));
+            Assert.Empty(AutoTagger.Suggest("Windows Explorer", "Program Manager", null));
+            // Задовга назва — без тегу
+            Assert.Empty(AutoTagger.Suggest("Some Very Long Enterprise Application Name", "Вікно", null));
+        }
+
+        [Fact]
+        public void AutoTags_UnknownApp_GetsAppName()
+        {
+            // 3.2.1: програма без сервісу й типу — тег із її короткої назви
+            Assert.Equal(new[] { "steam" }, AutoTagger.Suggest("Steam", "Бібліотека", "Привіт"));
+            Assert.Equal(new[] { "notepad++" }, AutoTagger.Suggest("Notepad++", "нотатки.txt", null));
+            Assert.Equal(new[] { "помилка", "документ" }, AutoTagger.Suggest("Microsoft Word", "Лист", "Помилка"));
+            // Слово всередині іншого слова не рахується («terror» — не «error», «Wordle» — не Word) — лишається назва
+            Assert.Equal(new[] { "wordle" }, AutoTagger.Suggest("Wordle", "Гра", "terror"));
+            // Провідник і графічні редактори — тип програми
+            Assert.Equal(new[] { "файли" }, AutoTagger.Suggest("Провідник", "Завантаження", null));
+            Assert.Equal(new[] { "дизайн" }, AutoTagger.Suggest("Adobe Photoshop 2025", "logo.psd", null));
         }
 
         [Fact]

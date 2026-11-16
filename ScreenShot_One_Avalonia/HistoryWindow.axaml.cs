@@ -224,6 +224,9 @@ namespace ScreenShot_One_Avalonia
         private string _query = "";
         private string? _tagFilter;
         private readonly DispatcherTimer _searchTimer = new() { Interval = TimeSpan.FromMilliseconds(220) };
+        // Перелік тегів над галереєю перебудовуємо не на кожен запис фонового розпізнавання, а раз на ~1,5 с
+        private bool _isClosed;
+        private readonly DispatcherTimer _chipsTimer = new() { Interval = TimeSpan.FromMilliseconds(1500) };
 
         // Змінна для нашого нового рідного діалогового вікна
 
@@ -251,8 +254,9 @@ namespace ScreenShot_One_Avalonia
 
             // Пошук: застосовуємо, коли користувач на мить зупинився; розпізнаний у фоні текст теж підхоплюємо
             _searchTimer.Tick += (_, _) => { _searchTimer.Stop(); ApplyFilter(); };
+            _chipsTimer.Tick += (_, _) => { _chipsTimer.Stop(); RebuildTagChips(); };
             HistoryIndex.Changed += OnIndexChanged;
-            Closed += (_, _) => { HistoryIndex.Changed -= OnIndexChanged; _searchTimer.Stop(); };
+            Closed += (_, _) => { _isClosed = true; HistoryIndex.Changed -= OnIndexChanged; _searchTimer.Stop(); _chipsTimer.Stop(); };
             // Наступна сторінка карток — коли до кінця лишається кілька рядів
             ScreenshotsListBox.AddHandler(ScrollViewer.ScrollChangedEvent, (_, e) => OnGalleryScrolled(e, isVideo: false));
             VideosListBox.AddHandler(ScrollViewer.ScrollChangedEvent, (_, e) => OnGalleryScrolled(e, isVideo: true));
@@ -500,9 +504,15 @@ namespace ScreenShot_One_Avalonia
 
         private void OnIndexChanged(string path)
         {
-            // Фоновий OCR дописав текст — якщо зараз шукаємо, оновлюємо результати (не частіше, ніж раз на ~0,2 с)
+            // Фоновий OCR дописав текст або автотеги — оновлюємо картку одразу (раніше теги з'являлись лише після
+            // повторного відкриття вікна), перелік тегів — трохи згодом, результати пошуку — якщо зараз шукаємо
             Dispatcher.UIThread.Post(() =>
             {
+                string full = System.IO.Path.GetFullPath(path);
+                foreach (var item in _screenshotItems.Concat(_videoItems))
+                    if (string.Equals(System.IO.Path.GetFullPath(item.Path), full, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                        item.RefreshInfo();
+                if (!_chipsTimer.IsEnabled) _chipsTimer.Start();
                 if (_query.Length > 0 && !_searchTimer.IsEnabled) _searchTimer.Start();
             });
         }
@@ -838,7 +848,6 @@ namespace ScreenShot_One_Avalonia
                         {
                             var videoEditor = new VideoEditorWindow(flattenedPath, false, this, selectedItem);
                             videoEditor.Show();
-                            this.Hide();
                         }
                         catch (Exception ex)
                         {
@@ -872,8 +881,9 @@ namespace ScreenShot_One_Avalonia
 
                     var bitmap = new Bitmap(originalPath);
                     var editor = new EditorWindow(bitmap, jsonPath, this, selectedItem);
+                    // Історія лишається відкритою під редактором: раніше вона ховалась і після редактора з'являлась
+                    // наново — виглядало, ніби вікно закривається й відкривається
                     editor.Show();
-                    this.Hide();
                 }
                 catch (Exception ex)
                 {
@@ -886,10 +896,12 @@ namespace ScreenShot_One_Avalonia
         {
             Dispatcher.UIThread.Post(() =>
             {
+                if (_isClosed) return; // історію закрили, поки був відкритий редактор
                 try
                 {
-                    this.Show();
-                    this.Activate();
+                    if (!IsVisible) Show();
+                    if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+                    Activate();
 
                     if (isVideo)
                     {
