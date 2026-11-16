@@ -1,7 +1,11 @@
-• macOS: after recording, the video editor no longer shows “loading” forever — the player now starts on Apple Silicon Macs (M1–M4).
-• The “Trim” button in the video editor works on the first click and no longer flickers: bottom bar tooltips now appear above the buttons instead of covering the cursor.
+• New video trimming: one bar with two handles, a choice of “Keep selection” or “Cut selection” (a piece from the middle), “Start here” / “End here” buttons and a hint showing how long the video will be.
+• macOS: the recording panel and the area frame no longer appear in videos (recording via ScreenCaptureKit on macOS 15 and later); system audio recording added.
+• macOS: a “macOS permissions” section in Settings shows what is already allowed, and its button opens the right permission directly.
+• Closing a new recording without “Save” now asks whether to keep the video (it used to be deleted).
+• Video editor: a failed Google Drive upload no longer stops the player; the trim button uses theme colors.
 
 Changes in previous versions:
+• 2.10.2: video editor on Apple Silicon Macs; the “Trim” button works on the first click.
 • 2.10.1: macOS — area selection without switching to a separate desktop; the video area frame lets clicks through.
 • 2.10.0: single-window capture, sticker on top of windows, background and frame in the editor.
 • 2.9.0: new screen recording panel, pressed keys shown in the video, video export to GIF.
