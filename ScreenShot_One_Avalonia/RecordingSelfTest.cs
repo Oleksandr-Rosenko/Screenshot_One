@@ -50,21 +50,30 @@ namespace ScreenShot_One_Avalonia
                 await Dispatcher.UIThread.InvokeAsync(() => PlatformHelper.HideWindowFromScreenCapture(hidden!));
                 await Task.Delay(800);
 
-                var (rectHidden, rectVisible, screen) = await Dispatcher.UIThread.InvokeAsync(() =>
+                static PixelRect R(Window w)
                 {
-                    PixelRect R(Window w)
-                    {
-                        var a = w.PointToScreen(new Point(0, 0));
-                        var b = w.PointToScreen(new Point(w.Bounds.Width, w.Bounds.Height));
-                        return new PixelRect(a.X, a.Y, b.X - a.X, b.Y - a.Y);
-                    }
-                    return (R(hidden!), R(visible!), hidden!.Screens.Primary);
-                });
-                // Контрольне вікно на Mac іноді ще домальовується (анімація появи) — кілька спроб, поки його не видно повністю
+                    var a = w.PointToScreen(new Point(0, 0));
+                    var b = w.PointToScreen(new Point(w.Bounds.Width, w.Bounds.Height));
+                    return new PixelRect(a.X, a.Y, b.X - a.X, b.Y - a.Y);
+                }
+                var (rectHidden, rectVisible, screen) = await Dispatcher.UIThread.InvokeAsync(() => (R(hidden!), R(visible!), hidden!.Screens.Primary));
+                // Контрольне вікно на Mac іноді ще домальовується (анімація появи) — кілька спроб, поки його не видно повністю.
+                // Якщо вгорі його щось перекриває (на раннерах macOS — системні сповіщення), переносимо обидва вікна нижче.
                 double h = -1, v = -1;
-                for (int attempt = 0; attempt < 5 && !(v > 0.5); attempt++)
+                for (int attempt = 0; attempt < 8 && !(v > 0.5); attempt++)
                 {
-                    if (attempt > 0) await Task.Delay(700);
+                    if (attempt == 4)
+                    {
+                        (rectHidden, rectVisible) = await Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            hidden!.Position = new PixelPoint(60, 400);
+                            visible!.Position = new PixelPoint(320, 400);
+                            return (R(hidden!), R(visible!));
+                        });
+                        AppLog.Write($"[SelfTest] виключення вікон: контрольне вікно перекрите ({v:P0}) — переносимо нижче");
+                        await Task.Delay(800);
+                    }
+                    else if (attempt > 0) await Task.Delay(700);
                     var shot = screen != null ? ScreenCaptureService.Instance.CaptureScreen(screen) : null;
                     if (shot == null) continue;
                     var bounds = screen!.Bounds;
