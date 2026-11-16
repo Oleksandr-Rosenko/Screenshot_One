@@ -22,7 +22,74 @@ namespace ScreenShot_One_Avalonia
 
             SettingsManager.IsSuspended = true;
             LoadCurrentSettings();
+
+            if (OperatingSystem.IsMacOS())
+            {
+                MacPermissionsSection.IsVisible = true;
+                RefreshPermissions();
+                // Користувач повертається із «Системних параметрів» — оновлюємо стан
+                Activated += (_, _) => RefreshPermissions();
+                MacPermissions.Changed += RefreshPermissions;
+                Loc.LanguageChanged += RefreshPermissions;
+                Closed += (_, _) => { MacPermissions.Changed -= RefreshPermissions; Loc.LanguageChanged -= RefreshPermissions; };
+            }
         }
+
+        private static readonly MacPermissionKind[] PermissionKinds =
+            { MacPermissionKind.ScreenRecording, MacPermissionKind.Microphone, MacPermissionKind.InputMonitoring };
+
+        private static string PermName(MacPermissionKind kind) => kind switch
+        {
+            MacPermissionKind.Microphone => "Mic",
+            MacPermissionKind.InputMonitoring => "Keys",
+            _ => "Screen"
+        };
+
+        /// <summary>Розділ «Дозволи macOS»: крапка й текст стану, кнопка «Дозволити» або «Налаштування».</summary>
+        private void RefreshPermissions()
+        {
+            try
+            {
+                foreach (var kind in PermissionKinds)
+                {
+                    var state = MacPermissions.GetState(kind);
+                    string name = PermName(kind);
+                    var dot = this.FindControl<Avalonia.Controls.Shapes.Ellipse>("Dot" + name);
+                    var text = this.FindControl<TextBlock>("TxtPerm" + name);
+                    var button = this.FindControl<Button>("BtnPerm" + name);
+                    if (dot == null || text == null || button == null) continue;
+
+                    var (key, brushKey) = state switch
+                    {
+                        MacPermissionState.Granted => ("Perm_Granted", "AccentBrush"),
+                        MacPermissionState.NotDetermined => ("Perm_NotAsked", "MutedTextBrush"),
+                        _ => ("Perm_Denied", "DangerBrush")
+                    };
+                    var brush = AppTheme.Brush(this, brushKey, Avalonia.Media.Brushes.Gray);
+                    dot.Fill = brush;
+                    text.Text = Loc.T(key);
+                    text.Foreground = brush;
+                    button.Content = Loc.T(state == MacPermissionState.Granted ? "Perm_Open" : "Perm_Allow");
+                    button.Classes.Set("Flat", state != MacPermissionState.Granted);
+                }
+
+                bool screenMissing = MacPermissions.GetState(MacPermissionKind.ScreenRecording) != MacPermissionState.Granted;
+                PermRestartRow.IsVisible = screenMissing;
+                PermRestartPanel.IsVisible = screenMissing;
+            }
+            catch (Exception ex) { AppLog.Warn(ex); }
+        }
+
+        private void BtnPerm_Click(object? sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: string name }) return;
+            var kind = name switch { "Mic" => MacPermissionKind.Microphone, "Keys" => MacPermissionKind.InputMonitoring, _ => MacPermissionKind.ScreenRecording };
+            if (MacPermissions.GetState(kind) == MacPermissionState.Granted) MacPermissions.OpenSettings(kind);
+            else MacPermissions.Request(kind);
+            RefreshPermissions();
+        }
+
+        private void BtnPermRestart_Click(object? sender, RoutedEventArgs e) => MacPermissions.Restart();
 
         private void UpdateVersionText()
         {
