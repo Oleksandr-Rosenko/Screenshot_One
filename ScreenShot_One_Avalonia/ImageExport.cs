@@ -12,9 +12,19 @@ namespace ScreenShot_One_Avalonia
     {
         public const int JpegQuality = 92;
 
-        /// <summary>Папка за замовчуванням: «Зображення/Screenshot One».</summary>
-        public static string DefaultFolder => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Screenshot One");
+        /// <summary>
+        /// Папка за замовчуванням: «Зображення/Shot One». Хто вже зберігав у «Зображення/Screenshot One»
+        /// (до перейменування програми в 3.3.0), лишається зі старою папкою — файли не розкидаються по двох.
+        /// </summary>
+        public static string DefaultFolder
+        {
+            get
+            {
+                string pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                string legacy = Path.Combine(pictures, "Screenshot One");
+                return Directory.Exists(legacy) ? legacy : Path.Combine(pictures, "Shot One");
+            }
+        }
 
         /// <summary>Папка з налаштувань або папка за замовчуванням.</summary>
         public static string SaveFolder

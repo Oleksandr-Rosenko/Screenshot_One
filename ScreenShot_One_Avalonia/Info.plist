@@ -7,13 +7,13 @@
     <key>CFBundleIdentifier</key>
     <string>com.screenshotone.app</string>
     <key>CFBundleName</key>
-    <string>Screenshot One</string>
+    <string>Shot One</string>
     <key>CFBundleDisplayName</key>
-    <string>Screenshot One</string>
+    <string>Shot One</string>
     <key>CFBundleVersion</key>
-    <string>3.2.2</string>
+    <string>3.3.0</string>
     <key>CFBundleShortVersionString</key>
-    <string>3.2.2</string>
+    <string>3.3.0</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>
@@ -29,12 +29,12 @@
     <key>NSRequiresAquaSystemAppearance</key>
     <false/>
     <key>NSScreenCaptureUsageDescription</key>
-    <string>Screenshot One requires screen capture access to take screenshots and record screen video.</string>
+    <string>Shot One requires screen capture access to take screenshots and record screen video.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Screenshot One requires access to system events to register global shortcuts.</string>
+    <string>Shot One requires access to system events to register global shortcuts.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Screenshot One requires microphone access to record audio in your screen videos.</string>
+    <string>Shot One requires microphone access to record audio in your screen videos.</string>
     <key>NSDesktopFolderUsageDescription</key>
-    <string>Screenshot One requires folder access to save screenshots and video recordings.</string>
+    <string>Shot One requires folder access to save screenshots and video recordings.</string>
 </dict>
 </plist>

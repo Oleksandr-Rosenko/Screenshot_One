@@ -142,7 +142,7 @@ namespace ScreenShot_One_Avalonia
                 try
                 {
                     MacStatusItem.Clicked += () => TrayPanelWindow.Toggle(ScreenService.GetCursorPosition());
-                    MacStatusItem.Create(ReadAsset("tray.png"), "Screenshot One");
+                    MacStatusItem.Create(ReadAsset("tray.png"), "Shot One");
                     VideoRecorderManager.OnStatusChanged += isRecording =>
                         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                         {
@@ -159,7 +159,7 @@ namespace ScreenShot_One_Avalonia
 
                 Icon = LoadTrayIcon(isRecording: false),
 
-                ToolTipText = "Screenshot One"
+                ToolTipText = "Shot One"
 
             };
 
@@ -477,7 +477,7 @@ namespace ScreenShot_One_Avalonia
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { if (TrayPanelWindow.IsOpen) TrayPanelWindow.Toggle(null); });
                 await System.Threading.Tasks.Task.Delay(1000);
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
-                    new Window { Name = "AvaloniaTrayPopupRoot_Screenshot One", Width = 10, Height = 10, ShowInTaskbar = false }.Show());
+                    new Window { Name = "AvaloniaTrayPopupRoot_Shot One", Width = 10, Height = 10, ShowInTaskbar = false }.Show());
                 await System.Threading.Tasks.Task.Delay(2500);
                 bool openRight = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => TrayPanelWindow.IsOpen);
                 bool menuGone = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>

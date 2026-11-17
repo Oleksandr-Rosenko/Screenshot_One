@@ -8,13 +8,13 @@ namespace ScreenShot_One_Avalonia
     /// Windows: ярлики й кеш іконок після оновлення.
     /// Ярлики в «Пуску» й на робочому столі Velopack створив під час першого встановлення з назвою пакета
     /// («ScreenShotOne»), а Windows тримає іконку програми в кеші — після зміни іконки (2.7.1) у пошуку
-    /// й меню «Пуск» лишалась стара. Раз на версію перейменовуємо старий ярлик на «Screenshot One»
-    /// і просимо оболонку перечитати іконки.
+    /// й меню «Пуск» лишалась стара. Раз на версію перейменовуємо старі ярлики («ScreenShotOne», з 3.3.0 —
+    /// і «Screenshot One») на «Shot One» і просимо оболонку перечитати іконки.
     /// </summary>
     public static class WindowsShell
     {
-        private const string OldShortcutName = "ScreenShotOne.lnk";
-        private const string NewShortcutName = "Screenshot One.lnk";
+        private static readonly string[] OldShortcutNames = { "ScreenShotOne.lnk", "Screenshot One.lnk" };
+        private const string NewShortcutName = "Shot One.lnk";
 
         [DllImport("shell32.dll")]
         private static extern void SHChangeNotify(int wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
@@ -32,7 +32,8 @@ namespace ScreenShot_One_Avalonia
 
                 int renamed = 0;
                 foreach (var dir in ShortcutFolders())
-                    renamed += RenameShortcut(dir);
+                    foreach (var oldName in OldShortcutNames)
+                        renamed += RenameShortcut(dir, oldName);
 
                 SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, IntPtr.Zero, IntPtr.Zero);
                 AppLog.Write($"Оновлено ярлики ({renamed}) і кеш іконок для версії {version}");
@@ -60,10 +61,10 @@ namespace ScreenShot_One_Avalonia
             foreach (var d in subdirs) yield return d; // ярлик може лежати в папці видавця
         }
 
-        /// <summary>«ScreenShotOne.lnk» → «Screenshot One.lnk» (якщо новий уже є — старий дубль прибираємо).</summary>
-        private static int RenameShortcut(string dir)
+        /// <summary>Старий ярлик → «Shot One.lnk» (якщо новий уже є — старий дубль прибираємо).</summary>
+        private static int RenameShortcut(string dir, string oldName)
         {
-            string oldPath = Path.Combine(dir, OldShortcutName);
+            string oldPath = Path.Combine(dir, oldName);
             if (!File.Exists(oldPath)) return 0;
             try
             {

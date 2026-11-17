@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Один інсталятор для всіх Mac: сам ставить версію для Apple Silicon (M1–M4) або Intel -->
 <installer-gui-script minSpecVersion="2">
-    <title>Screenshot One</title>
+    <title>Shot One</title>
     <options customize="never" require-scripts="false" hostArchitectures="x86_64,arm64"/>
     <domains enable_localSystem="true"/>
     <volume-check>

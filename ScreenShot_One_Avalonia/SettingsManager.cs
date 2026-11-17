@@ -49,7 +49,7 @@ namespace ScreenShot_One_Avalonia
         // Через скільки секунд мініатюра ховається сама (0 — не ховати)
         public int QuickAccessAutoCloseSeconds { get; set; } = 15;
 
-        // Папка для «Зберегти» / автозбереження (null — «Зображення/Screenshot One»)
+        // Папка для «Зберегти» / автозбереження (null — «Зображення/Shot One»)
         public string? SaveFolder { get; set; }
 
         // Формат файлів: "png" або "jpg"

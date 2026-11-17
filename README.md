@@ -1,4 +1,6 @@
-# Screenshot One
+# Shot One
+
+(До версії 3.3.0 — «Screenshot One».)
 
 Програма для скріншотів і запису екрана для **Windows** і **macOS** на [Avalonia](https://avaloniaui.net/) (.NET 10).
 
