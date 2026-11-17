@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Avalonia;
+using System.Text;
 
 namespace ScreenShot_One_Avalonia
 {
@@ -15,7 +17,10 @@ namespace ScreenShot_One_Avalonia
     /// </summary>
     public static class WindowLocator
     {
-        public static List<PixelRect> GetWindows()
+        /// <summary>Вікно: межі, процес, заголовок і (на Mac) назва програми — щоб знати, з якої програми знято зону (3.2.2).</summary>
+        public sealed record Entry(PixelRect Bounds, int Pid, string? Title, string? Owner);
+
+        public static List<Entry> GetEntries()
         {
             try
             {
@@ -23,8 +28,10 @@ namespace ScreenShot_One_Avalonia
                 if (OperatingSystem.IsMacOS()) return MacImpl.Get();
             }
             catch (Exception ex) { AppLog.Warn(ex); }
-            return new List<PixelRect>();
+            return new List<Entry>();
         }
+
+        public static List<PixelRect> GetWindows() => GetEntries().Select(e => e.Bounds).ToList();
 
         /// <summary>Найвище вікно, що містить точку (публічний для тестів).</summary>
         public static PixelRect? HitTest(IReadOnlyList<PixelRect> windows, PixelPoint point)
@@ -42,6 +49,7 @@ namespace ScreenShot_One_Avalonia
             [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
             [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hWnd);
             [DllImport("user32.dll")] private static extern int GetWindowTextLength(IntPtr hWnd);
+            [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int max);
             [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
             [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT r);
             [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(IntPtr hWnd, int attr, out RECT value, int size);
@@ -50,9 +58,9 @@ namespace ScreenShot_One_Avalonia
             [StructLayout(LayoutKind.Sequential)] private struct RECT { public int Left, Top, Right, Bottom; }
             private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9, DWMWA_CLOAKED = 14;
 
-            public static List<PixelRect> Get()
+            public static List<Entry> Get()
             {
-                var list = new List<PixelRect>();
+                var list = new List<Entry>();
                 uint own = (uint)Environment.ProcessId;
                 EnumWindows((h, _) =>
                 {
@@ -62,7 +70,10 @@ namespace ScreenShot_One_Avalonia
                     if (DwmGetWindowAttributeInt(h, DWMWA_CLOAKED, out int cloaked, 4) == 0 && cloaked != 0) return true; // приховані UWP-вікна
                     if (DwmGetWindowAttribute(h, DWMWA_EXTENDED_FRAME_BOUNDS, out RECT r, Marshal.SizeOf<RECT>()) != 0 && !GetWindowRect(h, out r)) return true;
                     int w = r.Right - r.Left, ht = r.Bottom - r.Top;
-                    if (w >= 40 && ht >= 40) list.Add(new PixelRect(r.Left, r.Top, w, ht));
+                    if (w < 40 || ht < 40) return true;
+                    var sb = new StringBuilder(512);
+                    GetWindowText(h, sb, sb.Capacity);
+                    list.Add(new Entry(new PixelRect(r.Left, r.Top, w, ht), (int)pid, sb.Length > 0 ? sb.ToString() : null, null));
                     return true;
                 }, IntPtr.Zero);
                 return list;
@@ -81,19 +92,34 @@ namespace ScreenShot_One_Avalonia
             [DllImport(CF)] private static extern IntPtr CFDictionaryGetValue(IntPtr dict, IntPtr key);
             [DllImport(CF)] [return: MarshalAs(UnmanagedType.I1)] private static extern bool CFNumberGetValue(IntPtr number, int type, out int value);
             [DllImport(CF)] private static extern IntPtr CFStringCreateWithCString(IntPtr alloc, string s, uint encoding);
+            [DllImport(CF)] private static extern long CFStringGetLength(IntPtr s);
+            [DllImport(CF)] [return: MarshalAs(UnmanagedType.I1)] private static extern bool CFStringGetCString(IntPtr s, byte[] buffer, long size, uint encoding);
             [DllImport(CF)] private static extern void CFRelease(IntPtr obj);
+
+            private static string? Str(IntPtr cf)
+            {
+                if (cf == IntPtr.Zero) return null;
+                long len = CFStringGetLength(cf);
+                var buf = new byte[len * 4 + 1];
+                if (!CFStringGetCString(cf, buf, buf.Length, Utf8)) return null;
+                int n = Array.IndexOf(buf, (byte)0);
+                string s = Encoding.UTF8.GetString(buf, 0, n < 0 ? buf.Length : n);
+                return string.IsNullOrWhiteSpace(s) ? null : s;
+            }
 
             [StructLayout(LayoutKind.Sequential)] private struct CGRect { public double X, Y, W, H; }
             private const uint OnScreenOnly = 1, ExcludeDesktop = 16, Utf8 = 0x08000100;
             private const int kCFNumberIntType = 9;
 
-            public static List<PixelRect> Get()
+            public static List<Entry> Get()
             {
-                var list = new List<PixelRect>();
+                var list = new List<Entry>();
                 double scale = ScreenService.GetPrimaryScreen()?.Scaling ?? 1.0;
                 IntPtr kLayer = CFStringCreateWithCString(IntPtr.Zero, "kCGWindowLayer", Utf8);
                 IntPtr kBounds = CFStringCreateWithCString(IntPtr.Zero, "kCGWindowBounds", Utf8);
                 IntPtr kPid = CFStringCreateWithCString(IntPtr.Zero, "kCGWindowOwnerPID", Utf8);
+                IntPtr kOwner = CFStringCreateWithCString(IntPtr.Zero, "kCGWindowOwnerName", Utf8);
+                IntPtr kName = CFStringCreateWithCString(IntPtr.Zero, "kCGWindowName", Utf8);
                 IntPtr arr = CGWindowListCopyWindowInfo(OnScreenOnly | ExcludeDesktop, 0);
                 try
                 {
@@ -108,13 +134,14 @@ namespace ScreenShot_One_Avalonia
                         IntPtr b = CFDictionaryGetValue(d, kBounds);
                         if (b == IntPtr.Zero || !CGRectMakeWithDictionaryRepresentation(b, out CGRect r)) continue;
                         if (r.W < 40 || r.H < 40) continue;
-                        list.Add(new PixelRect((int)(r.X * scale), (int)(r.Y * scale), (int)(r.W * scale), (int)(r.H * scale)));
+                        list.Add(new Entry(new PixelRect((int)(r.X * scale), (int)(r.Y * scale), (int)(r.W * scale), (int)(r.H * scale)),
+                            pid, Str(CFDictionaryGetValue(d, kName)), Str(CFDictionaryGetValue(d, kOwner))));
                     }
                 }
                 finally
                 {
                     if (arr != IntPtr.Zero) CFRelease(arr);
-                    CFRelease(kLayer); CFRelease(kBounds); CFRelease(kPid);
+                    CFRelease(kLayer); CFRelease(kBounds); CFRelease(kPid); CFRelease(kOwner); CFRelease(kName);
                 }
                 return list;
             }

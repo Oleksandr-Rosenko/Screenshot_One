@@ -43,10 +43,10 @@
 			</Style>
 		</Grid.Styles>
 
-		<!-- Шапка: вкладки ліворуч, очищення праворуч. Ширина = ширині сітки карток (див. UpdateGalleryLayout),
-		     тож кнопка очищення стоїть рівно над правим краєм сітки, а весь блок — по центру вікна. -->
-		<Grid Grid.Row="0" Name="HeaderRow" ColumnDefinitions="Auto,*,Auto" Margin="0,14,0,6" HorizontalAlignment="Stretch">
-			<StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+		<!-- Шапка (3.2.2): вкладки по центру, очищення праворуч; під ними — пошук на всю ширину сітки.
+		     Ширина = ширині сітки карток (див. UpdateGalleryLayout), тож краї шапки збігаються з краями карток. -->
+		<Grid Grid.Row="0" Name="HeaderRow" ColumnDefinitions="*,Auto,*" RowDefinitions="Auto,Auto" Margin="0,14,0,6" HorizontalAlignment="Stretch">
+			<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 				<RadioButton Name="TabScreenshots" Classes="Chips" IsChecked="True" IsCheckedChanged="Tab_Checked">
 					<StackPanel Orientation="Horizontal" Spacing="6">
 						<material:MaterialIcon Kind="ImageOutline" />
@@ -60,17 +60,18 @@
 					</StackPanel>
 				</RadioButton>
 			</StackPanel>
+			<!-- Компактна кнопка без підпису; що саме вона очистить — у підказці -->
+			<Button Grid.Column="2" Name="BtnClearAll" Classes="Basic hbtn danger" Click="BtnClearAll_Click" ToolTip.Tip="{DynamicResource History_ClearScreenshots}"
+			        HorizontalAlignment="Right" VerticalAlignment="Center">
+				<material:MaterialIcon Kind="DeleteSweepOutline"/>
+			</Button>
 			<!-- Пошук (3.1.0): текст на знімку, програма й вікно, дата, теги («#тег» — лише теги) -->
-			<TextBox Grid.Column="1" Name="TxtSearch" Margin="14,0,10,0" MaxWidth="380" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+			<TextBox Grid.Row="1" Grid.ColumnSpan="3" Name="TxtSearch" Margin="0,12,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Center"
 			         PlaceholderText="{DynamicResource History_SearchHint}" TextChanged="TxtSearch_TextChanged">
 				<TextBox.InnerLeftContent>
 					<material:MaterialIcon Kind="Magnify" Width="18" Height="18" Margin="8,0,0,0" Foreground="{DynamicResource MutedTextBrush}"/>
 				</TextBox.InnerLeftContent>
 			</TextBox>
-			<!-- Компактна кнопка без підпису; що саме вона очистить — у підказці -->
-			<Button Grid.Column="2" Name="BtnClearAll" Classes="Basic hbtn danger" Click="BtnClearAll_Click" ToolTip.Tip="{DynamicResource History_ClearScreenshots}" VerticalAlignment="Center">
-				<material:MaterialIcon Kind="DeleteSweepOutline"/>
-			</Button>
 		</Grid>
 
 		<!-- Фільтр за тегами: «пігулки» з кількістю записів (з'являються, коли теги є) -->

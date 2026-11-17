@@ -12,12 +12,13 @@ namespace ScreenShot_One_Avalonia
     ///   2) сервіс чи сайт (із заголовка або назви програми): jira, github, youtube, figma, telegram…;
     ///   3) тип програми (браузер, таблиці, документ…) — лише якщо сервісу не знайдено;
     ///   4) інакше — коротка назва самої програми (3.2.1: раніше знімки з «невідомих» програм лишались без тегів).
+    /// 3.2.2: без програми (старі записи) — сервіс за адресою сайту в тексті (figma.com…), таблиця — за рядками з числами.
     /// Без інтернету й без «магії» — прості правила, однакові на Windows і Mac.
     /// </summary>
     public static class AutoTagger
     {
         /// <summary>Версія правил: коли вони зміняться, автотеги старих записів перераховуються.</summary>
-        public const int RulesVersion = 2;
+        public const int RulesVersion = 3;
 
         // ---- 1. Зміст (текст на знімку) ----
         private static readonly (string Key, Regex Pattern)[] ContentRules =
@@ -35,6 +36,42 @@ namespace ScreenShot_One_Avalonia
             RegexOptions.Multiline | RegexOptions.CultureInvariant);
 
         // ---- 2. Сервіси (заголовок вікна або назва програми) — тег = назва сервісу ----
+        // Адреси сайтів у розпізнаному тексті (рядок браузера, посилання) — надійніше за саме слово в тексті
+        private static readonly (string Tag, string[] Domains)[] SiteDomains =
+        {
+            ("jira", new[] { "atlassian.net/browse", "jira." }),
+            ("confluence", new[] { "atlassian.net/wiki" }),
+            ("github", new[] { "github.com" }),
+            ("gitlab", new[] { "gitlab.com" }),
+            ("youtube", new[] { "youtube.com", "youtu.be" }),
+            ("figma", new[] { "figma.com" }),
+            ("gmail", new[] { "mail.google.com" }),
+            ("notion", new[] { "notion.so" }),
+            ("trello", new[] { "trello.com" }),
+            ("slack", new[] { "slack.com" }),
+            ("telegram", new[] { "web.telegram.org" }),
+            ("linkedin", new[] { "linkedin.com" }),
+            ("stackoverflow", new[] { "stackoverflow.com" }),
+        };
+
+        // Час (17:23) і дати (16.11.2026) — не «числа таблиці»
+        private static readonly Regex TimeOrDate = new(@"\b\d{1,2}:\d{2}\b|\b\d{1,2}[./]\d{1,2}[./]\d{2,4}\b", RegexOptions.CultureInvariant);
+        private static readonly Regex Number = new(@"\d+(?:[.,]\d+)?", RegexOptions.CultureInvariant);
+
+        /// <summary>Чи схожий текст на таблицю: щонайменше 3 рядки з двома числами чи дробом, і це хоча б третина рядків.</summary>
+        public static bool LooksLikeTable(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            var lines = text.Split('\n').Where(l => l.Trim().Length > 0).ToList();
+            int numeric = lines.Count(l =>
+            {
+                string clean = TimeOrDate.Replace(l, " ");
+                var nums = Number.Matches(clean);
+                return nums.Count >= 2 || nums.Any(m => m.Value.Contains('.') || m.Value.Contains(','));
+            });
+            return numeric >= 3 && numeric * 3 >= lines.Count;
+        }
+
         private static readonly (string Tag, string[] Words)[] Services =
         {
             ("jira", new[] { "jira" }),
@@ -130,11 +167,14 @@ namespace ScreenShot_One_Avalonia
                 foreach (var (key, pattern) in ContentRules)
                     if (pattern.IsMatch(text)) { content = key; break; }
                 if (content == null && LooksLikeCode(text)) content = "code";
+                if (content == null && LooksLikeTable(text)) content = "tables";
             }
             if (content != null) result.Add(TagName(content));
 
             // Де: спершу конкретний сервіс, потім тип програми
-            string? service = Services.FirstOrDefault(s => s.Words.Any(w => HasWord(where, w))).Tag;
+            string? service = Services.FirstOrDefault(s => s.Words.Any(w => HasWord(where, w))).Tag
+                ?? (string.IsNullOrWhiteSpace(text) ? null
+                    : SiteDomains.FirstOrDefault(s => s.Domains.Any(d => text.Contains(d, StringComparison.OrdinalIgnoreCase))).Tag);
             if (service != null) result.Add(service);
             else if (!string.IsNullOrWhiteSpace(app))
             {

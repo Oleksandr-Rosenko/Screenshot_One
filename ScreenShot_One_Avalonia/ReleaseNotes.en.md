@@ -1,7 +1,9 @@
-• Auto tags now appear on most screenshots: for an unknown app its name becomes the tag (e.g. “steam”); new types “files” and “design”. History cards update tags right away, without reopening the window.
-• The history window no longer disappears and reappears when you open or close the editor.
+• More accurate tags: the app is detected by the window under the selected area, not the active window (a browser screenshot could get another app's tag). Old entries get tags from text only.
+• New tags from the text in the image: “spreadsheets” for tables with numbers and the service from a site address (e.g. figma.com).
+• History: tabs centered, full-width search below them.
 
 Changes in previous versions:
+• 3.2.1: auto tags on most screenshots, history stays open under the editor.
 • 3.2.0: “what + where” auto tags in history (error, invoice, jira, telegram…), offline.
 • 3.1.0: search in history (text in images, app, date, tags) and tags with a filter.
 • 3.0.2: automatic update checks every 4 hours; on Mac the thumbnail and recording panel no longer appear in screenshots; stability improvements.

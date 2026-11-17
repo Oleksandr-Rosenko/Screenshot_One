@@ -23,6 +23,7 @@ namespace ScreenShot_One_Avalonia
 
         // Знімок окремого вікна (2.10.0): межі вікон на момент «заморожування» екрана і вікно під курсором
         private System.Collections.Generic.List<PixelRect> _windows = new();
+        private System.Collections.Generic.List<WindowLocator.Entry> _windowEntries = new();
         private Rect? _hoverWindow;
 
         public MainWindow() : this(ocrMode: false) { }
@@ -73,7 +74,8 @@ namespace ScreenShot_One_Avalonia
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 _avaloniaBackground = ScreenCaptureService.Instance.CaptureRect(_currentScreenBounds, _currentScaling);
                 long captureMs = sw.ElapsedMilliseconds;
-                _windows = WindowLocator.GetWindows();
+                _windowEntries = WindowLocator.GetEntries();
+                _windows = _windowEntries.Select(w => w.Bounds).ToList();
                 AppLog.Write($"[Capture] екран {_currentScreenBounds.Width}×{_currentScreenBounds.Height} (×{_currentScaling:0.##}): знімок {captureMs} мс, " +
                              $"вікон {_windows.Count} за {sw.ElapsedMilliseconds - captureMs} мс, " +
                              $"картинка {(_avaloniaBackground == null ? "немає" : $"{_avaloniaBackground.PixelSize.Width}×{_avaloniaBackground.PixelSize.Height}")}");
@@ -252,6 +254,8 @@ namespace ScreenShot_One_Avalonia
             int realY = screenPointLeft.Y;
             int realWidth = Math.Max(1, screenPointRight.X - screenPointLeft.X);
             int realHeight = Math.Max(1, screenPointRight.Y - screenPointLeft.Y);
+            // Програма для пошуку й автотегів — та, чиє вікно під виділенням, а не активна
+            CaptureSource.NarrowTo(_windowEntries, new PixelRect(realX, realY, realWidth, realHeight));
 
             this.Hide();
 

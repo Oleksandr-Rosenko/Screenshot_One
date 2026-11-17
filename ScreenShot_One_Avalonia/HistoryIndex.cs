@@ -19,6 +19,11 @@ namespace ScreenShot_One_Avalonia
         public bool TextDone { get; set; }
         public string? App { get; set; }
         public string? Title { get; set; }
+        /// <summary>
+        /// true — програму визначено за вікном під виділенням (з 3.2.2). У старих записах це активне вікно,
+        /// яке часто не те, що на знімку, — для автотегів і картки його не використовуємо (лише для пошуку).
+        /// </summary>
+        public bool SourceChecked { get; set; }
         /// <summary>Автотеги (3.2.0) — обчислюються з програми, вікна й тексту (AutoTagger).</summary>
         public List<string> AutoTags { get; set; } = new();
         /// <summary>Автотеги, які користувач прибрав, — більше не повертаються.</summary>
@@ -101,7 +106,7 @@ namespace ScreenShot_One_Avalonia
         }
 
         public static void SetSource(string path, CaptureSource source) =>
-            Update(path, i => { i.App = source.App; i.Title = source.Title; RecomputeAutoTags(i); });
+            Update(path, i => { i.App = source.App; i.Title = source.Title; i.SourceChecked = true; RecomputeAutoTags(i); });
 
         public static void SetText(string path, string text) =>
             Update(path, i => { i.Text = string.IsNullOrWhiteSpace(text) ? null : text; i.TextDone = true; RecomputeAutoTags(i); });
@@ -109,7 +114,7 @@ namespace ScreenShot_One_Avalonia
         /// <summary>Автотеги з програми, вікна й тексту — без тих, що користувач прибрав або вже має сам.</summary>
         private static void RecomputeAutoTags(HistoryInfo i)
         {
-            i.AutoTags = AutoTagger.Suggest(i.App, i.Title, i.Text)
+            i.AutoTags = (i.SourceChecked ? AutoTagger.Suggest(i.App, i.Title, i.Text) : AutoTagger.Suggest(null, null, i.Text))
                 .Where(t => !i.RemovedAutoTags.Contains(t, StringComparer.OrdinalIgnoreCase) && !i.Tags.Contains(t, StringComparer.OrdinalIgnoreCase))
                 .ToList();
             i.AutoTagsVersion = AutoTagger.RulesVersion;

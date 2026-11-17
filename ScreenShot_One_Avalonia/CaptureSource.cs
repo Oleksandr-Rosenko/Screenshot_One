@@ -1,5 +1,8 @@
+using Avalonia;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
@@ -10,6 +13,8 @@ namespace ScreenShot_One_Avalonia
     /// Звідки знято скріншот (3.1.0): програма й заголовок вікна, що були на передньому плані в момент знімка.
     /// Потрібно для пошуку в історії («chrome», «jira», «звіт»). Запам'ятовується на початку знімка
     /// (до появи оверлея), а редактор/мініатюра забирають це значення разом із бітмапом.
+    /// 3.2.2: для виділеної зони чи вікна — вікно ПІД виділенням (NarrowTo), а не активне: раніше знімок браузера,
+    /// зроблений, поки активним був інший застосунок, підписувався його назвою.
     /// </summary>
     public sealed record CaptureSource(string? App, string? Title)
     {
@@ -20,6 +25,29 @@ namespace ScreenShot_One_Avalonia
         {
             try { _pending = Detect(); }
             catch (Exception ex) { AppLog.Warn(ex); _pending = null; }
+        }
+
+        /// <summary>
+        /// Уточнити джерело за виділеною зоною (пікселі екрана): найвище вікно, що містить центр зони.
+        /// Якщо такого немає (зона на робочому столі) — лишається активне вікно.
+        /// </summary>
+        public static void NarrowTo(IReadOnlyList<WindowLocator.Entry> windows, PixelRect area)
+        {
+            try
+            {
+                var hit = Pick(windows, area);
+                if (hit == null) return;
+                string? app = hit.Owner ?? (OperatingSystem.IsWindows() ? WindowsImpl.AppName((uint)hit.Pid) : null);
+                if (app != null) _pending = new CaptureSource(app, hit.Title);
+            }
+            catch (Exception ex) { AppLog.Warn(ex); }
+        }
+
+        /// <summary>Найвище вікно, що містить центр зони (публічний для тестів).</summary>
+        public static WindowLocator.Entry? Pick(IReadOnlyList<WindowLocator.Entry> windows, PixelRect area)
+        {
+            var c = new PixelPoint(area.X + area.Width / 2, area.Y + area.Height / 2);
+            return windows.FirstOrDefault(w => c.X >= w.Bounds.X && c.X < w.Bounds.Right && c.Y >= w.Bounds.Y && c.Y < w.Bounds.Bottom);
         }
 
         /// <summary>Забрати запам'ятоване (лише один раз — для нового знімка).</summary>
@@ -73,7 +101,7 @@ namespace ScreenShot_One_Avalonia
                 return new CaptureSource(AppName(pid), sb.Length > 0 ? sb.ToString() : null);
             }
 
-            private static string? AppName(uint pid)
+            public static string? AppName(uint pid)
             {
                 try
                 {

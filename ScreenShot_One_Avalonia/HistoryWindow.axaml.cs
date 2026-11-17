@@ -69,7 +69,7 @@ namespace ScreenShot_One_Avalonia
             AutoTags = HistoryIndex.AutoTagsEnabled && info != null
                 ? info.AutoTags.Where(a => !Tags.Contains(a, StringComparer.OrdinalIgnoreCase)).ToArray()
                 : Array.Empty<string>();
-            App = info?.App;
+            App = info?.SourceChecked == true ? info.App : null; // у старих записах це було активне вікно, а не знята програма
             TagsLine = string.Join("  ", Tags.Select(t => "#" + t));
             AutoTagsLine = (Tags.Count > 0 && AutoTags.Count > 0 ? "  " : "") + string.Join("  ", AutoTags.Select(t => "#" + t));
         }
