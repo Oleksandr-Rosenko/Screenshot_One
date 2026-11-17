@@ -17,6 +17,7 @@ namespace ScreenShot_One_Avalonia
         public SettingsWindow()
         {
             InitializeComponent();
+            DonateSection.IsVisible = Donate.IsConfigured;
 
             UpdateVersionText();
 
@@ -379,6 +380,8 @@ namespace ScreenShot_One_Avalonia
             SettingsManager.IsSuspended = false;
             base.OnClosed(e);
         }
+
+        private void BtnDonate_Click(object? sender, RoutedEventArgs e) => Donate.Open();
 
         private void BtnSave_Click(object? sender, RoutedEventArgs e)
         {

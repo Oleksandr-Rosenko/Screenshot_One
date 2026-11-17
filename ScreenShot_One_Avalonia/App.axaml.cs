@@ -487,7 +487,7 @@ namespace ScreenShot_One_Avalonia
         }
 
         /// <summary>Дії трею — спільні для меню й панелі <see cref="TrayPanelWindow"/>.</summary>
-        public enum TrayAction { Region, RegionDelayed, FullScreen, AllScreens, Ocr, Video, History, Settings, CheckUpdates, Quit }
+        public enum TrayAction { Region, RegionDelayed, FullScreen, AllScreens, Ocr, Video, History, Settings, CheckUpdates, Quit, Donate }
 
         public void RunTrayAction(TrayAction action)
         {
@@ -502,6 +502,7 @@ namespace ScreenShot_One_Avalonia
                 case TrayAction.History: ShowSingle(() => new HistoryWindow()); break;
                 case TrayAction.Settings: ShowSingle(() => new SettingsWindow()); break;
                 case TrayAction.CheckUpdates: UpdateWindow.CheckAndShowAsync(isManual: true).FireAndForget("Перевірка оновлень"); break;
+                case TrayAction.Donate: Donate.Open(); break;
                 case TrayAction.Quit:
                     SettingsManager.UnregisterAll();
                     // Дописуємо фонові збереження історії, щоб останній скріншот не загубився

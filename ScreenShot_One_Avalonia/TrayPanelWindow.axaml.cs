@@ -29,6 +29,7 @@ namespace ScreenShot_One_Avalonia
         public TrayPanelWindow()
         {
             InitializeComponent();
+            BtnDonate.IsVisible = Donate.IsConfigured;
             var v = typeof(TrayPanelWindow).Assembly.GetName().Version;
             TxtVersion.Text = v == null ? "" : $"{v.Major}.{v.Minor}.{Math.Max(0, v.Build)}";
 

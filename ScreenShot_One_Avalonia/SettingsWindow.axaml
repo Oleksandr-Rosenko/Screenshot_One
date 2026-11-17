@@ -1,6 +1,7 @@
 <suki:SukiWindow xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+        xmlns:material="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="ScreenShot_One_Avalonia.SettingsWindow"
         Title="{DynamicResource Settings_Title}" Width="600" Height="760" MinHeight="420" MinWidth="520"
         WindowStartupLocation="CenterScreen"
@@ -218,6 +219,22 @@
 				</StackPanel>
 			</Border>
 		</StackPanel>
+
+		<!-- Підтримати проєкт (3.3.0): прихований, поки немає посилання -->
+		<Border Name="DonateSection" Classes="section">
+			<Grid Classes="row" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+				<StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,8">
+					<TextBlock Classes="label" Text="{DynamicResource Donate_Title}"/>
+					<TextBlock Classes="hint" Text="{DynamicResource Donate_Hint}"/>
+				</StackPanel>
+				<Button Grid.Column="1" Name="BtnDonate" Click="BtnDonate_Click" VerticalAlignment="Center" Padding="14,6">
+					<StackPanel Orientation="Horizontal" Spacing="6">
+						<material:MaterialIcon Kind="HeartOutline" Width="16" Height="16" Foreground="{DynamicResource AccentBrush}"/>
+						<TextBlock Text="{DynamicResource Donate_Button}"/>
+					</StackPanel>
+				</Button>
+			</Grid>
+		</Border>
 
 		<Button Classes="Flat" Content="{DynamicResource Settings_SaveAndClose}" FontWeight="SemiBold" FontSize="15"
                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10" CornerRadius="10" Click="BtnSave_Click"/>

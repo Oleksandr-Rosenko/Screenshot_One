@@ -157,7 +157,7 @@
 			<TextBlock Name="TxtNoRecent" Text="{DynamicResource Panel_NoRecent}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" Margin="4,0,4,6" IsVisible="False"/>
 
 			<Border Height="1" Background="{DynamicResource PanelBorderBrush}" Margin="-14,0"/>
-			<Grid ColumnDefinitions="Auto,Auto,*,Auto">
+			<Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
 				<Button Classes="foot" Tag="Settings" Click="Tile_Click">
 					<StackPanel Orientation="Horizontal" Spacing="6">
 						<material:MaterialIcon Kind="CogOutline"/>
@@ -170,7 +170,11 @@
 						<TextBlock Text="{DynamicResource Panel_Updates}"/>
 					</StackPanel>
 				</Button>
-				<Button Grid.Column="3" Classes="foot muted" Tag="Quit" Click="Tile_Click">
+				<!-- Підтримати проєкт (3.3.0): лише значок, підпис — у підказці; прихована, поки немає посилання -->
+				<Button Grid.Column="3" Name="BtnDonate" Classes="foot" Tag="Donate" Click="Tile_Click" ToolTip.Tip="{DynamicResource Donate_Title}">
+					<material:MaterialIcon Kind="HeartOutline" Foreground="{DynamicResource AccentBrush}"/>
+				</Button>
+				<Button Grid.Column="4" Classes="foot muted" Tag="Quit" Click="Tile_Click">
 					<StackPanel Orientation="Horizontal" Spacing="6">
 						<material:MaterialIcon Kind="Power"/>
 						<TextBlock Text="{DynamicResource Tray_Exit}"/>
