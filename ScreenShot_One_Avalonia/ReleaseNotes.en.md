@@ -1,4 +1,4 @@
-• Hotkeys (PrintScreen) work while the Settings window is open: they are paused only while you type a new combination.
+• More reliable hotkeys (PrintScreen): they work with Settings open, in windows running as administrator (terminal, PowerShell) and after virtual machines.
 • App icon in window title bars.
 
 Changes in previous versions:

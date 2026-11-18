@@ -30,6 +30,10 @@ namespace ScreenShot_One_Avalonia
     /// <summary>
     /// Глобальні гарячі клавіші.
     /// Windows: low-level hook клавіатури в окремому потоці з власним циклом повідомлень.
+    ///   3.3.1: + запасна реєстрація RegisterHotKey — Windows (UIPI) не викликає hook, коли активне вікно
+    ///   запущене від адміністратора (термінал, PowerShell); hook перевстановлюється при зміні активного вікна
+    ///   (віртуальні машини ставлять власний hook і стають першими в черзі) і раз на хвилину (Windows тихо
+    ///   знімає hook, який не встиг відповісти).
     ///   Hook (а не RegisterHotKey) лишається, бо на Windows 11 клавішу PrintScreen часто займає «Ножиці»,
     ///   і RegisterHotKey для неї просто не реєструється. Окремий потік потрібен, щоб Windows не знімала hook,
     ///   коли UI-потік зайнятий (раніше через це гарячі клавіші «раптом» переставали працювати).
@@ -88,6 +92,7 @@ namespace ScreenShot_One_Avalonia
             if (OperatingSystem.IsWindows())
             {
                 WindowsHook.Suspended = suspended;
+                WindowsHook.RequestSync(); // запасні RegisterHotKey: зняти на час вводу комбінації, потім — нові
             }
             else if (OperatingSystem.IsMacOS() && _started)
             {
@@ -96,8 +101,15 @@ namespace ScreenShot_One_Avalonia
             }
         }
 
-        private static void Raise(HotkeyAction action)
+        /// <summary>Самоперевірка: hook не розпізнає комбінації (перевіряємо запасну реєстрацію).</summary>
+        internal static volatile bool TestBypassHook;
+        /// <summary>Самоперевірка: замість дії — повідомити, що і яким шляхом спрацювало.</summary>
+        internal static Action<HotkeyAction, string>? TestObserver;
+
+        private static void Raise(HotkeyAction action, string via = "hook")
         {
+            var observer = TestObserver;
+            if (observer != null) { observer(action, via); return; }
             try { _onPressed?.Invoke(action); }
             catch (Exception ex) { AppLog.Write($"[Hotkeys] Помилка обробника {action}: {ex.Message}"); }
         }
@@ -130,7 +142,13 @@ namespace ScreenShot_One_Avalonia
             private const int WM_KEYDOWN = 0x0100;
             private const int WM_SYSKEYDOWN = 0x0104;
             private const uint WM_QUIT = 0x0012;
+            private const uint WM_TIMER = 0x0113;
+            private const uint WM_HOTKEY = 0x0312;
+            private const uint WM_APP_SYNC = 0x8001;
             private const uint PM_NOREMOVE = 0x0000;
+            private const uint MOD_NOREPEAT = 0x4000;
+            private const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
+            private const uint WINEVENT_OUTOFCONTEXT = 0x0000;
 
             private const int VK_SHIFT = 0x10;
             private const int VK_CONTROL = 0x11;
@@ -146,6 +164,16 @@ namespace ScreenShot_One_Avalonia
             private static IntPtr _hookId = IntPtr.Zero;
             private static Thread? _thread;
             private static uint _threadId;
+
+            private delegate void WinEventProc(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
+            private static readonly WinEventProc _foregroundProc = OnForegroundChanged;
+            private static IntPtr _winEventHook = IntPtr.Zero;
+            private static UIntPtr _reinstallTimer = UIntPtr.Zero;
+            private static UIntPtr _watchTimer = UIntPtr.Zero;
+            private static readonly HashSet<int> _registeredIds = new();
+            // Остання дія з hook — щоб та сама натиснута клавіша не спрацювала двічі (hook + RegisterHotKey)
+            private static HotkeyAction? _lastHookAction;
+            private static long _lastHookTicks;
 
             internal static volatile bool Suspended;
 
@@ -198,6 +226,90 @@ namespace ScreenShot_One_Avalonia
             [DllImport("kernel32.dll")]
             private static extern uint GetCurrentThreadId();
 
+            [DllImport("user32.dll", SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+            [DllImport("user32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+            [DllImport("user32.dll")]
+            private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventProc proc, uint idProcess, uint idThread, uint flags);
+
+            [DllImport("user32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+
+            [DllImport("user32.dll")]
+            private static extern UIntPtr SetTimer(IntPtr hWnd, UIntPtr nIDEvent, uint uElapse, IntPtr lpTimerFunc);
+
+            [DllImport("user32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            private static extern bool KillTimer(IntPtr hWnd, UIntPtr uIDEvent);
+
+            /// <summary>Перечитати комбінації для запасної реєстрації (виконується в потоці hook).</summary>
+            internal static void RequestSync()
+            {
+                if (_threadId != 0) PostThreadMessage(_threadId, WM_APP_SYNC, IntPtr.Zero, IntPtr.Zero);
+            }
+
+            private static void InstallHook()
+            {
+                IntPtr old = _hookId;
+                _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(null), 0);
+                if (_hookId == IntPtr.Zero)
+                {
+                    AppLog.Write($"[Hotkeys] SetWindowsHookEx не вдався, код {Marshal.GetLastWin32Error()}");
+                    _hookId = old; // лишаємо попередній, якщо він ще живий
+                    return;
+                }
+                // Новий hook стоїть першим у черзі; старий знімаємо вже після цього, щоб не було «дірки»
+                if (old != IntPtr.Zero) UnhookWindowsHookEx(old);
+            }
+
+            private static void OnForegroundChanged(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
+            {
+                // Віртуальна машина ставить свій hook, коли отримує фокус, — перевстановлюємо свій трохи згодом
+                if (_reinstallTimer == UIntPtr.Zero) _reinstallTimer = SetTimer(IntPtr.Zero, UIntPtr.Zero, 700, IntPtr.Zero);
+            }
+
+            /// <summary>Модифікатори settings.json → MOD_* для RegisterHotKey (публічний для тестів).</summary>
+            internal static uint ToWinModifiers(int mods)
+            {
+                uint m = 0;
+                if ((mods & HotkeyModifiers.Alt) != 0) m |= 0x0001;
+                if ((mods & HotkeyModifiers.Ctrl) != 0) m |= 0x0002;
+                if ((mods & HotkeyModifiers.Shift) != 0) m |= 0x0004;
+                if ((mods & HotkeyModifiers.Meta) != 0) m |= 0x0008;
+                return m;
+            }
+
+            private static void SyncRegistered()
+            {
+                foreach (int id in _registeredIds) UnregisterHotKey(IntPtr.Zero, id);
+                _registeredIds.Clear();
+                if (Suspended) return;
+                foreach (var (action, key, mods) in GetConfiguredHotkeys())
+                {
+                    if (key == 0) continue;
+                    if (RegisterHotKey(IntPtr.Zero, (int)action, ToWinModifiers(mods) | MOD_NOREPEAT, (uint)key))
+                        _registeredIds.Add((int)action);
+                    else
+                        AppLog.Write($"[Hotkeys] запасна реєстрація {action} не вдалась (комбінацію зайняла інша програма, напр. «Ножиці» — PrintScreen); hook працює як і раніше");
+                }
+            }
+
+            private static void OnRegisteredHotkey(int id)
+            {
+                if (Suspended || !Enum.IsDefined(typeof(HotkeyAction), id)) return;
+                var action = (HotkeyAction)id;
+                // Hook уже обробив це натискання — не дублюємо
+                if (_lastHookAction == action && Environment.TickCount64 - Interlocked.Read(ref _lastHookTicks) < 400) return;
+                AppLog.Write($"[Hotkeys] {action} — через RegisterHotKey (hook не отримав натискання)");
+                Raise(action, "RegisterHotKey");
+            }
+
             internal static void Start()
             {
                 if (_thread != null) return;
@@ -210,19 +322,34 @@ namespace ScreenShot_One_Avalonia
                     // Створюємо чергу повідомлень потоку до того, як хтось захоче надіслати йому WM_QUIT.
                     PeekMessage(out _, IntPtr.Zero, 0, 0, PM_NOREMOVE);
 
-                    _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(null), 0);
-                    if (_hookId == IntPtr.Zero)
-                    {
-                        AppLog.Write($"[Hotkeys] SetWindowsHookEx не вдався, код {Marshal.GetLastWin32Error()}");
-                    }
+                    InstallHook();
+                    SyncRegistered();
+                    _winEventHook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, _foregroundProc, 0, 0, WINEVENT_OUTOFCONTEXT);
+                    _watchTimer = SetTimer(IntPtr.Zero, UIntPtr.Zero, 60_000, IntPtr.Zero);
                     ready.Set();
 
                     while (GetMessage(out MSG msg, IntPtr.Zero, 0, 0) > 0)
                     {
+                        if (msg.hwnd == IntPtr.Zero)
+                        {
+                            if (msg.message == WM_HOTKEY) { OnRegisteredHotkey((int)msg.wParam); continue; }
+                            if (msg.message == WM_APP_SYNC) { SyncRegistered(); continue; }
+                            if (msg.message == WM_TIMER)
+                            {
+                                var id = (UIntPtr)(ulong)msg.wParam;
+                                bool afterForeground = id == _reinstallTimer;
+                                if (afterForeground) { KillTimer(IntPtr.Zero, id); _reinstallTimer = UIntPtr.Zero; }
+                                if (afterForeground || id == _watchTimer) InstallHook();
+                                continue;
+                            }
+                        }
                         TranslateMessage(ref msg);
                         DispatchMessage(ref msg);
                     }
 
+                    foreach (int id in _registeredIds) UnregisterHotKey(IntPtr.Zero, id);
+                    _registeredIds.Clear();
+                    if (_winEventHook != IntPtr.Zero) { UnhookWinEvent(_winEventHook); _winEventHook = IntPtr.Zero; }
                     if (_hookId != IntPtr.Zero)
                     {
                         UnhookWindowsHookEx(_hookId);
@@ -265,9 +392,11 @@ namespace ScreenShot_One_Avalonia
 
                         if (ObserveKeys) RaiseKeyObserved(vkCode, modifiers);
 
-                        var action = Match(vkCode, modifiers);
+                        var action = TestBypassHook ? null : Match(vkCode, modifiers);
                         if (action != null)
                         {
+                            _lastHookAction = action;
+                            Interlocked.Exchange(ref _lastHookTicks, Environment.TickCount64);
                             // Обробник лише ставить задачу в UI-потік, тому hook повертається миттєво.
                             Raise(action.Value);
                             return (IntPtr)1; // «з'їдаємо» натискання, щоб воно не пішло далі

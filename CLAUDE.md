@@ -54,7 +54,7 @@
     macOS: `TrayIcon` з Avalonia **не дає події кліку** (Avalonia.Native не викликає OnClicked), тому значок — власний `MacStatusItem` (NSStatusItem через ObjC runtime: клас `SOStatusItemTarget`, action `soClick:` → `[UnmanagedCallersOnly]` C#). Лівий і правий клік — панель. Якщо створити не вдалось — запасний `TrayIcon` з меню.
     Самоперевірка: `SO_SELFTEST_TRAY=1` — через 6 с програма сама «клікає» значок (Mac — `performClick:`), у журнал пише «[SelfTest] панель трею відкрита через 2,5 с: True»; CI перевіряє це на Windows і macOS; на Windows ще й правий клік («[SelfTest] правий клік → панель: True»). Реліз (`release.yml`) викладає Mac-файли лише після такої ж самоперевірки.
   - **Меню трею не підміняти** (`_trayIcon.Menu = ...` лише один раз): на macOS Avalonia падає «The menu being updated does not match». Зміна мови — `UpdateTrayMenuTexts` (лише `Header`). Так падала Mac-версія 2.8.0–2.8.1.
-  - `HotkeyService` — глобальні клавіші. Windows: low-level hook в окремому потоці; macOS: Carbon `RegisterEventHotKey`.
+  - `HotkeyService` — глобальні клавіші. Windows: low-level hook в окремому потоці + запасна `RegisterHotKey` у тому ж потоці (`WM_HOTKEY`, `WM_APP_SYNC` після зміни комбінацій/`SetSuspended`), перевстановлення hook при `EVENT_SYSTEM_FOREGROUND` і щохвилини; macOS: Carbon `RegisterEventHotKey`.
   - `SettingsManager` / `AppSettings` — `settings.json`, міграції (`SettingsVersion`), тема, автозапуск.
   - `UpdateWindow` — оновлення через Velopack (`GithubSource`, без токена).
   - `GoogleDriveManager` (scope `DriveFile`, файли публічні за посиланням), `PublicCloudManager` (catbox.moe).
@@ -172,7 +172,7 @@ CI (`.github/workflows/ci.yml`) — збірка й тести на Windows і �
 
 ## Історія ключових змін
 
-- 3.3.1 — гарячі клавіші вимикаються лише поки фокус у полі комбінації в налаштуваннях (раніше — весь час, поки вікно налаштувань відкрите: PrintScreen «не працював»); іконка в заголовку всіх `SukiWindow` (стиль `LogoContent` в `App.axaml`).
+- 3.3.1 — гарячі клавіші вимикаються лише поки фокус у полі комбінації в налаштуваннях (раніше — весь час, поки вікно налаштувань відкрите: PrintScreen «не працював»); Windows: запасна RegisterHotKey (UIPI не пускає low-level hook у вікна адміністратора; дубль відсікається 400 мс), hook перевстановлюється при зміні активного вікна (VM ставлять свій hook першим) і раз на хвилину (Windows тихо знімає hook після тайм-ауту); самоперевірка в KEYS: «[SelfTest] гарячі клавіші: hook → hook, без hook → RegisterHotKey — True»; іконка в заголовку всіх `SukiWindow` (стиль `LogoContent` в `App.axaml`).
 - 3.3.0 — програма називається «Shot One» (лише назва для людей); кнопка «Підтримати проєкт» (`Donate`: банка Monobank українською, міжнародний сервіс іншими мовами; прихована, поки `Donate.UkrainianUrl`/`InternationalUrl` порожні).
 - 3.2.2 — програма для тегів — за вікном під виділенням (не активне; раніше браузер отримував «#claude»), старі записи — теги лише з тексту; теги «таблиці» й сервіс за адресою сайту з тексту; шапка історії: вкладки по центру, пошук на всю ширину.
 - 3.2.1 — автотеги на більшості знімків (назва програми як запасний тег, `RulesVersion` = 2), картки історії оновлюють теги одразу (`HistoryWindow.OnIndexChanged`); історія не ховається під редактором (раніше `Hide()`/`Show()` — «закривалась і відкривалась»).

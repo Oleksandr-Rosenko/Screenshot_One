@@ -76,11 +76,13 @@ jobs:
           Write-Host "----- app.log -----"
           if (Test-Path $log) { Get-Content $log -Tail 60 }
           Write-Host "----- діагностика -----"
-          if (Test-Path $log) { Select-String -Path $log -Pattern '\[Flicker\]|SelfTest\] (запис|мерехтіння|вирізання|виключення|пошук)' | ForEach-Object { $_.Line } }
+          if (Test-Path $log) { Select-String -Path $log -Pattern '\[Flicker\]|SelfTest\] (запис|мерехтіння|вирізання|виключення|пошук|гарячі)' | ForEach-Object { $_.Line } }
           if (-not $alive) { throw "App exited early (code $($p.ExitCode))" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\].*2,5.*True' -Quiet)) { throw "Tray panel self-test (left click) failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\].*→.*True' -Quiet)) { throw "Tray panel self-test (right click) failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] клавіші.*True' -Quiet)) { throw "Keystroke overlay self-test failed" }
+          Select-String -Path $log -Pattern 'SelfTest\] гарячі клавіші|\[Hotkeys\]' | ForEach-Object { $_.Line }
+          if (-not (Select-String -Path $log -Pattern 'SelfTest\] гарячі клавіші.*True' -Quiet)) { throw "Hotkey self-test (hook + RegisterHotKey fallback) failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] вікна.*True' -Quiet)) { throw "Window list self-test failed" }
           if (-not (Select-String -Path $log -Pattern 'SelfTest\] оверлей.*True' -Quiet)) { throw "Selection overlay self-test failed" }
           if (Select-String -Path $log -Pattern '\[Capture\].*картинка немає' -Quiet) { throw "Screen capture returned no image" }

@@ -216,6 +216,31 @@ namespace ScreenShot_One_Avalonia
             string? shown = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => KeystrokeOverlay.LastShown);
             AppLog.Write($"[SelfTest] клавіші: «{shown}» = {shown == "Ctrl + C"}");
 
+            // Гарячі клавіші (3.3.1): спершу звичайний hook, потім запасна RegisterHotKey (hook «не бачить» — як з вікном адміністратора)
+            var s = SettingsManager.Current;
+            (int key, int mods) saved = (s.OcrKey, s.OcrModifier);
+            s.OcrKey = 0x78; s.OcrModifier = HotkeyModifiers.Ctrl | HotkeyModifiers.Alt; // Ctrl + Alt + F9
+            HotkeyService.SetSuspended(false);
+            string? via = null;
+            HotkeyService.TestObserver = (a, how) => { if (a == HotkeyAction.Ocr) via = how; };
+            async System.Threading.Tasks.Task<string?> Press()
+            {
+                via = null;
+                await System.Threading.Tasks.Task.Delay(500);
+                keybd_event(0x11, 0, 0, UIntPtr.Zero); keybd_event(0x12, 0, 0, UIntPtr.Zero); keybd_event(0x78, 0, 0, UIntPtr.Zero);
+                keybd_event(0x78, 0, KEYUP, UIntPtr.Zero); keybd_event(0x12, 0, KEYUP, UIntPtr.Zero); keybd_event(0x11, 0, KEYUP, UIntPtr.Zero);
+                await System.Threading.Tasks.Task.Delay(1000);
+                return via;
+            }
+            string? byHook = await Press();
+            HotkeyService.TestBypassHook = true;
+            string? byFallback = await Press();
+            HotkeyService.TestBypassHook = false;
+            HotkeyService.TestObserver = null;
+            (s.OcrKey, s.OcrModifier) = saved;
+            HotkeyService.SetSuspended(false);
+            AppLog.Write($"[SelfTest] гарячі клавіші: hook → {byHook ?? "нічого"}, без hook → {byFallback ?? "нічого"} — {byHook == "hook" && byFallback == "RegisterHotKey"}");
+
             // Знімок вікна: список вікон інших програм (CI запускає Блокнот)
             var windows = WindowLocator.GetWindows();
             AppLog.Write($"[SelfTest] вікна інших програм: {windows.Count} — {windows.Count > 0}");
