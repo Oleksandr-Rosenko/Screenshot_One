@@ -21,7 +21,19 @@ namespace ScreenShot_One_Avalonia
 
             UpdateVersionText();
 
-            SettingsManager.IsSuspended = true;
+            // Гарячі клавіші вимикаємо лише поки фокус у полі комбінації (щоб натискання записувалось, а не робило знімок).
+            // Раніше вони були вимкнені весь час, поки відкрите вікно налаштувань, — PrintScreen «не працював».
+            foreach (var box in new[] { TxtRegionKey, TxtFullScreenKey, TxtAllScreensKey, TxtVideoKey, TxtOcrKey })
+            {
+                box.GotFocus += (_, _) => SettingsManager.IsSuspended = true;
+                box.LostFocus += (_, _) => SettingsManager.IsSuspended = false;
+            }
+            // Перейшли в інше вікно, а курсор лишився в полі комбінації — клавіші мають працювати
+            Deactivated += (_, _) => SettingsManager.IsSuspended = false;
+            Activated += (_, _) =>
+            {
+                if (FocusManager?.GetFocusedElement() is TextBox { Classes: var c } && c.Contains("hotkey")) SettingsManager.IsSuspended = true;
+            };
             LoadCurrentSettings();
 
             if (OperatingSystem.IsMacOS())

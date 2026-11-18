@@ -1,6 +1,8 @@
-• New name — Shot One. Only the name has changed: history, settings and updates stay as they were.
+• Hotkeys (PrintScreen) work while the Settings window is open: they are paused only while you type a new combination.
+• App icon in window title bars.
 
 Changes in previous versions:
+• 3.3.0: new name — Shot One.
 • 3.2.2: more accurate auto tags (by the window under the selection), tags from text, new history header.
 • 3.2.1: auto tags on most screenshots, history stays open under the editor.
 • 3.2.0: “what + where” auto tags in history (error, invoice, jira, telegram…), offline.

@@ -92,6 +92,15 @@
 		<Style Selector="sukic|SukiWindow /template/ Panel#PART_Root">
 			<Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
 		</Style>
+		<!-- Іконка програми в заголовку кожного вікна (3.3.1); Template — окремий екземпляр для кожного вікна -->
+		<Style Selector="sukic|SukiWindow">
+			<Setter Property="LogoContent">
+				<Template>
+					<Image Source="/Assets/tray.png" Width="18" Height="18" Margin="0,0,2,0" VerticalAlignment="Center"/>
+				</Template>
+			</Setter>
+		</Style>
+
 		<!-- Без ефекту «скла»: звичайні непрозорі картки -->
 		<Style Selector="sukic|GlassCard">
 			<Setter Property="IsOpaque" Value="True" />

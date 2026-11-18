@@ -12,7 +12,7 @@
     <AssemblyName>Screenshot_One</AssemblyName>
     <Product>Shot One</Product>
     <AssemblyTitle>Shot One</AssemblyTitle>
-    <Version>3.3.0</Version>
+    <Version>3.3.1</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(TargetFramework.StartsWith('net10.0-windows'))">
